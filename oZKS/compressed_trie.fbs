@@ -1,0 +1,12 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+namespace ozks.fbs;
+
+table CompressedTrie {
+    version:uint32;
+    epoch:uint64;
+    node_count:uint64;
+}
+
+root_type CompressedTrie;

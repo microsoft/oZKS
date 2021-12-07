@@ -1,0 +1,22 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+namespace ozks.fbs;
+
+struct LookupProof {
+    partial_label:[ubyte:64];
+    partial_label_size:uint32;
+    hash:[ubyte:64];
+    hash_size:uint32;
+}
+
+table QueryResult {
+    is_member:bool;
+    payload:[ubyte];
+    lookup_proof:[LookupProof];
+    vrf_proof:[ubyte];
+    randomness:[ubyte];
+    include_vrf:bool;
+}
+
+root_type QueryResult;

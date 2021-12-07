@@ -1,0 +1,20 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+namespace ozks.fbs;
+
+table PublicKey {
+    data:[ubyte] (required);
+}
+
+table RootCommitment {
+    data:[ubyte] (required);
+}
+
+table Commitment {
+    version:uint32;
+    public_key:PublicKey (required);
+    root_commitment:RootCommitment (required);
+}
+
+root_type Commitment;

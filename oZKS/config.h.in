@@ -1,0 +1,9 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+#pragma once
+
+#define OZKS_VERSION "@OZKS_VERSION@"
+#define OZKS_VERSION_MAJOR @OZKS_VERSION_MAJOR@
+#define OZKS_VERSION_MINOR @OZKS_VERSION_MINOR@
+#define OZKS_VERSION_PATCH @OZKS_VERSION_PATCH@

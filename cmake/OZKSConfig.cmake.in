@@ -1,0 +1,79 @@
+# Exports target OZKS::ozks
+#
+# Creates variables:
+#
+#   OZKS_FOUND : If either a static or a shared OZKS was found
+#   OZKS_STATIC_FOUND : If a static OZKS library was found
+#   OZKS_SHARED_FOUND : If a shared OZKS library was found
+#   OZKS_VERSION : The full version number
+#   OZKS_VERSION_MAJOR : The major version number
+#   OZKS_VERSION_MINOR : The minor version number
+#   OZKS_VERSION_PATCH : The patch version number
+#   OZKS_BUILD_TYPE : The build type (e.g., "Release" or "Debug")
+#   OZKS_USE_CXX17 : Set to non-zero value if library is compiled as C++17 instead of C++14
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+macro(ozks_find_dependency dep)
+    find_dependency(${dep})
+    if(NOT ${dep}_FOUND)
+        if(NOT OZKS_FIND_QUIETLY)
+            message(WARNING "Could not find dependency `${dep}` required by this configuration")
+        endif()
+        set(OZKS_FOUND FALSE)
+        return()
+    endif()
+endmacro()
+
+set(OZKS_FOUND FALSE)
+set(OZKS_STATIC_FOUND FALSE)
+set(OZKS_SHARED_FOUND FALSE)
+set(OZKS_VERSION @OZKS_VERSION@)
+set(OZKS_VERSION_MAJOR @OZKS_VERSION_MAJOR@)
+set(OZKS_VERSION_MINOR @OZKS_VERSION_MINOR@)
+set(OZKS_VERSION_PATCH @OZKS_VERSION_PATCH@)
+set(OZKS_BUILD_TYPE @CMAKE_BUILD_TYPE@)
+
+set(OZKS_USE_CXX17 @OZKS_USE_CXX17@)
+
+# We must look for dependencies
+ozks_find_dependency(Microsoft.GSL)
+ozks_find_dependency(Flatbuffers)
+
+# Add the current directory to the module search path
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+include(${CMAKE_CURRENT_LIST_DIR}/OZKSTargets.cmake)
+
+if(TARGET OZKS::ozks)
+    set(OZKS_FOUND TRUE)
+    set(OZKS_STATIC_FOUND TRUE)
+endif()
+
+# if(TARGET OZKS::ozks_shared)
+#     set(OZKS_FOUND TRUE)
+#     set(OZKS_SHARED_FOUND TRUE)
+# endif()
+
+if(OZKS_FOUND)
+    if(NOT OZKS_FIND_QUIETLY)
+        message(STATUS "OZKS -> Version ${OZKS_VERSION} detected")
+    endif()
+    set(OZKS_TARGETS_AVAILABLE "OZKS -> Targets available:")
+
+    if(OZKS_STATIC_FOUND)
+        string(APPEND OZKS_TARGETS_AVAILABLE " OZKS::ozks")
+    endif()
+    # if(OZKS_SHARED_FOUND)
+    #     string(APPEND OZKS_TARGETS_AVAILABLE " OZKS::ozks_shared")
+    # endif()
+    if(NOT OZKS_FIND_QUIETLY)
+        message(STATUS ${OZKS_TARGETS_AVAILABLE})
+    endif()
+else()
+    if(NOT OZKS_FIND_QUIETLY)
+        message(STATUS "OZKS -> NOT FOUND")
+    endif()
+endif()
