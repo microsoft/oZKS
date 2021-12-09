@@ -102,13 +102,6 @@ VRFProof VRFSecretKey::get_proof(gsl::span<const byte> data) const
     utils::ECPoint nonce_times_h2c_data(h2c_data);
     nonce_times_h2c_data.scalar_multiply(nonce, false);
 
-    // Lambda for appending ECPoint data to a buffer
-    auto append_pt_to_buf = [](const utils::ECPoint &pt, auto &buf) {
-        array<byte, utils::ECPoint::save_size> pt_buf;
-        pt.save(pt_buf);
-        copy(pt_buf.begin(), pt_buf.end(), back_inserter(buf));
-    };
-
     // Compute c as the hash of all of the above curve points and reduce modulo order
     decltype(VRFProof::c) c = hash_points(
         generator,
