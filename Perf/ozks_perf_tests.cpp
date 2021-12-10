@@ -3,14 +3,14 @@
 
 // STD
 #include <algorithm>
-#include <string>
-#include <fstream>
 #include <chrono>
+#include <fstream>
+#include <string>
 
 // OZKS
-#include "mem_utils.h"
 #include "oZKS/fourq/random.h"
 #include "oZKS/ozks.h"
+#include "mem_utils.h"
 
 // Google Benchmark
 #include <benchmark/benchmark.h>
@@ -86,9 +86,9 @@ static void OZKSLookup(benchmark::State &state)
 
         auto query_result = ozks_.query(keys_[idx++]);
         lookup_count++;
-        accumulated_depth += query_result.lookup_proof.size() - 1;
+        accumulated_depth += query_result.lookup_proof().size() - 1;
 
-        if (!query_result.is_member) {
+        if (!query_result.is_member()) {
             state.SkipWithError("query should have been found");
         }
     }
@@ -111,11 +111,11 @@ static void OZKSFailedLookup(benchmark::State &state)
 
         auto query_result = ozks_.query(key);
         lookup_count++;
-        if (query_result.lookup_proof.size() > 2) {
-            accumulated_depth += query_result.lookup_proof.size() - 2;
+        if (query_result.lookup_proof().size() > 2) {
+            accumulated_depth += query_result.lookup_proof().size() - 2;
         }
 
-        if (query_result.is_member) {
+        if (query_result.is_member()) {
             state.SkipWithError("query should not have been found");
         }
     }
@@ -136,7 +136,7 @@ static void OZKSVerifySuccessfulQuery(benchmark::State &state)
         auto query_result = ozks_.query(keys_[idx]);
         state.ResumeTiming();
 
-        if (!query_result.is_member) {
+        if (!query_result.is_member()) {
             state.SkipWithError("query should have been found");
         }
 
@@ -148,7 +148,7 @@ static void OZKSVerifySuccessfulQuery(benchmark::State &state)
     }
 }
 
-static void OZKSVerifyFailedQuery(benchmark::State& state)
+static void OZKSVerifyFailedQuery(benchmark::State &state)
 {
     size_t idx = 0;
     key_type key(40);
@@ -159,7 +159,7 @@ static void OZKSVerifyFailedQuery(benchmark::State& state)
         auto query_result = ozks_.query(key);
         state.ResumeTiming();
 
-        if (query_result.is_member) {
+        if (query_result.is_member()) {
             state.SkipWithError("query should not have been found");
         }
 
@@ -171,7 +171,7 @@ static void OZKSVerifyFailedQuery(benchmark::State& state)
     }
 }
 
-static void OZKSSave(benchmark::State& state)
+static void OZKSSave(benchmark::State &state)
 {
     for (auto _ : state) {
         ofstream output_file;
@@ -181,7 +181,7 @@ static void OZKSSave(benchmark::State& state)
     }
 }
 
-static void OZKSLoad(benchmark::State& state)
+static void OZKSLoad(benchmark::State &state)
 {
     ozks_.clear();
 
@@ -189,12 +189,12 @@ static void OZKSLoad(benchmark::State& state)
         OZKS ozks;
         ifstream input_file;
         input_file.open(file_name_, ios::in | ios::binary);
-        OZKS::load(input_file, ozks);
+        OZKS::load(ozks, input_file);
         input_file.close();
     }
 }
 
-static void OZKSBytesToBools(benchmark::State& state)
+static void OZKSBytesToBools(benchmark::State &state)
 {
     vector<byte> bytes(40);
     for (auto _ : state) {
