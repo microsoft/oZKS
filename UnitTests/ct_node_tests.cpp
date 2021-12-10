@@ -136,7 +136,6 @@ TEST(CTNodeTests, AllNodesHashedTest)
     EXPECT_EQ(hash_03, node.left->left->right->right->hash);
     partial_label_type label_04{ 0, 0, 0, 0, 0, 1, 0, 0 };
     EXPECT_EQ(label_04, node.left->right->label);
-    hash_type hash_04 = node.left->right->hash;
 
     hash_root = node.hash;
     lab = bytes_to_bools(make_bytes(0x80));
@@ -182,7 +181,6 @@ TEST(CTNodeTests, AllNodesHashedTest)
     EXPECT_EQ(hash_00000, node.left->hash);
     partial_label_type label_100000{ 1, 0, 0, 0, 0, 0 };
     EXPECT_EQ(label_100000, node.right->label);
-    hash_type hash_100000 = node.right->hash;
     EXPECT_EQ(label_1000000, node.right->left->label);
     EXPECT_EQ(hash_1000000, node.right->left->hash);
     EXPECT_EQ(label_80, node.right->left->left->label);
