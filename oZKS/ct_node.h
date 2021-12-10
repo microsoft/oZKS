@@ -40,13 +40,15 @@ namespace ozks {
         Insert the given label and payload under this node.
         */
         void insert(
-            const partial_label_type &label, const payload_type &payload, const std::size_t epoch);
+            const partial_label_type &insert_label,
+            const payload_type &insert_payload,
+            const std::size_t epoch);
 
         /**
         Lookup a given label and return the path to it (including its sibling) if found.
         */
         bool lookup(
-            const partial_label_type &label,
+            const partial_label_type &lookup_label,
             lookup_path_type &path,
             bool include_searched = true) const;
 
@@ -126,19 +128,23 @@ namespace ozks {
         Will compute and update the hash for the node.
         */
         void init(
-            const partial_label_type &label, const payload_type &payload, const std::size_t epoch);
+            const partial_label_type &init_label,
+            const payload_type &init_payload,
+            const std::size_t epoch);
 
         /**
         Initialize node with given label, payload and hash.
         */
         void init(
-            const partial_label_type &label, const payload_type &payload, const hash_type &hash);
+            const partial_label_type &init_label,
+            const payload_type &init_payload,
+            const hash_type &init_hash);
 
         /**
         Initialize node with given label.
         Payload is cleared. Hash is updated.
         */
-        void init(const partial_label_type &label);
+        void init(const partial_label_type &init_label);
 
         /**
         Update the hash of the current node

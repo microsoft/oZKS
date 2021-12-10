@@ -62,7 +62,6 @@ vector<bool> utils::bytes_to_bools(const byte *bytes, size_t size)
     vector<bool> result(size);
     size_t bit_mod = size % 8;
     size_t bit_idx = (bit_mod == 0) ? 7 : (size % 8) - 1;
-    size_t byte_count = (size + 7) / 8;
     size_t byte_idx = 0;
 
     for (size_t idx = 0; idx < size; idx++) {

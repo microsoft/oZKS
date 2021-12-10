@@ -1,12 +1,8 @@
 
 
-# Set the C++ language version
+# Set the C++ language version; we require C++17
 macro(ozks_set_language target)
-    if(OZKS_USE_CXX17)
-        target_compile_features(${target} PUBLIC cxx_std_17)
-    else()
-        target_compile_features(${target} PUBLIC cxx_std_14)
-    endif()
+    target_compile_features(${target} PUBLIC cxx_std_17)
 endmacro()
 
 # Include a file to fetch thirdparty content

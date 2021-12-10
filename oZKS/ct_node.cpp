@@ -28,11 +28,11 @@ CTNode::CTNode(const CTNode &node)
 string CTNode::to_string(bool include_payload) const
 {
     stringstream ss;
-    string left = this->left == nullptr ? "(null)" : utils::to_string(this->left->label);
-    string right = this->right == nullptr ? "(null)" : utils::to_string(this->right->label);
+    string left_str = left == nullptr ? "(null)" : utils::to_string(left->label);
+    string right_str = right == nullptr ? "(null)" : utils::to_string(right->label);
 
-    ss << "n:" << utils::to_string(this->label);
-    ss << ":l:" << left << ":r:" << right;
+    ss << "n:" << utils::to_string(label);
+    ss << ":l:" << left_str << ":r:" << right_str;
 
     if (include_payload && payload.size() > 0) {
         ss << ":p:" << utils::to_string(payload);
@@ -40,12 +40,12 @@ string CTNode::to_string(bool include_payload) const
 
     ss << ";";
 
-    if (nullptr != this->left) {
-        string sub = this->left->to_string(include_payload);
+    if (nullptr != left) {
+        string sub = left->to_string(include_payload);
         ss << sub;
     }
-    if (nullptr != this->right) {
-        string sub = this->right->to_string(include_payload);
+    if (nullptr != right) {
+        string sub = right->to_string(include_payload);
         ss << sub;
     }
 
@@ -63,31 +63,34 @@ CTNode &CTNode::operator=(const CTNode &node)
     return *this;
 }
 
-void CTNode::init(const partial_label_type &label, const payload_type &payload, const size_t epoch)
+void CTNode::init(
+    const partial_label_type &init_label, const payload_type &init_payload, const size_t epoch)
 {
     if (!is_leaf())
         throw runtime_error("Should only be used for leaf nodes");
 
     hash_type new_hash;
-    compute_leaf_hash(label, payload, epoch, new_hash);
-    init(label, payload, new_hash);
+    compute_leaf_hash(init_label, init_payload, epoch, new_hash);
+    init(init_label, init_payload, new_hash);
 }
 
 void CTNode::init(
-    const partial_label_type &label, const payload_type &payload, const hash_type &hash)
+    const partial_label_type &init_label,
+    const payload_type &init_payload,
+    const hash_type &init_hash)
 {
-    this->label = label;
-    this->payload = payload;
-    this->hash = hash;
+    label = init_label;
+    payload = init_payload;
+    hash = init_hash;
 }
 
-void CTNode::init(const partial_label_type &label)
+void CTNode::init(const partial_label_type &init_label)
 {
     if (is_leaf())
         throw runtime_error("Should not be used for leaf nodes");
 
-    this->label = label;
-    this->payload = {};
+    label = init_label;
+    payload = {};
 
     update_hash();
 }
@@ -113,51 +116,52 @@ void CTNode::update_hash()
         right_label = right->label;
     }
 
-    compute_node_hash(left_label, left_hash, right_label, right_hash, this->hash);
+    compute_node_hash(left_label, left_hash, right_label, right_hash, hash);
 }
 
-void CTNode::insert(const partial_label_type &label, const payload_type &payload, size_t epoch)
+void CTNode::insert(
+    const partial_label_type &insert_label, const payload_type &insert_payload, size_t epoch)
 {
-    if (label == this->label) {
+    if (insert_label == label) {
         throw runtime_error("Attempting to insert the same label");
     }
 
-    vector<bool> common = get_common_prefix(label, this->label);
+    vector<bool> common = get_common_prefix(insert_label, label);
 
-    if (common.size() >= label.size()) {
+    if (common.size() >= insert_label.size()) {
         throw runtime_error("Common part should be smaller");
     }
 
-    bool next_bit = label[common.size()];
+    bool next_bit = insert_label[common.size()];
 
-    if (this->is_leaf() && !this->is_empty()) {
+    if (is_leaf() && !is_empty()) {
         // Convert current leaf to non-leaf
-        this->left = make_unique<CTNode>();
-        this->right = make_unique<CTNode>();
+        left = make_unique<CTNode>();
+        right = make_unique<CTNode>();
 
         if (next_bit == 0) {
-            this->left->init(label, payload, epoch);
-            this->right->init(this->label, this->payload, this->hash);
+            left->init(insert_label, insert_payload, epoch);
+            right->init(label, payload, hash);
 
         } else {
-            this->left->init(this->label, this->payload, this->hash);
-            this->right->init(label, payload, epoch);
+            left->init(label, payload, hash);
+            right->init(insert_label, insert_payload, epoch);
         }
 
-        this->init(common);
+        init(common);
         return;
     }
 
     // If there is a route to follow, follow it
-    if (next_bit == 1 && this->right != nullptr && this->right->label[common.size()] == 1) {
-        this->right->insert(label, payload, epoch);
-        this->update_hash();
+    if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
+        right->insert(insert_label, insert_payload, epoch);
+        update_hash();
         return;
     }
 
-    if (next_bit == 0 && this->left != nullptr && this->left->label[common.size()] == 0) {
-        this->left->insert(label, payload, epoch);
-        this->update_hash();
+    if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
+        left->insert(insert_label, insert_payload, epoch);
+        update_hash();
         return;
     }
 
@@ -168,87 +172,87 @@ void CTNode::insert(const partial_label_type &label, const payload_type &payload
 
     // If there is no route to follow, insert here
     if (next_bit == 1) {
-        if (nullptr == this->right) {
-            this->right = make_unique<CTNode>();
-            this->right->init(label, payload, epoch);
-            this->update_hash();
+        if (nullptr == right) {
+            right = make_unique<CTNode>();
+            right->init(insert_label, insert_payload, epoch);
+            update_hash();
             return;
         }
 
-        insert_node = &this->right;
-        transfer_node = &this->left;
+        insert_node = &right;
+        transfer_node = &left;
     } else {
-        if (nullptr == this->left) {
-            this->left = make_unique<CTNode>();
-            this->left->init(label, payload, epoch);
-            this->update_hash();
+        if (nullptr == left) {
+            left = make_unique<CTNode>();
+            left->init(insert_label, insert_payload, epoch);
+            update_hash();
             return;
         }
 
-        insert_node = &this->left;
-        transfer_node = &this->right;
+        insert_node = &left;
+        transfer_node = &right;
     }
 
     unique_ptr<CTNode> new_node = make_unique<CTNode>();
-    new_node->init(this->label, this->payload, this->hash);
-    new_node->left.swap(this->left);
-    new_node->right.swap(this->right);
+    new_node->init(label, payload, hash);
+    new_node->left.swap(left);
+    new_node->right.swap(right);
 
-    this->label = common;
+    label = common;
     transfer_node->swap(new_node);
 
     *insert_node = make_unique<CTNode>();
-    (*insert_node)->init(label, payload, epoch);
-    this->update_hash();
+    (*insert_node)->init(insert_label, insert_payload, epoch);
+    update_hash();
 }
 
 bool CTNode::lookup(
-    const partial_label_type &label, lookup_path_type &path, bool include_searched) const
+    const partial_label_type &lookup_label, lookup_path_type &path, bool include_searched) const
 {
-    if (this->label == label) {
+    if (label == lookup_label) {
         if (include_searched) {
             // This node is the result
-            path.push_back({ this->label, this->hash });
+            path.push_back({ label, hash });
         }
         return true;
     }
 
-    if (this->is_leaf()) {
+    if (is_leaf()) {
         return false;
     }
 
-    vector<bool> common = get_common_prefix(label, this->label);
+    vector<bool> common = get_common_prefix(lookup_label, label);
 
-    if (common.size() >= label.size()) {
+    if (common.size() >= lookup_label.size()) {
         throw runtime_error("Common part should be less than either labels");
     }
 
-    bool next_bit = label[common.size()];
+    bool next_bit = lookup_label[common.size()];
 
     // If there is a route to follow, follow it
     bool found = false;
     CTNode *sibling = nullptr;
 
-    if (next_bit == 1 && this->right != nullptr && this->right->label[common.size()] == 1) {
-        found = this->right->lookup(label, path, include_searched);
-        sibling = this->left.get();
-    } else if (next_bit == 0 && this->left != nullptr && this->left->label[common.size()] == 0) {
-        found = this->left->lookup(label, path, include_searched);
-        sibling = this->right.get();
+    if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
+        found = right->lookup(lookup_label, path, include_searched);
+        sibling = left.get();
+    } else if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
+        found = left->lookup(lookup_label, path, include_searched);
+        sibling = right.get();
     }
 
     if (!found && path.empty()) {
         // Need to inlcude non-existene proof in result.
-        if (nullptr != this->left) {
-            path.push_back({ this->left->label, this->left->hash });
+        if (nullptr != left) {
+            path.push_back({ left->label, left->hash });
         }
 
-        if (nullptr != this->right) {
-            path.push_back({ this->right->label, this->right->hash });
+        if (nullptr != right) {
+            path.push_back({ right->label, right->hash });
         }
 
-        if (!this->is_empty()) {
-            path.push_back({ this->label, this->hash });
+        if (!is_empty()) {
+            path.push_back({ label, hash });
         }
     } else if (nullptr != sibling) {
         // Add sibling to the path
@@ -284,8 +288,8 @@ size_t CTNode::save(SerializationWriter &writer) const
         left_label = fbs::CreatePartialLabel(
             fbs_builder, left_data, static_cast<uint32_t>(left->label.size()));
     } else {
-        auto label_data = fbs_builder.CreateVector(empty_label);
-        left_label = fbs::CreatePartialLabel(fbs_builder, label_data, 0);
+        auto left_data = fbs_builder.CreateVector(empty_label);
+        left_label = fbs::CreatePartialLabel(fbs_builder, left_data, 0);
     }
 
     if (nullptr != right) {

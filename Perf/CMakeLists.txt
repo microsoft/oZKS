@@ -15,14 +15,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
-project(ozks_perf VERSION 3.6.6 LANGUAGES CXX)
+project(ozks_perf VERSION 0.2.0 LANGUAGES CXX)
 
 # If not called from root CMakeLists.txt
 if(NOT DEFINED OZKS_BUILD_BENCH)
     set(OZKS_BUILD_BENCH ON)
 
     # Import OZKS
-    find_package(OZKS 0.1.0 EXACT REQUIRED)
+    find_package(OZKS 0.2.0 EXACT REQUIRED)
 
     # Must define these variables and include macros
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${OUTLIB_PATH})

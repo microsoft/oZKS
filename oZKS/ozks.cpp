@@ -336,7 +336,6 @@ size_t OZKS::load_store_element(SerializationReader &reader)
     auto fbs_store_element = fbs::GetSizePrefixedStoreElement(in_data.data());
 
     key_type key;
-    size_t idx = 0;
     transform(
         fbs_store_element->key()->cbegin(),
         fbs_store_element->key()->cend(),

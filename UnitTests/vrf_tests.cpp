@@ -1,13 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#include "oZKS/vrf.h"
 #include "oZKS/utilities.h"
-
+#include "oZKS/vrf.h"
 #include <algorithm>
 #include <array>
 #include <cstddef>
-
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -38,7 +36,8 @@ TEST(VRF, PublicKeyCreate)
     VRFSecretKey sk;
 
     // Secret key is uninitialized
-    EXPECT_THROW(VRFPublicKey pk = sk.get_public_key(), logic_error);
+    VRFPublicKey pk;
+    EXPECT_THROW(pk = sk.get_public_key(), logic_error);
 
     VRFSecretKey sk1, sk2;
     sk1.initialize();
@@ -80,7 +79,8 @@ TEST(VRF, CreateVerifyProof)
     vector<byte> data{};
 
     // Secret key is uninitialized
-    EXPECT_THROW(VRFProof pf = sk.get_proof(data), logic_error);
+    VRFProof pf;
+    EXPECT_THROW(pf = sk.get_proof(data), logic_error);
 
     // Initialize and create two proofs for the same data; they should be different
     sk.initialize();

@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT license.
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 # [option] CMAKE_BUILD_TYPE (default: "Release")
 # Build in one of the following modes: Release, Debug, MiniSizeRel, or RelWithDebInfo.
@@ -15,11 +15,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
-project(OZKS VERSION 0.1.0 LANGUAGES CXX C)
-
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
-    cmake_policy(SET CMP0077 NEW)
-endif()
+project(OZKS VERSION 0.2.0 LANGUAGES CXX C)
 
 ########################
 # Global configuration #
@@ -45,12 +41,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Make the install target depend on the all target (required by vcpkg)
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY OFF)
-
-# [option] OZKS_USE_CXX17_OPTION_STR (default: ON)
-# Use C++17, use C++14 otherwise.
-set(OZKS_USE_CXX17_OPTION_STR "Use C++17")
-option(OZKS_USE_CXX17 ${OZKS_USE_CXX17_OPTION_STR} ON)
-message(STATUS "OZKS_USE_CXX17: ${OZKS_USE_CXX17}")
 
 # Path for output
 set(OUTLIB_PATH "lib")
@@ -86,6 +76,7 @@ endif()
 #########################
 # External Dependencies #
 #########################
+
 # All dependencies are assumed pre-installed.
 # find_package might throw a FATAL_ERROR before"xxx: not found", e.g. with vcpkg.cmake.
 
@@ -228,6 +219,7 @@ target_sources(ozks PRIVATE ${OZKS_SOURCE_FILES})
 ####################################
 # oZKS C++ library for OpenEnclave #
 ####################################
+
 if(OZKS_OPENENCLAVE)
     add_library(ozks.enclave STATIC ${OZKS_SOURCE_FILES})
 

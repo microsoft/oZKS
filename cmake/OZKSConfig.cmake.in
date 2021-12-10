@@ -10,7 +10,6 @@
 #   OZKS_VERSION_MINOR : The minor version number
 #   OZKS_VERSION_PATCH : The patch version number
 #   OZKS_BUILD_TYPE : The build type (e.g., "Release" or "Debug")
-#   OZKS_USE_CXX17 : Set to non-zero value if library is compiled as C++17 instead of C++14
 
 @PACKAGE_INIT@
 
@@ -35,8 +34,6 @@ set(OZKS_VERSION_MAJOR @OZKS_VERSION_MAJOR@)
 set(OZKS_VERSION_MINOR @OZKS_VERSION_MINOR@)
 set(OZKS_VERSION_PATCH @OZKS_VERSION_PATCH@)
 set(OZKS_BUILD_TYPE @CMAKE_BUILD_TYPE@)
-
-set(OZKS_USE_CXX17 @OZKS_USE_CXX17@)
 
 # We must look for dependencies
 ozks_find_dependency(Microsoft.GSL)
