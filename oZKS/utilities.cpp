@@ -10,7 +10,7 @@
 
 // OZKS
 #include "oZKS/fourq/random.h"
-#include "oZKS/hash/sha512.h"
+#include "oZKS/hash/blake2.h"
 #include "oZKS/utilities.h"
 
 using namespace std;
@@ -198,10 +198,17 @@ hash_type utils::compute_hash(gsl::span<const byte> in, const string &domain_str
     utils::copy_bytes(in.data(), in.size(), hash_in.data() + domain_str.size());
 
     hash_type hash;
-    crypto_sha512(
-        reinterpret_cast<unsigned char *>(hash_in.data()),
+    blake2b(
+        hash.data(),
+        hash.size(),
+        hash_in.data(),
         hash_in.size(),
-        reinterpret_cast<unsigned char *>(hash.data()));
+        /* key */ nullptr,
+        /* keylen */ 0);
+    //crypto_sha512(
+    //    reinterpret_cast<unsigned char *>(hash_in.data()),
+    //    hash_in.size(),
+    //    reinterpret_cast<unsigned char *>(hash.data()));
 
     return hash;
 }

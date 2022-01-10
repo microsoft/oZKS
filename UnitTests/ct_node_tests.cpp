@@ -30,8 +30,8 @@ TEST(CTNodeTests, UpdateHashTest)
     EXPECT_EQ(lab, node.left->label);
     EXPECT_NE(nullptr, node.left);
     EXPECT_EQ(
-        "4aba638216d778fc5c86170235c8cb7fa59a3fe6afdb0c998997a50ddd750bff60ed25776c354d0c0ec4e85874"
-        "a71c01fe18f99cfc9d5ab469a0c0b8a3779b95",
+        "2de2976b794dc48d2e939b2e16d7db73701dbf2c1641ca93e4ad74b8f029cf07f02d01fb9c0b31dc740056acc9"
+        "c17ddfd5c7d5d4471b227e5033d0169180f1a2",
         to_string(node.left->hash));
 
     lab = bytes_to_bools(make_bytes(0x02));
@@ -43,12 +43,12 @@ TEST(CTNodeTests, UpdateHashTest)
     EXPECT_NE(nullptr, node.left->left);
     EXPECT_NE(nullptr, node.left->right);
     EXPECT_EQ(
-        "4aba638216d778fc5c86170235c8cb7fa59a3fe6afdb0c998997a50ddd750bff60ed25776c354d0c0ec4e85874"
-        "a71c01fe18f99cfc9d5ab469a0c0b8a3779b95",
+        "2de2976b794dc48d2e939b2e16d7db73701dbf2c1641ca93e4ad74b8f029cf07f02d01fb9c0b31dc740056acc9"
+        "c17ddfd5c7d5d4471b227e5033d0169180f1a2",
         to_string(node.left->left->hash));
     EXPECT_EQ(
-        "ac06dc4b46ed04ccafbb5e5eb036cfad00d04b8327d7b6546f19a516e08c677daee409563b4714d27353c9440c"
-        "aeb3c1e099380d4dd24616feb252e2665fa18b",
+        "9aba28398d409188b8d44a66a2b29d489d37d0946617c72bddd4d6ac324deca00a4322da731f7bd137adb07ea5"
+        "05d02296ea2ba1b53f71e733d83834e9d79961",
         to_string(node.left->right->hash));
     EXPECT_NE(hash_root, node.hash);
 }
