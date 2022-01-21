@@ -13,17 +13,21 @@ using namespace std;
 namespace ozks {
     bool InsertResult::verify() const
     {
-        if (append_proof_.size() == 0) {
+        if (!initialized()) {
+            throw runtime_error("This result has not been initialized");
+        }
+
+        if (append_proof_->size() == 0) {
             throw runtime_error("Append proof cannot be empty");
         }
 
         partial_label_type common;
-        partial_label_type partial_label = append_proof_[0].first;
-        hash_type hash = append_proof_[0].second;
+        partial_label_type partial_label = (*append_proof_)[0].first;
+        hash_type hash = (*append_proof_)[0].second;
         hash_type temp_hash;
 
-        for (size_t idx = 1; idx < append_proof_.size(); idx++) {
-            auto sibling = append_proof_[idx];
+        for (size_t idx = 1; idx < append_proof_->size(); idx++) {
+            auto sibling = (*append_proof_)[idx];
             common = utils::get_common_prefix(sibling.first, partial_label);
 
             // These are sibling nodes
@@ -44,7 +48,7 @@ namespace ozks {
         // - The commitment
         // - the last child node hash we need to get the commitment
         commitment_type hash_commitment(hash.begin(), hash.end());
-        if (hash_commitment == commitment_) {
+        if (hash_commitment == *commitment_) {
             return true;
         }
 
@@ -55,6 +59,6 @@ namespace ozks {
         }
 
         hash_commitment = commitment_type(temp_hash.begin(), temp_hash.end());
-        return (hash_commitment == commitment_);
+        return (hash_commitment == *commitment_);
     }
 } // namespace ozks

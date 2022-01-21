@@ -25,38 +25,40 @@ OZKS::OZKS(const OZKSConfig &config)
     }
 }
 
-InsertResult OZKS::insert(const key_type &key, const payload_type &payload)
+shared_ptr<InsertResult> OZKS::insert(const key_type& key, const payload_type& payload)
 {
-    // The label is computed by evaluating the VRF at the payload
-    hash_type vrf_value = get_key_hash(key);
-
-    label_type label(vrf_value.begin(), vrf_value.end());
-    append_proof_type proof;
-
-    auto payload_commit = commit(payload);
-
-    // Keep the original data if necessary
-    if (store_.find(key) != store_.end()) {
-        throw runtime_error("Key is already contained");
-    }
-    store_[key] = { payload, payload_commit.second };
-
-    trie_.insert(label, payload_commit.first, proof);
-
-    commitment_type commitment;
-    trie_.get_commitment(commitment);
-
-    // Return commitment and append proof so caller can publish it somewhere
-    return { commitment, proof };
+    pending_insertion pending{ key, payload };
+    pending_insertions_.emplace_back(pending);
+    pending_result pending_res{ key, make_shared<InsertResult>() };
+    pending_results_.emplace_back(pending_res);
+    return pending_res.second;
 }
 
 InsertResultBatch OZKS::insert(const key_payload_batch_type &input)
 {
     InsertResultBatch result;
+    for (const auto &i : input) {
+        pending_insertion pending{ i.first, i.second };
+        pending_insertions_.emplace_back(pending);
+        pending_result pending_res{ i.first, make_shared<InsertResult>() };
+        pending_results_.emplace_back(pending_res);
+        result.emplace_back(pending_res.second);
+    }
+
+    return result;
+}
+
+void OZKS::do_pending_insertions()
+{
+    if (pending_insertions_.size() != pending_results_.size()) {
+        throw runtime_error("Pending insertions and results should match");
+    }
+
+    InsertResultBatch result;
     label_payload_batch_type label_payload_batch;
 
     // Compute the labels and payloads that will be inserted
-    for (auto &key_payload : input) {
+    for (auto &key_payload : pending_insertions_) {
         hash_type vrf_value = get_key_hash(key_payload.first);
         auto payload_commit = commit(key_payload.second);
 
@@ -77,10 +79,12 @@ InsertResultBatch OZKS::insert(const key_payload_batch_type &input)
     trie_.get_commitment(commitment);
 
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
-        result.push_back({ commitment, append_proofs[idx] });
+        auto &pending_result = pending_results_[idx];
+        pending_result.second->init_result(commitment, append_proofs[idx]);
     }
 
-    return result;
+    pending_insertions_.clear();
+    pending_results_.clear();
 }
 
 QueryResult OZKS::query(const key_type &key) const
@@ -121,6 +125,11 @@ QueryResult OZKS::query(const key_type &key) const
     return result;
 }
 
+void OZKS::flush()
+{
+    do_pending_insertions();
+}
+
 pair<payload_type, randomness_type> OZKS::commit(const payload_type &payload)
 {
     randomness_type randomness;
@@ -158,6 +167,8 @@ void OZKS::clear()
 {
     trie_.clear();
     store_.clear();
+    pending_insertions_.clear();
+    pending_results_.clear();
     vrf_pk_ = {};
     vrf_sk_ = {};
     config_ = {};
