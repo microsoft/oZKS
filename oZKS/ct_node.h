@@ -8,12 +8,16 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 // OZKS
 #include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
 
 namespace ozks {
+    class CTNode;
+    using DirtyNodeList = std::vector<std::unordered_set<CTNode *>>;
+
     class CTNode {
     public:
         CTNode();
@@ -43,6 +47,16 @@ namespace ozks {
             const partial_label_type &insert_label,
             const payload_type &insert_payload,
             const std::size_t epoch);
+
+        /**
+        Insert the given payload and label under this node
+        */
+        void insert(
+            const partial_label_type &insert_label,
+            const payload_type &insert_payload,
+            const std::size_t level,
+            const std::size_t epoch,
+            DirtyNodeList &dirty_nodes);
 
         /**
         Lookup a given label and return the path to it (including its sibling) if found.
@@ -122,6 +136,16 @@ namespace ozks {
         static std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t> load(
             const std::vector<T> &vec, std::size_t position = 0);
 
+        /**
+        Update the hash of the current node
+        */
+        void update_hash();
+
+        /**
+        Update the hashes of the dirty nodes
+        */
+        static void update_node_hashes(const DirtyNodeList &dirty_nodes);
+
     private:
         /**
         Initialize node with given label and payload.
@@ -147,8 +171,8 @@ namespace ozks {
         void init(const partial_label_type &init_label);
 
         /**
-        Update the hash of the current node
+        Mark the given node as dirty by adding it to the dirty node list.
         */
-        void update_hash();
+        void mark_dirty_node(std::size_t level, DirtyNodeList &dirty_nodes, CTNode *node);
     };
 } // namespace ozks

@@ -38,6 +38,7 @@ void CompressedTrie::insert(
 void CompressedTrie::insert(
     const label_payload_batch_type &label_payload_batch, append_proof_batch_type &append_proofs)
 {
+    DirtyNodeList dirty_nodes;
     append_proofs.resize(label_payload_batch.size());
     epoch_++;
 
@@ -47,8 +48,10 @@ void CompressedTrie::insert(
 
         vector<bool> lab = bytes_to_bools(label);
 
-        root_->insert(lab, payload, epoch_);
+        root_->insert(lab, payload, /* level */ 0, epoch_, dirty_nodes);
     }
+
+    CTNode::update_node_hashes(dirty_nodes);
 
     // To get the append proof we need to lookup the item we just inserted after hashes have been
     // updated

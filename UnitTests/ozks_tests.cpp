@@ -278,9 +278,8 @@ TEST(OZKSTests, RandomInsertVerificationTest)
     payload_type payload(40);
     vector<key_type> valid_keys;
 
-    for (int i = 0; i < 10000; i++) {
-        get_random_bytes(
-            reinterpret_cast<unsigned char *>(key.data()), key.size());
+    for (size_t i = 0; i < 10000; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
         auto insert_result = ozks.insert(key, payload);
@@ -307,6 +306,57 @@ TEST(OZKSTests, RandomInsertVerificationTest)
     for (size_t i = 0; i < 1000; i++) {
         get_random_bytes(
             reinterpret_cast<unsigned char *>(key.data()), key.size());
+
+        auto result = ozks.query(key);
+        EXPECT_FALSE(result.is_member());
+        EXPECT_EQ(0, result.payload().size());
+        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
+    }
+}
+
+TEST(OZKSTests, RandomMultiInsertVerificationTest)
+{
+    OZKS ozks;
+    key_type key(16);
+    payload_type payload(40);
+    vector<key_type> valid_keys;
+
+    key_payload_batch_type insertions;
+
+    for (size_t i = 0; i < 10000; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
+
+        insertions.push_back({ key, payload });
+
+        unsigned char c;
+        get_random_bytes(&c, 1);
+        if (valid_keys.size() < 100 && c > 128) {
+            valid_keys.push_back(key);
+        }
+    }
+
+    auto insert_result = ozks.insert(insertions);
+    ozks.flush();
+
+    // Check all insertions are verified
+    for (size_t i = 0; i < insert_result.size(); i++) {
+        auto &single_result = insert_result[i];
+        EXPECT_TRUE(single_result->verify());
+    }
+
+
+    // Check the valid keys are found and that their path is verified correctly
+    for (size_t i = 0; i < valid_keys.size(); i++) {
+        auto result = ozks.query(valid_keys[i]);
+        EXPECT_TRUE(result.is_member());
+        EXPECT_NE(0, result.payload().size());
+        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+    }
+
+    // Check that invalid keys are not found and that their path is verified correctly
+    for (size_t i = 0; i < 1000; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
 
         auto result = ozks.query(key);
         EXPECT_FALSE(result.is_member());

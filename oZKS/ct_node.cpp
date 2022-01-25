@@ -119,8 +119,29 @@ void CTNode::update_hash()
     compute_node_hash(left_label, left_hash, right_label, right_hash, hash);
 }
 
+void CTNode::mark_dirty_node(size_t level, DirtyNodeList& dirty_nodes, CTNode* node)
+{
+    if (dirty_nodes.size() < level + 1) {
+        dirty_nodes.resize(level + 1);
+    }
+
+    dirty_nodes[level].insert(node);
+}
+
 void CTNode::insert(
-    const partial_label_type &insert_label, const payload_type &insert_payload, size_t epoch)
+    const partial_label_type &insert_label, const payload_type &insert_payload, const size_t epoch)
+{
+    DirtyNodeList dirty_nodes;
+    insert(insert_label, insert_payload, /* level */ 0, epoch, dirty_nodes);
+    update_node_hashes(dirty_nodes);
+}
+
+void CTNode::insert(
+    const partial_label_type &insert_label,
+    const payload_type &insert_payload,
+    const size_t level,
+    const size_t epoch,
+    DirtyNodeList &dirty_nodes)
 {
     if (insert_label == label) {
         throw runtime_error("Attempting to insert the same label");
@@ -154,14 +175,14 @@ void CTNode::insert(
 
     // If there is a route to follow, follow it
     if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
-        right->insert(insert_label, insert_payload, epoch);
-        update_hash();
+        right->insert(insert_label, insert_payload, level + 1, epoch, dirty_nodes);
+        mark_dirty_node(level, dirty_nodes, this);
         return;
     }
 
     if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
-        left->insert(insert_label, insert_payload, epoch);
-        update_hash();
+        left->insert(insert_label, insert_payload, level + 1, epoch, dirty_nodes);
+        mark_dirty_node(level, dirty_nodes, this);
         return;
     }
 
@@ -175,7 +196,7 @@ void CTNode::insert(
         if (nullptr == right) {
             right = make_unique<CTNode>();
             right->init(insert_label, insert_payload, epoch);
-            update_hash();
+            mark_dirty_node(level, dirty_nodes, this);
             return;
         }
 
@@ -185,7 +206,7 @@ void CTNode::insert(
         if (nullptr == left) {
             left = make_unique<CTNode>();
             left->init(insert_label, insert_payload, epoch);
-            update_hash();
+            mark_dirty_node(level, dirty_nodes, this);
             return;
         }
 
@@ -203,7 +224,7 @@ void CTNode::insert(
 
     *insert_node = make_unique<CTNode>();
     (*insert_node)->init(insert_label, insert_payload, epoch);
-    update_hash();
+    mark_dirty_node(level, dirty_nodes, this);
 }
 
 bool CTNode::lookup(
@@ -383,6 +404,22 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
 {
     VectorSerializationReader reader(&vec, position);
     return load(reader);
+}
+
+void CTNode::update_node_hashes(const DirtyNodeList &dirty_nodes)
+{
+    if (dirty_nodes.size() == 0) {
+        return;
+    }
+
+    size_t idx = dirty_nodes.size();
+    do {
+        idx--;
+        auto &level_nodes = dirty_nodes[idx];
+        for (auto node : level_nodes) {
+            node->update_hash();
+        }
+    } while (idx > 0);
 }
 
 // Explicit instantiations
