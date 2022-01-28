@@ -15,9 +15,6 @@
 #include "oZKS/serialization_helpers.h"
 
 namespace ozks {
-    class CTNode;
-    using DirtyNodeList = std::vector<std::unordered_set<CTNode *>>;
-
     class CTNode {
     public:
         CTNode();
@@ -49,22 +46,12 @@ namespace ozks {
             const std::size_t epoch);
 
         /**
-        Insert the given payload and label under this node
-        */
-        void insert(
-            const partial_label_type &insert_label,
-            const payload_type &insert_payload,
-            const std::size_t level,
-            const std::size_t epoch,
-            DirtyNodeList &dirty_nodes);
-
-        /**
         Lookup a given label and return the path to it (including its sibling) if found.
         */
         bool lookup(
             const partial_label_type &lookup_label,
             lookup_path_type &path,
-            bool include_searched = true) const;
+            bool include_searched = true);
 
         /**
         Returns a string representation of this node.
@@ -99,7 +86,14 @@ namespace ozks {
         /**
         Node hash
         */
-        hash_type hash = {};
+        hash_type hash() const
+        {
+            if (is_dirty_) {
+                throw std::runtime_error("Tried to obtain hash of a node that needs to be updated");
+            }
+
+            return hash_;
+        }
 
         /**
         Save this node to a stream
@@ -139,14 +133,13 @@ namespace ozks {
         /**
         Update the hash of the current node
         */
-        void update_hash();
-
-        /**
-        Update the hashes of the dirty nodes
-        */
-        static void update_node_hashes(const DirtyNodeList &dirty_nodes);
+        bool update_hash();
 
     private:
+        hash_type hash_ = {};
+        bool is_dirty_ = false;
+        std::vector<hash_type *> hashes_to_update_;
+
         /**
         Initialize node with given label and payload.
         Will compute and update the hash for the node.
@@ -170,9 +163,6 @@ namespace ozks {
         */
         void init(const partial_label_type &init_label);
 
-        /**
-        Mark the given node as dirty by adding it to the dirty node list.
-        */
-        void mark_dirty_node(std::size_t level, DirtyNodeList &dirty_nodes, CTNode *node);
+        static void add_path_element(CTNode *node, lookup_path_type &path);
     };
 } // namespace ozks

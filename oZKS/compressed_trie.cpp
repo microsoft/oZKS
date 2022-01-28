@@ -38,7 +38,6 @@ void CompressedTrie::insert(
 void CompressedTrie::insert(
     const label_payload_batch_type &label_payload_batch, append_proof_batch_type &append_proofs)
 {
-    DirtyNodeList dirty_nodes;
     append_proofs.resize(label_payload_batch.size());
     epoch_++;
 
@@ -48,13 +47,10 @@ void CompressedTrie::insert(
 
         vector<bool> lab = bytes_to_bools(label);
 
-        root_->insert(lab, payload, /* level */ 0, epoch_, dirty_nodes);
+        root_->insert(lab, payload, epoch_);
     }
 
-    CTNode::update_node_hashes(dirty_nodes);
-
-    // To get the append proof we need to lookup the item we just inserted after hashes have been
-    // updated
+    // To get the append proof we need to lookup the item we just inserted
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
         const label_type &label = label_payload_batch[idx].first;
         append_proof_type &append_proof = append_proofs[idx];
@@ -71,7 +67,9 @@ bool CompressedTrie::lookup(const label_type &label, lookup_path_type &path) con
 }
 
 bool CompressedTrie::lookup(
-    const label_type &label, lookup_path_type &path, bool include_searched) const
+    const label_type &label,
+    lookup_path_type &path,
+    bool include_searched) const
 {
     path.clear();
     partial_label_type partial_label = bytes_to_bools(label);
@@ -85,12 +83,13 @@ string CompressedTrie::to_string(bool include_payload) const
 
 void CompressedTrie::get_commitment(commitment_type &commitment) const
 {
-    if (root_->hash.size() == 0) {
+    hash_type root_hash = root_->hash();
+    if (root_hash.size() == 0) {
         throw runtime_error("No commitment has been computed");
     }
 
-    commitment.resize(root_->hash.size());
-    utils::copy_bytes(root_->hash.data(), root_->hash.size(), commitment.data());
+    commitment.resize(root_hash.size());
+    utils::copy_bytes(root_hash.data(), root_hash.size(), commitment.data());
 }
 
 void CompressedTrie::clear()
