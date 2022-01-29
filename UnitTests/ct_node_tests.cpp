@@ -18,6 +18,63 @@ using namespace ozks;
 using namespace ozks::utils;
 
 
+TEST(CTNodeTests, InsertTest)
+{
+    CTNode root;
+    partial_label_type label1{ true, true, true, true };
+    partial_label_type label2{ true, true, true, false };
+    partial_label_type label3{ true, false, false, false };
+    partial_label_type label4{ true, false, false, true };
+    partial_label_type label5{ true, false, true, true };
+    payload_type payload1 = make_bytes(0xFF, 0xFE, 0xFD, 0xFC);
+    payload_type payload2 = make_bytes(0xFE, 0xFD, 0xFC, 0xFB);
+    payload_type payload3 = make_bytes(0xFD, 0xFC, 0xFB, 0xFA);
+    payload_type payload4 = make_bytes(0xFC, 0xFB, 0xFA, 0xF9);
+    payload_type payload5 = make_bytes(0xFB, 0xFA, 0xF9, 0xF8);
+
+    root.insert(label1, payload1, /* epoch */ 1);
+    root.insert(label2, payload2, /* epoch */ 1);
+    root.insert(label3, payload3, /* epoch */ 1);
+    root.insert(label4, payload4, /* epoch */ 1);
+    root.insert(label5, payload5, /* epoch */ 1);
+
+    root.update_hashes(label1);
+    root.update_hashes(label2);
+    root.update_hashes(label3);
+    root.update_hashes(label4);
+    root.update_hashes(label5);
+
+    string root_str = root.to_string();
+    EXPECT_EQ(
+    "n::l:(null):r:1;"
+    "n:1:l:10:r:111;"
+    "n:10:l:100:r:1011;"
+    "n:100:l:1000:r:1001;"
+    "n:1000:l:(null):r:(null);"
+    "n:1001:l:(null):r:(null);"
+    "n:1011:l:(null):r:(null);"
+    "n:111:l:1110:r:1111;"
+    "n:1110:l:(null):r:(null);"
+    "n:1111:l:(null):r:(null);", root_str);
+
+    lookup_path_type path1;
+    lookup_path_type path2;
+    lookup_path_type path3;
+    lookup_path_type path4;
+    lookup_path_type path5;
+
+    EXPECT_TRUE(root.lookup(label1, path1, /* include_searched */ true));
+    EXPECT_TRUE(root.lookup(label2, path2, /* include_searched */ true));
+    EXPECT_TRUE(root.lookup(label3, path3, /* include_searched */ true));
+    EXPECT_TRUE(root.lookup(label4, path4, /* include_searched */ true));
+    EXPECT_TRUE(root.lookup(label5, path5, /* include_searched */ true));
+
+    partial_label_type left_common{ true, false };
+    EXPECT_EQ(path1[0].first, label1);
+    EXPECT_EQ(path1[1].first, label2);
+    EXPECT_EQ(path1[2].first, left_common);
+}
+
 TEST(CTNodeTests, UpdateHashTest)
 {
     CTNode node;
@@ -28,7 +85,8 @@ TEST(CTNodeTests, UpdateHashTest)
     lookup_path_type lookup_path;
 
     node.insert(lab, payload, /* epoch */ 1);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
+
     EXPECT_EQ(lab, node.left->label);
     EXPECT_NE(nullptr, node.left);
     EXPECT_EQ(
@@ -41,7 +99,8 @@ TEST(CTNodeTests, UpdateHashTest)
 
     hash_type hash_root = node.hash();
     node.insert(lab, payload, 2);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
+
     EXPECT_NE(nullptr, node.left);
     EXPECT_NE(nullptr, node.left->left);
     EXPECT_NE(nullptr, node.left->right);
@@ -67,7 +126,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     lookup_path_type lookup_path;
 
     node.insert(lab, payload, 1);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash()); // Updated
     EXPECT_NE(nullptr, node.left);
@@ -80,7 +139,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     payload = make_bytes(0x04, 0x05, 0x06);
 
     node.insert(lab, payload, 2);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash()); // Updated
     partial_label_type label_000000{ 0, 0, 0, 0, 0, 0 };
@@ -101,7 +160,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     payload = make_bytes(0x04, 0x05, 0x06);
 
     node.insert(lab, payload, 3);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash());
     EXPECT_EQ(label_000000, node.left->label);
@@ -125,7 +184,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     payload = make_bytes(0x04, 0x05, 0x06);
 
     node.insert(lab, payload, 4);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash()); // Updated
     partial_label_type label_00000{ 0, 0, 0, 0, 0 };
@@ -150,7 +209,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     payload = make_bytes(0x04, 0x05, 0x06);
 
     node.insert(lab, payload, 5);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash()); // Updated
     EXPECT_EQ(label_00000, node.left->label);
@@ -164,7 +223,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     payload = make_bytes(0x04, 0x05, 0x06);
 
     node.insert(lab, payload, 6);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash()); // Updated
     EXPECT_EQ(label_00000, node.left->label);
@@ -185,7 +244,7 @@ TEST(CTNodeTests, AllNodesHashedTest)
     payload = make_bytes(0x04, 0x05, 0x06);
 
     node.insert(lab, payload, 7);
-    node.lookup(lab, lookup_path);
+    node.update_hashes(lab);
 
     EXPECT_NE(hash_root, node.hash()); // Updated
     EXPECT_EQ(label_00000, node.left->label);

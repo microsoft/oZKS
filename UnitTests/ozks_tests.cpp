@@ -178,6 +178,11 @@ TEST(OZKSTests, MultiInsertQueryTest)
     auto result = ozks.insert(batch);
     ozks.flush();
 
+    // Check inserts are verified
+    for (const auto &single_result : result) {
+        EXPECT_TRUE(single_result->verify());
+    }
+
     auto key = make_bytes(0x03, 0x04, 0x05);
     auto payload = make_bytes(0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8);
     QueryResult query_result = ozks.query(key);

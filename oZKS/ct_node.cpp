@@ -133,12 +133,6 @@ bool CTNode::update_hash()
     compute_node_hash(left_label, left_hash, right_label, right_hash, hash_);
     is_dirty_ = false;
 
-    // Update pending hashes
-    for (auto hash_ptr : hashes_to_update_) {
-        utils::copy_bytes(hash_.data(), hash_.size(), hash_ptr);
-    }
-    hashes_to_update_.clear();
-
     return true;
 }
 
@@ -218,6 +212,7 @@ void CTNode::insert(
 
     unique_ptr<CTNode> new_node = make_unique<CTNode>();
     new_node->init(label, payload, hash_);
+    new_node->is_dirty_ = true;
     new_node->left.swap(left);
     new_node->right.swap(right);
 
@@ -229,27 +224,38 @@ void CTNode::insert(
     is_dirty_ = true;
 }
 
-void CTNode::add_path_element(CTNode *node, lookup_path_type &path)
+bool CTNode::lookup(
+    const partial_label_type &lookup_label,
+    lookup_path_type &path,
+    bool include_searched)
 {
-    bool updated = node->update_hash();
-    path.push_back({ node->label, node->hash_ });
+    return lookup(lookup_label, path, include_searched, /* update_hashes */ false);
+}
 
-    if (!updated) {
-        auto hash_ptr = &path[path.size() - 1].second;
-        node->hashes_to_update_.push_back(hash_ptr);
+void CTNode::update_hashes(const partial_label_type& label)
+{
+    lookup_path_type path;
+    if (!lookup(label, path, /* include_searched */ false, /* update_hashes */ true)) {
+        throw runtime_error("Should have found the path of the lable to update hashes");
     }
 }
 
 bool CTNode::lookup(
     const partial_label_type &lookup_label,
     lookup_path_type &path,
-    bool include_searched)
+    bool include_searched,
+    bool update_hashes)
 {
     if (label == lookup_label) {
-        if (include_searched) {
+        if (include_searched && !update_hashes) {
             // This node is the result
-            add_path_element(this, path);
+            path.push_back({ label, hash() });
         }
+
+        if (update_hashes) {
+            update_hash();
+        }
+
         return true;
     }
 
@@ -270,33 +276,41 @@ bool CTNode::lookup(
     CTNode *sibling = nullptr;
 
     if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
-        found = right->lookup(lookup_label, path, include_searched);
+        found = right->lookup(lookup_label, path, include_searched, update_hashes);
         sibling = left.get();
     } else if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
-        found = left->lookup(lookup_label, path, include_searched);
+        found = left->lookup(lookup_label, path, include_searched, update_hashes);
         sibling = right.get();
     }
 
     if (!found && path.empty()) {
-        // Need to include non-existence proof in result.
-        if (nullptr != left) {
-            add_path_element(left.get(), path);
-        }
+        if (!update_hashes) {
+            // Need to include non-existence proof in result.
+            if (nullptr != left) {
+                path.push_back({ left->label, left->hash() });
+            }
 
-        if (nullptr != right) {
-            add_path_element(right.get(), path);
-        }
+            if (nullptr != right) {
+                path.push_back({ right->label, right->hash() });
+            }
 
-        if (!is_empty()) {
-            add_path_element(this, path);
+            if (!is_empty()) {
+                path.push_back({ label, hash() });
+            }
         }
     } else {
         if (nullptr != sibling) {
-            // Add sibling to the path
-            add_path_element(sibling, path);
+            if (update_hashes) {
+                sibling->update_hash();
+            } else {
+                // Add sibling to the path
+                path.push_back({ sibling->label, sibling->hash() });
+            }
         }
 
-        update_hash();
+        if (update_hashes) {
+            update_hash();
+        }
     }
 
     return found;

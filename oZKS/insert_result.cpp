@@ -52,6 +52,10 @@ namespace ozks {
             return true;
         }
 
+        if (partial_label.size() == 0) {
+            throw runtime_error("partial_label should have 1 bit");
+        }
+
         if (partial_label[0] == 0) {
             utils::compute_node_hash(partial_label, hash, {}, {}, temp_hash);
         } else {

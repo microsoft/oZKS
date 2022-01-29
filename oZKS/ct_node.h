@@ -54,6 +54,11 @@ namespace ozks {
             bool include_searched = true);
 
         /**
+        Update hashes on the path of the given label
+        */
+        void update_hashes(const partial_label_type &label);
+
+        /**
         Returns a string representation of this node.
         */
         std::string to_string(bool include_payload = false) const;
@@ -138,7 +143,6 @@ namespace ozks {
     private:
         hash_type hash_ = {};
         bool is_dirty_ = false;
-        std::vector<hash_type *> hashes_to_update_;
 
         /**
         Initialize node with given label and payload.
@@ -163,6 +167,10 @@ namespace ozks {
         */
         void init(const partial_label_type &init_label);
 
-        static void add_path_element(CTNode *node, lookup_path_type &path);
+        bool lookup(
+            const partial_label_type &lookup_label,
+            lookup_path_type &path,
+            bool include_searched,
+            bool update_hashes);
     };
 } // namespace ozks

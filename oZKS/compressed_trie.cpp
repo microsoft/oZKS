@@ -27,6 +27,7 @@ void CompressedTrie::insert(
 
     epoch_++;
     root_->insert(lab, payload, epoch_);
+    root_->update_hashes(lab);
 
     // To get the append proof we need to lookup the item we just inserted after hashes have been
     // updated
@@ -38,6 +39,8 @@ void CompressedTrie::insert(
 void CompressedTrie::insert(
     const label_payload_batch_type &label_payload_batch, append_proof_batch_type &append_proofs)
 {
+    vector<partial_label_type> labs;
+
     append_proofs.resize(label_payload_batch.size());
     epoch_++;
 
@@ -45,9 +48,17 @@ void CompressedTrie::insert(
         const auto &label = label_payload_batch[idx].first;
         const auto &payload = label_payload_batch[idx].second;
 
-        vector<bool> lab = bytes_to_bools(label);
+        labs.emplace_back(bytes_to_bools(label));
+        const auto &lab = labs[idx];
 
         root_->insert(lab, payload, epoch_);
+    }
+
+    for (size_t idx = 0; idx < label_payload_batch.size(); idx++) {
+        const auto &label = label_payload_batch[idx].first;
+        const auto &lab = labs[idx];
+
+        root_->update_hashes(lab);
     }
 
     // To get the append proof we need to lookup the item we just inserted
