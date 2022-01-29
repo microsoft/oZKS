@@ -15,6 +15,8 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
+constexpr size_t random_iterations = 100000;
+
 namespace {
     /**
     Get random bytes and throw if unsuccessful
@@ -283,7 +285,7 @@ TEST(OZKSTests, RandomInsertVerificationTest)
     payload_type payload(40);
     vector<key_type> valid_keys;
 
-    for (size_t i = 0; i < 10000; i++) {
+    for (size_t i = 0; i < random_iterations; i++) {
         get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
@@ -328,7 +330,7 @@ TEST(OZKSTests, RandomMultiInsertVerificationTest)
 
     key_payload_batch_type insertions;
 
-    for (size_t i = 0; i < 10000; i++) {
+    for (size_t i = 0; i < random_iterations; i++) {
         get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
