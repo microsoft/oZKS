@@ -52,6 +52,7 @@ static void OZKSInsert(benchmark::State &state)
         state.ResumeTiming();
 
         auto insert_result = ozks_.insert(key, payload);
+        ozks_.flush();
 
         state.PauseTiming();
         // Max 1 million keys
@@ -60,11 +61,6 @@ static void OZKSInsert(benchmark::State &state)
         }
         state.ResumeTiming();
     }
-
-    // We don't want to include flush in this scenario
-    state.PauseTiming();
-    ozks_.flush();
-    state.ResumeTiming();
 
     // Report how long it took to perform all repetitions
     auto end = chrono::high_resolution_clock::now();
