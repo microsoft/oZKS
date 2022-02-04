@@ -205,10 +205,6 @@ hash_type utils::compute_hash(gsl::span<const byte> in, const string &domain_str
         hash_in.size(),
         /* key */ nullptr,
         /* keylen */ 0);
-    //crypto_sha512(
-    //    reinterpret_cast<unsigned char *>(hash_in.data()),
-    //    hash_in.size(),
-    //    reinterpret_cast<unsigned char *>(hash.data()));
 
     return hash;
 }

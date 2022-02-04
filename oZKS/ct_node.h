@@ -8,7 +8,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unordered_set>
 
 // OZKS
 #include "oZKS/defines.h"
