@@ -17,7 +17,7 @@ using namespace ozks::utils;
 
 CTNode::CTNode()
 {
-    memset(hash.data(), 0, hash.size());
+    memset(hash_.data(), 0, hash_.size());
 }
 
 CTNode::CTNode(const CTNode &node)
@@ -56,7 +56,8 @@ CTNode &CTNode::operator=(const CTNode &node)
 {
     label = node.label;
     payload = node.payload;
-    hash = node.hash;
+    hash_ = node.hash_;
+    is_dirty_ = node.is_dirty_;
     left = nullptr;
     right = nullptr;
 
@@ -81,7 +82,8 @@ void CTNode::init(
 {
     label = init_label;
     payload = init_payload;
-    hash = init_hash;
+    hash_ = init_hash;
+    is_dirty_ = false;
 }
 
 void CTNode::init(const partial_label_type &init_label)
@@ -91,12 +93,16 @@ void CTNode::init(const partial_label_type &init_label)
 
     label = init_label;
     payload = {};
-
-    update_hash();
+    is_dirty_ = true;
 }
 
-void CTNode::update_hash()
+bool CTNode::update_hash()
 {
+    if (!is_dirty_) {
+        // No need to actually update the hash
+        return true;
+    }
+
     if (is_leaf())
         throw runtime_error("Should not be used for leaf nodes");
 
@@ -107,20 +113,31 @@ void CTNode::update_hash()
     hash_type right_hash{};
 
     if (nullptr != left) {
-        left_hash = left->hash;
+        if (left->is_dirty_) {
+            return false;
+        }
+
+        left_hash = left->hash();
         left_label = left->label;
     }
 
     if (nullptr != right) {
-        right_hash = right->hash;
+        if (right->is_dirty_) {
+            return false;
+        }
+
+        right_hash = right->hash();
         right_label = right->label;
     }
 
-    compute_node_hash(left_label, left_hash, right_label, right_hash, hash);
+    compute_node_hash(left_label, left_hash, right_label, right_hash, hash_);
+    is_dirty_ = false;
+
+    return true;
 }
 
 void CTNode::insert(
-    const partial_label_type &insert_label, const payload_type &insert_payload, size_t epoch)
+    const partial_label_type &insert_label, const payload_type &insert_payload, const size_t epoch)
 {
     if (insert_label == label) {
         throw runtime_error("Attempting to insert the same label");
@@ -141,10 +158,10 @@ void CTNode::insert(
 
         if (next_bit == 0) {
             left->init(insert_label, insert_payload, epoch);
-            right->init(label, payload, hash);
+            right->init(label, payload, hash_);
 
         } else {
-            left->init(label, payload, hash);
+            left->init(label, payload, hash_);
             right->init(insert_label, insert_payload, epoch);
         }
 
@@ -155,13 +172,13 @@ void CTNode::insert(
     // If there is a route to follow, follow it
     if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
         right->insert(insert_label, insert_payload, epoch);
-        update_hash();
+        is_dirty_ = true;
         return;
     }
 
     if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
         left->insert(insert_label, insert_payload, epoch);
-        update_hash();
+        is_dirty_ = true;
         return;
     }
 
@@ -175,7 +192,7 @@ void CTNode::insert(
         if (nullptr == right) {
             right = make_unique<CTNode>();
             right->init(insert_label, insert_payload, epoch);
-            update_hash();
+            is_dirty_ = true;
             return;
         }
 
@@ -185,7 +202,7 @@ void CTNode::insert(
         if (nullptr == left) {
             left = make_unique<CTNode>();
             left->init(insert_label, insert_payload, epoch);
-            update_hash();
+            is_dirty_ = true;
             return;
         }
 
@@ -194,7 +211,8 @@ void CTNode::insert(
     }
 
     unique_ptr<CTNode> new_node = make_unique<CTNode>();
-    new_node->init(label, payload, hash);
+    new_node->init(label, payload, hash_);
+    new_node->is_dirty_ = true;
     new_node->left.swap(left);
     new_node->right.swap(right);
 
@@ -203,17 +221,41 @@ void CTNode::insert(
 
     *insert_node = make_unique<CTNode>();
     (*insert_node)->init(insert_label, insert_payload, epoch);
-    update_hash();
+    is_dirty_ = true;
 }
 
 bool CTNode::lookup(
-    const partial_label_type &lookup_label, lookup_path_type &path, bool include_searched) const
+    const partial_label_type &lookup_label,
+    lookup_path_type &path,
+    bool include_searched)
+{
+    return lookup(lookup_label, path, include_searched, /* update_hashes */ false);
+}
+
+void CTNode::update_hashes(const partial_label_type& label)
+{
+    lookup_path_type path;
+    if (!lookup(label, path, /* include_searched */ false, /* update_hashes */ true)) {
+        throw runtime_error("Should have found the path of the lable to update hashes");
+    }
+}
+
+bool CTNode::lookup(
+    const partial_label_type &lookup_label,
+    lookup_path_type &path,
+    bool include_searched,
+    bool update_hashes)
 {
     if (label == lookup_label) {
-        if (include_searched) {
+        if (include_searched && !update_hashes) {
             // This node is the result
-            path.push_back({ label, hash });
+            path.push_back({ label, hash() });
         }
+
+        if (update_hashes) {
+            update_hash();
+        }
+
         return true;
     }
 
@@ -234,29 +276,41 @@ bool CTNode::lookup(
     CTNode *sibling = nullptr;
 
     if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
-        found = right->lookup(lookup_label, path, include_searched);
+        found = right->lookup(lookup_label, path, include_searched, update_hashes);
         sibling = left.get();
     } else if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
-        found = left->lookup(lookup_label, path, include_searched);
+        found = left->lookup(lookup_label, path, include_searched, update_hashes);
         sibling = right.get();
     }
 
     if (!found && path.empty()) {
-        // Need to inlcude non-existene proof in result.
-        if (nullptr != left) {
-            path.push_back({ left->label, left->hash });
+        if (!update_hashes) {
+            // Need to include non-existence proof in result.
+            if (nullptr != left) {
+                path.push_back({ left->label, left->hash() });
+            }
+
+            if (nullptr != right) {
+                path.push_back({ right->label, right->hash() });
+            }
+
+            if (!is_empty()) {
+                path.push_back({ label, hash() });
+            }
+        }
+    } else {
+        if (nullptr != sibling) {
+            if (update_hashes) {
+                sibling->update_hash();
+            } else {
+                // Add sibling to the path
+                path.push_back({ sibling->label, sibling->hash() });
+            }
         }
 
-        if (nullptr != right) {
-            path.push_back({ right->label, right->hash });
+        if (update_hashes) {
+            update_hash();
         }
-
-        if (!is_empty()) {
-            path.push_back({ label, hash });
-        }
-    } else if (nullptr != sibling) {
-        // Add sibling to the path
-        path.push_back({ sibling->label, sibling->hash });
     }
 
     return found;
@@ -264,6 +318,10 @@ bool CTNode::lookup(
 
 size_t CTNode::save(SerializationWriter &writer) const
 {
+    if (is_dirty_) {
+        throw runtime_error("Attempted to save node with out of date hash");
+    }
+
     flatbuffers::FlatBufferBuilder fbs_builder;
 
     auto label_bytes = utils::bools_to_bytes(label);
@@ -273,7 +331,7 @@ size_t CTNode::save(SerializationWriter &writer) const
     auto partial_label =
         fbs::CreatePartialLabel(fbs_builder, label_data, static_cast<uint32_t>(label.size()));
     auto hash_data =
-        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(hash.data()), hash.size());
+        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(hash_.data()), hash_.size());
     auto payload_data =
         fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(payload.data()), payload.size());
 
@@ -360,7 +418,10 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
     node.payload.resize(fbs_ctnode->payload()->size());
     utils::copy_bytes(
         fbs_ctnode->payload()->data(), fbs_ctnode->payload()->size(), node.payload.data());
-    utils::copy_bytes(fbs_ctnode->hash()->data(), fbs_ctnode->hash()->size(), node.hash.data());
+    utils::copy_bytes(fbs_ctnode->hash()->data(), fbs_ctnode->hash()->size(), node.hash_.data());
+
+    // is_dirty is not saved because it is in an error if we attempt to save a dirty node
+    node.is_dirty_ = false;
 
     tuple<CTNode, partial_label_type, partial_label_type, size_t> result;
     get<0>(result) = node;

@@ -15,6 +15,8 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
+constexpr size_t random_iterations = 100000;
+
 namespace {
     /**
     Get random bytes and throw if unsuccessful
@@ -34,20 +36,22 @@ TEST(OZKSTests, InsertTest)
     auto payload = make_bytes(0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA);
 
     auto result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_NE(0, result.commitment().size()); // Should have commitment
-    EXPECT_EQ(1, result.append_proof().size()); // First inserted
+    EXPECT_NE(0, result->commitment().size()); // Should have commitment
+    EXPECT_EQ(1, result->append_proof().size()); // First inserted
 
-    commitment_type commitment1 = result.commitment();
+    commitment_type commitment1 = result->commitment();
 
     key = make_bytes(0x02, 0x03, 0x04);
     payload = make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF);
 
     result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_NE(0, result.commitment().size());
-    EXPECT_NE(commitment1, result.commitment());
-    EXPECT_EQ(2, result.append_proof().size()); // Sibling
+    EXPECT_NE(0, result->commitment().size());
+    EXPECT_NE(commitment1, result->commitment());
+    EXPECT_EQ(2, result->append_proof().size()); // Sibling
 }
 
 TEST(OZKSTests, NoRandomInsertTest)
@@ -59,20 +63,22 @@ TEST(OZKSTests, NoRandomInsertTest)
     auto payload = make_bytes(0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA);
 
     auto result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_NE(0, result.commitment().size()); // Should have commitment
-    EXPECT_EQ(1, result.append_proof().size()); // First inserted
+    EXPECT_NE(0, result->commitment().size()); // Should have commitment
+    EXPECT_EQ(1, result->append_proof().size()); // First inserted
 
-    commitment_type commitment1 = result.commitment();
+    commitment_type commitment1 = result->commitment();
 
     key = make_bytes(0x02, 0x03, 0x04);
     payload = make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF);
 
     result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_NE(0, result.commitment().size());
-    EXPECT_NE(commitment1, result.commitment());
-    EXPECT_EQ(2, result.append_proof().size()); // Sibling
+    EXPECT_NE(0, result->commitment().size());
+    EXPECT_NE(commitment1, result->commitment());
+    EXPECT_EQ(2, result->append_proof().size()); // Sibling
 }
 
 TEST(OZKSTests, InsertBatchTest)
@@ -83,10 +89,11 @@ TEST(OZKSTests, InsertBatchTest)
     auto payload = make_bytes(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
 
     auto result_single = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(1, result_single.append_proof().size());
+    EXPECT_EQ(1, result_single->append_proof().size());
 
-    commitment_type commitment = result_single.commitment();
+    commitment_type commitment = result_single->commitment();
 
     key_payload_batch_type batch{
         pair<key_type, payload_type>{ make_bytes(0x01, 0x02, 0x03),
@@ -104,21 +111,22 @@ TEST(OZKSTests, InsertBatchTest)
     };
 
     auto result = ozks.insert(batch);
+    ozks.flush();
 
     EXPECT_EQ(6, result.size());
-    EXPECT_NE(commitment, result[0].commitment());
-    EXPECT_EQ(result[0].commitment(), result[1].commitment());
-    EXPECT_EQ(result[1].commitment(), result[2].commitment());
-    EXPECT_EQ(result[2].commitment(), result[3].commitment());
-    EXPECT_EQ(result[3].commitment(), result[4].commitment());
-    EXPECT_EQ(result[5].commitment(), result[4].commitment());
+    EXPECT_NE(commitment, result[0]->commitment());
+    EXPECT_EQ(result[0]->commitment(), result[1]->commitment());
+    EXPECT_EQ(result[1]->commitment(), result[2]->commitment());
+    EXPECT_EQ(result[2]->commitment(), result[3]->commitment());
+    EXPECT_EQ(result[3]->commitment(), result[4]->commitment());
+    EXPECT_EQ(result[5]->commitment(), result[4]->commitment());
 
-    EXPECT_GT(result[0].append_proof().size(), 0);
-    EXPECT_GT(result[1].append_proof().size(), 0);
-    EXPECT_GT(result[2].append_proof().size(), 0);
-    EXPECT_GT(result[3].append_proof().size(), 0);
-    EXPECT_GT(result[4].append_proof().size(), 0);
-    EXPECT_GT(result[5].append_proof().size(), 0);
+    EXPECT_GT(result[0]->append_proof().size(), 0);
+    EXPECT_GT(result[1]->append_proof().size(), 0);
+    EXPECT_GT(result[2]->append_proof().size(), 0);
+    EXPECT_GT(result[3]->append_proof().size(), 0);
+    EXPECT_GT(result[4]->append_proof().size(), 0);
+    EXPECT_GT(result[5]->append_proof().size(), 0);
 }
 
 TEST(OZKSTests, QueryTest)
@@ -129,8 +137,9 @@ TEST(OZKSTests, QueryTest)
     auto payload = make_bytes(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
 
     auto result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(1, result.append_proof().size());
+    EXPECT_EQ(1, result->append_proof().size());
 
     QueryResult query_result = ozks.query(key);
     EXPECT_EQ(true, query_result.is_member());
@@ -169,6 +178,12 @@ TEST(OZKSTests, MultiInsertQueryTest)
     };
 
     auto result = ozks.insert(batch);
+    ozks.flush();
+
+    // Check inserts are verified
+    for (const auto &single_result : result) {
+        EXPECT_TRUE(single_result->verify());
+    }
 
     auto key = make_bytes(0x03, 0x04, 0x05);
     auto payload = make_bytes(0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8);
@@ -200,58 +215,66 @@ TEST(OZKSTests, InsertResultVerificationTest)
     auto key = make_bytes(0x01, 0x02, 0x03, 0x04);
     auto payload = make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF);
 
-    InsertResult insert_result = ozks.insert(key, payload);
+    auto insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0x02, 0x03, 0x04, 0x05);
     payload = make_bytes(0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0x03, 0x03, 0x04, 0x05);
     payload = make_bytes(0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0xFF, 0xFE, 0xFD, 0xFC);
     payload = make_bytes(0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0xF0, 0xF1, 0xF2, 0xF3);
     payload = make_bytes(0xA2, 0xB3, 0xC4, 0xD5, 0xE6, 0xF7);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0xF1, 0xF2, 0xF3, 0xF4);
     payload = make_bytes(0xA3, 0xB4, 0xC5, 0xD6, 0xE7, 0xF8);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0xF2, 0xF3, 0xF4, 0xF5);
     payload = make_bytes(0xA4, 0xB5, 0xC6, 0xD7, 0xE8, 0xF9);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 
     key = make_bytes(0xF3, 0xF4, 0xF5, 0xF6);
     payload = make_bytes(0xA5, 0xB6, 0xC7, 0xD8, 0xE9, 0xFA);
 
     insert_result = ozks.insert(key, payload);
+    ozks.flush();
 
-    EXPECT_EQ(true, insert_result.verify());
+    EXPECT_EQ(true, insert_result->verify());
 }
 
 TEST(OZKSTests, RandomInsertVerificationTest)
@@ -262,13 +285,13 @@ TEST(OZKSTests, RandomInsertVerificationTest)
     payload_type payload(40);
     vector<key_type> valid_keys;
 
-    for (int i = 0; i < 10000; i++) {
-        get_random_bytes(
-            reinterpret_cast<unsigned char *>(key.data()), key.size());
+    for (size_t i = 0; i < random_iterations; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
         auto insert_result = ozks.insert(key, payload);
-        EXPECT_EQ(true, insert_result.verify());
+        ozks.flush();
+        EXPECT_EQ(true, insert_result->verify());
 
         // Add some keys at random to check later (up to 100)
         unsigned char c;
@@ -298,6 +321,57 @@ TEST(OZKSTests, RandomInsertVerificationTest)
     }
 }
 
+TEST(OZKSTests, RandomMultiInsertVerificationTest)
+{
+    OZKS ozks;
+    key_type key(16);
+    payload_type payload(40);
+    vector<key_type> valid_keys;
+
+    key_payload_batch_type insertions;
+
+    for (size_t i = 0; i < random_iterations; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
+
+        insertions.push_back({ key, payload });
+
+        unsigned char c;
+        get_random_bytes(&c, 1);
+        if (valid_keys.size() < 100 && c > 128) {
+            valid_keys.push_back(key);
+        }
+    }
+
+    auto insert_result = ozks.insert(insertions);
+    ozks.flush();
+
+    // Check all insertions are verified
+    for (size_t i = 0; i < insert_result.size(); i++) {
+        auto &single_result = insert_result[i];
+        EXPECT_TRUE(single_result->verify());
+    }
+
+
+    // Check the valid keys are found and that their path is verified correctly
+    for (size_t i = 0; i < valid_keys.size(); i++) {
+        auto result = ozks.query(valid_keys[i]);
+        EXPECT_TRUE(result.is_member());
+        EXPECT_NE(0, result.payload().size());
+        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+    }
+
+    // Check that invalid keys are not found and that their path is verified correctly
+    for (size_t i = 0; i < 1000; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+
+        auto result = ozks.query(key);
+        EXPECT_FALSE(result.is_member());
+        EXPECT_EQ(0, result.payload().size());
+        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
+    }
+}
+
 TEST(OZKSTests, QueryResultVerificationTest)
 {
     OZKS ozks;
@@ -318,6 +392,7 @@ TEST(OZKSTests, QueryResultVerificationTest)
     };
 
     auto result = ozks.insert(batch);
+    ozks.flush();
     EXPECT_EQ(6, result.size());
 
     auto key = make_bytes(0x03, 0x04, 0x05);
@@ -362,6 +437,8 @@ TEST(OZKSTests, SaveLoadTest)
             some_keys[i] = key;
         }
     }
+
+    ozks.flush();
 
     stringstream ss;
     size_t save_size = ozks.save(ss);
@@ -410,6 +487,8 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
         }
     }
 
+    ozks.flush();
+
     stringstream ss;
     size_t save_size = ozks.save(ss);
 
@@ -457,6 +536,8 @@ TEST(OZKSTests, SaveLoadToVectorTest)
             some_keys[i] = key;
         }
     }
+
+    ozks.flush();
 
     vector<byte> vec;
     size_t save_size = ozks.save(vec);
@@ -512,6 +593,8 @@ TEST(OZKSTests, ConfigurationTest)
 
     ozks1.insert(key, payload);
     ozks2.insert(key, payload);
+    ozks1.flush();
+    ozks2.flush();
 
     comm1 = ozks1.get_commitment();
     comm2 = ozks2.get_commitment();
@@ -532,6 +615,8 @@ TEST(OZKSTests, ConfigurationTest)
 
     ozks3.insert(key, payload);
     ozks4.insert(key, payload);
+    ozks3.flush();
+    ozks4.flush();
 
     comm1 = ozks3.get_commitment();
     comm2 = ozks4.get_commitment();

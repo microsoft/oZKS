@@ -50,7 +50,12 @@ namespace ozks {
         bool lookup(
             const partial_label_type &lookup_label,
             lookup_path_type &path,
-            bool include_searched = true) const;
+            bool include_searched = true);
+
+        /**
+        Update hashes on the path of the given label
+        */
+        void update_hashes(const partial_label_type &label);
 
         /**
         Returns a string representation of this node.
@@ -85,7 +90,14 @@ namespace ozks {
         /**
         Node hash
         */
-        hash_type hash = {};
+        hash_type hash() const
+        {
+            if (is_dirty_) {
+                throw std::runtime_error("Tried to obtain hash of a node that needs to be updated");
+            }
+
+            return hash_;
+        }
 
         /**
         Save this node to a stream
@@ -122,7 +134,15 @@ namespace ozks {
         static std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t> load(
             const std::vector<T> &vec, std::size_t position = 0);
 
+        /**
+        Update the hash of the current node
+        */
+        bool update_hash();
+
     private:
+        hash_type hash_ = {};
+        bool is_dirty_ = false;
+
         /**
         Initialize node with given label and payload.
         Will compute and update the hash for the node.
@@ -146,9 +166,10 @@ namespace ozks {
         */
         void init(const partial_label_type &init_label);
 
-        /**
-        Update the hash of the current node
-        */
-        void update_hash();
+        bool lookup(
+            const partial_label_type &lookup_label,
+            lookup_path_type &path,
+            bool include_searched,
+            bool update_hashes);
     };
 } // namespace ozks

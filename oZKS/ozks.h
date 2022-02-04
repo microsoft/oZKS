@@ -5,6 +5,7 @@
 
 // STD
 #include <iostream>
+#include <memory>
 #include <unordered_map>
 
 // oZKS
@@ -18,12 +19,17 @@
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
 
-namespace ozks {
+namespace {
     struct store_type {
-        payload_type payload;
-        randomness_type randomness;
+        ozks::payload_type payload;
+        ozks::randomness_type randomness;
     };
 
+    using pending_insertion = std::pair<ozks::key_type, ozks::payload_type>;
+    using pending_result = std::pair<ozks::key_type, std::shared_ptr<ozks::InsertResult>>;
+}
+
+namespace ozks {
     class OZKS {
     public:
         /**
@@ -39,7 +45,7 @@ namespace ozks {
         /**
         Insert a key and payload into this instance
         */
-        InsertResult insert(const key_type &key, const payload_type &payload);
+        std::shared_ptr<InsertResult> insert(const key_type &key, const payload_type &payload);
 
         /**
         Insert a batch of keys and payloads into this instance
@@ -50,6 +56,11 @@ namespace ozks {
         Perform a query for a given key
         */
         QueryResult query(const key_type &key) const;
+
+        /**
+        Flush any pending insertions
+        */
+        void flush();
 
         /**
         Get the VRF public key that can be used to verify VRF proofs
@@ -102,6 +113,9 @@ namespace ozks {
 
         std::unordered_map<key_type, store_type, utils::byte_vector_hash> store_;
 
+        std::vector<pending_insertion> pending_insertions_;
+        std::vector<pending_result> pending_results_;
+
         std::pair<payload_type, randomness_type> commit(const payload_type &payload);
 
         OZKSConfig config_;
@@ -119,5 +133,8 @@ namespace ozks {
         void initialize_vrf();
 
         hash_type get_key_hash(const key_type &key) const;
+
+        void do_pending_insertions();
+
     };
 } // namespace ozks

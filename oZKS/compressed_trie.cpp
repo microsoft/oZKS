@@ -27,6 +27,7 @@ void CompressedTrie::insert(
 
     epoch_++;
     root_->insert(lab, payload, epoch_);
+    root_->update_hashes(lab);
 
     // To get the append proof we need to lookup the item we just inserted after hashes have been
     // updated
@@ -38,6 +39,8 @@ void CompressedTrie::insert(
 void CompressedTrie::insert(
     const label_payload_batch_type &label_payload_batch, append_proof_batch_type &append_proofs)
 {
+    vector<partial_label_type> labs;
+
     append_proofs.resize(label_payload_batch.size());
     epoch_++;
 
@@ -45,13 +48,20 @@ void CompressedTrie::insert(
         const auto &label = label_payload_batch[idx].first;
         const auto &payload = label_payload_batch[idx].second;
 
-        vector<bool> lab = bytes_to_bools(label);
+        labs.emplace_back(bytes_to_bools(label));
+        const auto &lab = labs[idx];
 
         root_->insert(lab, payload, epoch_);
     }
 
-    // To get the append proof we need to lookup the item we just inserted after hashes have been
-    // updated
+    for (size_t idx = 0; idx < label_payload_batch.size(); idx++) {
+        const auto &label = label_payload_batch[idx].first;
+        const auto &lab = labs[idx];
+
+        root_->update_hashes(lab);
+    }
+
+    // To get the append proof we need to lookup the item we just inserted
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
         const label_type &label = label_payload_batch[idx].first;
         append_proof_type &append_proof = append_proofs[idx];
@@ -68,7 +78,9 @@ bool CompressedTrie::lookup(const label_type &label, lookup_path_type &path) con
 }
 
 bool CompressedTrie::lookup(
-    const label_type &label, lookup_path_type &path, bool include_searched) const
+    const label_type &label,
+    lookup_path_type &path,
+    bool include_searched) const
 {
     path.clear();
     partial_label_type partial_label = bytes_to_bools(label);
@@ -82,12 +94,13 @@ string CompressedTrie::to_string(bool include_payload) const
 
 void CompressedTrie::get_commitment(commitment_type &commitment) const
 {
-    if (root_->hash.size() == 0) {
+    hash_type root_hash = root_->hash();
+    if (root_hash.size() == 0) {
         throw runtime_error("No commitment has been computed");
     }
 
-    commitment.resize(root_->hash.size());
-    utils::copy_bytes(root_->hash.data(), root_->hash.size(), commitment.data());
+    commitment.resize(root_hash.size());
+    utils::copy_bytes(root_hash.data(), root_hash.size(), commitment.data());
 }
 
 void CompressedTrie::clear()

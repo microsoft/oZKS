@@ -19,7 +19,8 @@ using namespace std;
 using namespace ozks;
 
 namespace {
-    OZKS ozks_; // The OZKS instance
+    OZKSConfig ozks_config_ = { false, false };
+    OZKS ozks_(ozks_config_); // The OZKS instance
     vector<key_type> keys_;
 
     string file_name_;
@@ -51,6 +52,7 @@ static void OZKSInsert(benchmark::State &state)
         state.ResumeTiming();
 
         auto insert_result = ozks_.insert(key, payload);
+        ozks_.flush();
 
         state.PauseTiming();
         // Max 1 million keys
@@ -71,6 +73,40 @@ static void OZKSInsert(benchmark::State &state)
     state.counters["PrivateSet"] = benchmark::Counter(
         (double)mem_use.second, benchmark::Counter::kDefaults, benchmark::Counter::OneK::kIs1024);
     state.counters["Elapsed"] = benchmark::Counter((double)total_ms.count());
+}
+
+static void OZKSInsertFlush(benchmark::State& state)
+{
+    key_type key(40);
+    payload_type payload(40);
+    OZKS ozks(ozks_config_);
+    
+    // Measure total duration
+    auto start = chrono::high_resolution_clock::now();
+
+    // Insertion
+    for (auto _ : state) {
+        state.PauseTiming();
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
+        state.ResumeTiming();
+        
+        ozks.insert(key, payload);
+    }
+
+    auto flush_start = chrono::high_resolution_clock::now();
+    ozks.flush();
+    auto flush_end = chrono::high_resolution_clock::now();
+
+    // Report how long it took to perform all repetitions
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> diff = end - start;
+    auto total_ms = chrono::duration_cast<chrono::milliseconds>(diff);
+    chrono::duration<double> flush_diff = flush_end - flush_start;
+    auto flush_total_ms = chrono::duration_cast<chrono::milliseconds>(flush_diff);
+
+    state.counters["Elapsed"] = benchmark::Counter((double)total_ms.count());
+    state.counters["FlushElapsed"] = benchmark::Counter((double)flush_total_ms.count());
 }
 
 static void OZKSLookup(benchmark::State &state)
@@ -221,6 +257,7 @@ int main(int argc, char **argv)
     }
 
     benchmark::RegisterBenchmark("OZKSInsert", OZKSInsert)->Iterations(iterations);
+    benchmark::RegisterBenchmark("OZKSInsertFlush", OZKSInsertFlush)->Iterations(iterations);
     benchmark::RegisterBenchmark("OZKSLookup", OZKSLookup);
     benchmark::RegisterBenchmark("OZKSFailedLookup", OZKSFailedLookup);
     benchmark::RegisterBenchmark("OZKSVerifySuccess", OZKSVerifySuccessfulQuery);
