@@ -38,7 +38,7 @@ if(OZKS_BUILD_BENCH)
         message(STATUS "GoogleBenchmark: found")
     endif()
 
-    find_package(Microsoft.GSL 3 CONFIG QUIET REQUIRED)
+    find_package(Microsoft.GSL 4 CONFIG QUIET REQUIRED)
     if(NOT Microsoft.GSL_FOUND)
         message(FATAL_ERROR "Microsoft GSL: not found")
     else()
