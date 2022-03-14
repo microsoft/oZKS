@@ -35,9 +35,12 @@ TEST(OZKSTests, InsertTest)
     auto key = make_bytes(0x01, 0x02, 0x03);
     auto payload = make_bytes(0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA);
 
+    EXPECT_EQ(0, ozks.get_epoch());
+
     auto result = ozks.insert(key, payload);
     ozks.flush();
 
+    EXPECT_EQ(1, ozks.get_epoch());
     EXPECT_NE(0, result->commitment().size()); // Should have commitment
     EXPECT_EQ(1, result->append_proof().size()); // First inserted
 
@@ -49,6 +52,7 @@ TEST(OZKSTests, InsertTest)
     result = ozks.insert(key, payload);
     ozks.flush();
 
+    EXPECT_EQ(2, ozks.get_epoch());
     EXPECT_NE(0, result->commitment().size());
     EXPECT_NE(commitment1, result->commitment());
     EXPECT_EQ(2, result->append_proof().size()); // Sibling
@@ -88,9 +92,12 @@ TEST(OZKSTests, InsertBatchTest)
     auto key = make_bytes(0x01, 0x01, 0x01);
     auto payload = make_bytes(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
 
+    EXPECT_EQ(0, ozks.get_epoch());
+
     auto result_single = ozks.insert(key, payload);
     ozks.flush();
 
+    EXPECT_EQ(1, ozks.get_epoch());
     EXPECT_EQ(1, result_single->append_proof().size());
 
     commitment_type commitment = result_single->commitment();
@@ -113,6 +120,7 @@ TEST(OZKSTests, InsertBatchTest)
     auto result = ozks.insert(batch);
     ozks.flush();
 
+    EXPECT_EQ(2, ozks.get_epoch());
     EXPECT_EQ(6, result.size());
     EXPECT_NE(commitment, result[0]->commitment());
     EXPECT_EQ(result[0]->commitment(), result[1]->commitment());

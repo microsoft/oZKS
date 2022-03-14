@@ -68,6 +68,11 @@ namespace ozks {
         VRFPublicKey get_public_key() const;
 
         /**
+        Get the current epoch
+        */
+        std::size_t get_epoch() const;
+
+        /**
         Get the current commitment
         */
         Commitment get_commitment() const;

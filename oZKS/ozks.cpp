@@ -151,6 +151,11 @@ VRFPublicKey OZKS::get_public_key() const
     return vrf_pk_;
 }
 
+size_t OZKS::get_epoch() const
+{
+    return trie_.epoch();
+}
+
 Commitment OZKS::get_commitment() const
 {
     commitment_type commitment;
