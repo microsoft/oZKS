@@ -52,3 +52,11 @@ execute_process(
 if(result)
     message(FATAL_ERROR "flatc failed to compile query_result.fbs (${result})")
 endif()
+
+execute_process(
+    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/insert_result.fbs"
+    OUTPUT_QUIET
+    RESULT_VARIABLE result)
+if(result)
+    message(FATAL_ERROR "flatc failed to compile insert_result.fbs (${result})")
+endif()

@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 // STD
+#include <sstream>
 
 // OZKS
 #include "oZKS/ct_node.h"
@@ -97,4 +98,82 @@ TEST(InsertResultTests, VerifySingleInsertTest)
         EXPECT_TRUE(res.initialized());
         EXPECT_TRUE(res.verify());
     }
+}
+
+TEST(InsertResultTests, SaveLoadVectorTest)
+{
+    InsertResult ir;
+
+    commitment_type commitment = make_bytes(0x80, 0x23, 0x7f, 0x63);
+
+    hash_type hash1 = utils::compute_hash(make_bytes(0x01, 0x02, 0x03), "hash");
+    hash_type hash2 = utils::compute_hash(make_bytes(0x02, 0x03, 0x04), "hash");
+    hash_type hash3 = utils::compute_hash(make_bytes(0x03, 0x04, 0x05), "hash");
+
+    append_proof_type append_proof(3);
+    append_proof[0].first = bytes_to_bools(make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE));
+    append_proof[1].first = bytes_to_bools(make_bytes(0xA1, 0xB1, 0xC1, 0xD1));
+    append_proof[2].first = bytes_to_bools(make_bytes(0xA2, 0xB2, 0xC2));
+    append_proof[0].second = hash1;
+    append_proof[1].second = hash2;
+    append_proof[2].second = hash3;
+
+    ir.init_result(commitment, append_proof);
+
+    vector<uint8_t> buffer;
+    size_t save_size = ir.save(buffer);
+
+    InsertResult ir2;
+    EXPECT_FALSE(ir2.initialized());
+    size_t load_size = InsertResult::load(ir2, buffer);
+
+    EXPECT_EQ(save_size, load_size);
+    EXPECT_TRUE(ir2.initialized());
+    EXPECT_EQ(ir2.commitment(), ir.commitment());
+    EXPECT_EQ(ir.append_proof().size(), ir2.append_proof().size());
+    EXPECT_EQ(ir.append_proof()[0].first, ir2.append_proof()[0].first);
+    EXPECT_EQ(ir.append_proof()[0].second, ir2.append_proof()[0].second);
+    EXPECT_EQ(ir.append_proof()[1].first, ir2.append_proof()[1].first);
+    EXPECT_EQ(ir.append_proof()[1].second, ir2.append_proof()[1].second);
+    EXPECT_EQ(ir.append_proof()[2].first, ir2.append_proof()[2].first);
+    EXPECT_EQ(ir.append_proof()[2].second, ir2.append_proof()[2].second);
+}
+
+TEST(InsertResultTests, SaveLoadStreamTest)
+{
+    InsertResult ir;
+
+    commitment_type commitment = make_bytes(0x80, 0x23, 0x7f, 0x63);
+
+    hash_type hash1 = utils::compute_hash(make_bytes(0x01, 0x02, 0x03), "hash");
+    hash_type hash2 = utils::compute_hash(make_bytes(0x02, 0x03, 0x04), "hash");
+    hash_type hash3 = utils::compute_hash(make_bytes(0x03, 0x04, 0x05), "hash");
+
+    append_proof_type append_proof(3);
+    append_proof[0].first = bytes_to_bools(make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE));
+    append_proof[1].first = bytes_to_bools(make_bytes(0xA1, 0xB1, 0xC1, 0xD1));
+    append_proof[2].first = bytes_to_bools(make_bytes(0xA2, 0xB2, 0xC2));
+    append_proof[0].second = hash1;
+    append_proof[1].second = hash2;
+    append_proof[2].second = hash3;
+
+    ir.init_result(commitment, append_proof);
+
+    stringstream ss;
+    size_t save_size = ir.save(ss);
+
+    InsertResult ir2;
+    EXPECT_FALSE(ir2.initialized());
+    size_t load_size = InsertResult::load(ir2, ss);
+
+    EXPECT_EQ(save_size, load_size);
+    EXPECT_TRUE(ir2.initialized());
+    EXPECT_EQ(ir2.commitment(), ir.commitment());
+    EXPECT_EQ(ir.append_proof().size(), ir2.append_proof().size());
+    EXPECT_EQ(ir.append_proof()[0].first, ir2.append_proof()[0].first);
+    EXPECT_EQ(ir.append_proof()[0].second, ir2.append_proof()[0].second);
+    EXPECT_EQ(ir.append_proof()[1].first, ir2.append_proof()[1].first);
+    EXPECT_EQ(ir.append_proof()[1].second, ir2.append_proof()[1].second);
+    EXPECT_EQ(ir.append_proof()[2].first, ir2.append_proof()[2].first);
+    EXPECT_EQ(ir.append_proof()[2].second, ir2.append_proof()[2].second);
 }

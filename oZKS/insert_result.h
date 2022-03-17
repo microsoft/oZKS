@@ -5,9 +5,11 @@
 
 // STL
 #include <memory>
+#include <iostream>
 
 // oZKS
 #include "oZKS/defines.h"
+#include "oZKS/serialization_helpers.h"
 
 namespace ozks {
     /**
@@ -65,6 +67,39 @@ namespace ozks {
         Verify the append proof and commitment
         */
         bool verify() const;
+
+        /**
+        Save this insert result to a stream
+        */
+        std::size_t save(std::ostream &stream) const;
+
+        /**
+        Save this insert result to a byte vector
+        */
+        template <class T>
+        std::size_t save(std::vector<T> &vector) const;
+
+        /**
+        Save this insert result to a serialization writer
+        */
+        std::size_t save(SerializationWriter &writer) const;
+
+        /**
+        Load an insert result from a serialization reader
+        */
+        static std::size_t load(InsertResult &insert_result, SerializationReader &reader);
+
+        /**
+        Load an insert result from a stream
+        */
+        static std::size_t load(InsertResult &insert_result, std::istream &stream);
+
+        /**
+        Load an insert result from a vector
+        */
+        template <class T>
+        static std::size_t load(
+            InsertResult &insert_result, const std::vector<T> &vector, std::size_t position = 0);
 
     private:
         std::unique_ptr<commitment_type> commitment_;
