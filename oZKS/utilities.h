@@ -81,7 +81,7 @@ namespace ozks {
 
         /**
         Compute the hash of a leaf node in a Compressed Trie.
-        The hash is computed by using SHA512 on the concatenation of:
+        The hash is computed by using BLAKE2 on the concatenation of:
         - partial label
         - payload
         - epoch
@@ -94,7 +94,7 @@ namespace ozks {
 
         /**
         Compute the hash of a non-leaf node in a Compressed Trie.
-        The hash is computed by using SHA512 on the concatenation of:
+        The hash is computed by using BLAKE2 on the concatenation of:
         - partial label of left node
         - hash of left node
         - partial label of right node
@@ -115,9 +115,9 @@ namespace ozks {
             gsl::span<const std::byte> buffer, hash_type &hash, randomness_type &randomness);
 
         /**
-        Compute a domain-separated SHA512 hash of the given input. In other words, this function
-        returns SHA512(domain_str || in). The benefit is that we can create multiple independent
-        hash functions from SHA512: a separate one for each distinct use.
+        Compute a domain-separated BLAKE2 hash of the given input. In other words, this function
+        returns BLAKE2(domain_str || in). The benefit is that we can create multiple independent
+        hash functions from BLAKE2: a separate one for each distinct use.
         */
         hash_type compute_hash(gsl::span<const std::byte> in, const std::string &domain_str);
 

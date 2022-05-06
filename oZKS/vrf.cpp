@@ -42,7 +42,7 @@ namespace {
         // Write all points together into a single buffer
         vector<byte> hash_buf = append_ecpt_to_buffer(forward<Points>(points)...);
 
-        // Compute by applying SHA512 to buffer; truncate and reduce modulo group order
+        // Compute by applying BLAKE2 to buffer; truncate and reduce modulo group order
         hash_type proof_hash = utils::compute_hash(hash_buf, "vrf_proof_hash");
         decltype(VRFProof::c) c;
         static_assert(sizeof(proof_hash) >= sizeof(c), "hash_type is smaller than scalar type");
