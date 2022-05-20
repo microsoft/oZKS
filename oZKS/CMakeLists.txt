@@ -39,5 +39,6 @@ install(
 
 add_subdirectory(hash)
 add_subdirectory(fourq)
+add_subdirectory(storage)
 
 set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES} PARENT_SCOPE)
