@@ -4,37 +4,40 @@
 #pragma once
 
 // STD
-#include <tuple>
+#include <vector>
 
 // OZKS
-#include "oZKS/defines.h"
-#include "oZKS/ct_node.h"
-#include "oZKS/compressed_trie.h"
+#include "storage.h"
 
 namespace ozks {
     namespace storage {
-        class Storage {
+        class MemoryStorage : public Storage {
         public:
+            MemoryStorage(std::vector<std::uint8_t>& v);
+
             /**
             Get a node from storage
             */
             virtual std::tuple<std::size_t, partial_label_type, partial_label_type> LoadCTNode(
-                CTNode &node) = 0;
+                CTNode &node);
 
             /**
             Save a node to storage
             */
-            virtual std::size_t SaveCTNode(const CTNode &node) = 0;
+            virtual std::size_t SaveCTNode(const CTNode &node);
 
             /**
             Get a compressed trie from storage
             */
-            virtual std::size_t LoadCompressedTrie(CompressedTrie &trie) = 0;
+            virtual std::size_t LoadCompressedTrie(CompressedTrie &trie);
 
             /**
             Save a compressed trie to storage
             */
-            virtual std::size_t SaveCompressedTrie(const CompressedTrie &trie) = 0;
+            virtual std::size_t SaveCompressedTrie(const CompressedTrie &trie);
+
+        private:
+            std::vector<std::uint8_t> &v_;
         };
     } // namespace storage
 } // namespace ozks
