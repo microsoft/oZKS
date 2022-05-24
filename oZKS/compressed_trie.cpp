@@ -11,13 +11,18 @@
 #include "oZKS/ct_node.h"
 #include "oZKS/utilities.h"
 #include "oZKS/version.h"
+#include "oZKS/fourq/random.h"
 
 using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
+size_t const ID_SIZE = 16;
+
 CompressedTrie::CompressedTrie() : root_(make_unique<CTNode>()), epoch_(0)
-{}
+{
+    init_random_id();
+}
 
 void CompressedTrie::insert(
     const label_type &label, const payload_type &payload, append_proof_type &append_proof)
@@ -107,6 +112,7 @@ void CompressedTrie::clear()
 {
     epoch_ = 0;
     root_ = make_unique<CTNode>();
+    init_random_id();
 }
 
 size_t CompressedTrie::save(SerializationWriter &writer) const
@@ -266,6 +272,12 @@ size_t CompressedTrie::load_tree(CTNode &node, size_t &node_count, Serialization
     }
 
     return size;
+}
+
+void CompressedTrie::init_random_id()
+{
+    id_.resize(ID_SIZE);
+    random_bytes(reinterpret_cast<unsigned char *>(id_.data()), static_cast<unsigned int>(id_.size()));
 }
 
 // Explicit instantiations

@@ -13,6 +13,7 @@
 #include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
 
+
 namespace ozks {
     class CompressedTrie {
     public:
@@ -53,6 +54,14 @@ namespace ozks {
         std::size_t epoch() const
         {
             return epoch_;
+        }
+
+        /**
+        Get the current id
+        */
+        const std::vector<std::byte> id() const
+        {
+            return id_;
         }
 
         /**
@@ -102,6 +111,7 @@ namespace ozks {
     private:
         std::unique_ptr<CTNode> root_;
         std::size_t epoch_;
+        std::vector<std::byte> id_;
 
         bool lookup(const label_type &label, lookup_path_type &path, bool include_searched) const;
 
@@ -111,5 +121,7 @@ namespace ozks {
         std::size_t save_tree(const CTNode *node, SerializationWriter &writer) const;
         static std::size_t load_tree(
             CTNode &node, std::size_t &node_count, SerializationReader &reader);
+
+        void init_random_id();
     };
 } // namespace ozks
