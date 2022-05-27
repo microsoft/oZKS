@@ -15,12 +15,16 @@
 
 
 namespace ozks {
+    namespace storage {
+        class Storage;
+    }
+
     class CompressedTrie {
     public:
         /**
         Constructor
         */
-        CompressedTrie();
+        CompressedTrie(std::shared_ptr<ozks::storage::Storage> storage);
 
         /**
         Insert a single label into the tree. Increments the epoch and computes updated hashes.
@@ -112,6 +116,8 @@ namespace ozks {
         std::unique_ptr<CTNode> root_;
         std::size_t epoch_;
         std::vector<std::byte> id_;
+        std::shared_ptr<ozks::storage::Storage> storage_;
+        std::vector<std::byte> trie_id_;
 
         bool lookup(const label_type &label, lookup_path_type &path, bool include_searched) const;
 

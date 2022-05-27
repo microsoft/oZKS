@@ -12,6 +12,7 @@
 #include "oZKS/utilities.h"
 #include "oZKS/version.h"
 #include "oZKS/fourq/random.h"
+#include "oZKS/storage/storage.h"
 
 using namespace std;
 using namespace ozks;
@@ -19,9 +20,11 @@ using namespace ozks::utils;
 
 size_t const ID_SIZE = 16;
 
-CompressedTrie::CompressedTrie() : root_(make_unique<CTNode>()), epoch_(0)
+CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
+    : epoch_(0), storage_(storage)
 {
     init_random_id();
+    root_ = make_unique<CTNode>(storage, trie_id_);
 }
 
 void CompressedTrie::insert(
@@ -207,12 +210,16 @@ void CompressedTrie::get_node_count(const CTNode *node, size_t &node_count) cons
 
     node_count++;
 
-    if (nullptr != node->left) {
-        get_node_count(node->left.get(), node_count);
+    if (!node->left.empty()) {
+        CTNode left_node;
+        storage_->LoadCTNode(trie_id_, node->left, left_node);
+        get_node_count(&left_node, node_count);
     }
 
-    if (nullptr != node->right) {
-        get_node_count(node->right.get(), node_count);
+    if (!node->right.empty()) {
+        CTNode right_node;
+        storage_->LoadCTNode(trie_id_, node->right, right_node);
+        get_node_count(&right_node, node_count);
     }
 }
 
@@ -226,12 +233,16 @@ size_t CompressedTrie::save_tree(const CTNode *node, SerializationWriter &writer
 
     result = node->save(writer);
 
-    if (nullptr != node->left) {
-        result += save_tree(node->left.get(), writer);
+    if (!node->left.empty()) {
+        CTNode left_node;
+        storage_->LoadCTNode(trie_id_, node->left, left_node);
+        result += save_tree(&left_node, writer);
     }
 
-    if (nullptr != node->right) {
-        result += save_tree(node->right.get(), writer);
+    if (!node->right.empty()) {
+        CTNode right_node;
+        storage_->LoadCTNode(trie_id_, node->right, right_node);
+        result += save_tree(&right_node, writer);
     }
 
     return result;
@@ -251,22 +262,22 @@ size_t CompressedTrie::load_tree(CTNode &node, size_t &node_count, Serialization
 
     node = get<0>(loaded_node);
 
-    partial_label_type left_label = get<1>(loaded_node);
-    partial_label_type right_label = get<2>(loaded_node);
+    //partial_label_type left_label = get<1>(loaded_node);
+    //partial_label_type right_label = get<2>(loaded_node);
     size += get<3>(loaded_node);
 
-    if (left_label.size() > 0) {
-        node.left = make_unique<CTNode>();
-        size += load_tree(*node.left, node_count, reader);
-        if (node.left->label != left_label) {
+    if (!node.left.empty()) {
+        CTNode left_node;
+        size += load_tree(left_node, node_count, reader);
+        if (left_node.label != node.left) {
             throw runtime_error("Failed to load Compressed Trie: Left label does not match");
         }
     }
 
-    if (right_label.size() > 0) {
-        node.right = make_unique<CTNode>();
-        size += load_tree(*node.right, node_count, reader);
-        if (node.right->label != right_label) {
+    if (!node.right.empty()) {
+        CTNode right_node;
+        size += load_tree(right_node, node_count, reader);
+        if (right_node.label != node.right) {
             throw runtime_error("Failed to load Compressed Trie: Right label does not match");
         }
     }

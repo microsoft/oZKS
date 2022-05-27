@@ -8,9 +8,13 @@
 #include <vector>
 
 // OZKS
-#include "storage.h"
+#include "oZKS/storage/storage.h"
+#include "oZKS/ct_node.h"
+
 
 namespace ozks {
+    class CTNode;
+
     namespace storage {
         class StorageNodeKey {
         public:
@@ -72,12 +76,6 @@ namespace ozks {
             std::vector<std::byte> data_;
         };
 
-        //class BinaryTrie {
-        //public:
-        //    BinaryTrie()
-        //    {}
-        //};
-
         class MemoryStorage : public Storage {
         public:
             MemoryStorage();
@@ -85,7 +83,7 @@ namespace ozks {
             /**
             Get a node from storage
             */
-            virtual std::tuple<std::size_t, partial_label_type, partial_label_type> LoadCTNode(
+            virtual bool LoadCTNode(
                 const std::vector<std::byte> &trie_id,
                 const partial_label_type &node_id,
                 CTNode &node);

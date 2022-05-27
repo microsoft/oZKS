@@ -18,6 +18,7 @@
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
+//#include "oZKS/storage/storage.h"
 
 namespace {
     struct store_type {
@@ -30,6 +31,10 @@ namespace {
 }
 
 namespace ozks {
+    namespace storage {
+        class Storage;
+    }
+
     class OZKS {
     public:
         /**
@@ -114,7 +119,8 @@ namespace ozks {
 
         VRFPublicKey vrf_pk_;
 
-        CompressedTrie trie_;
+        std::shared_ptr<ozks::storage::Storage> storage_;
+        std::unique_ptr<CompressedTrie> trie_;
 
         std::unordered_map<key_type, store_type, utils::byte_vector_hash> store_;
 

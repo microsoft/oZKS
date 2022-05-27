@@ -4,7 +4,7 @@
 // STD
 
 // OZKS
-#include "memory_storage.h"
+#include "oZKS/storage/memory_storage.h"
 
 using namespace std;
 using namespace ozks;
@@ -13,28 +13,18 @@ using namespace ozks::storage;
 MemoryStorage::MemoryStorage()
 {}
 
-tuple<size_t, partial_label_type, partial_label_type> MemoryStorage::LoadCTNode(
+bool MemoryStorage::LoadCTNode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
 {
-    tuple<size_t, partial_label_type, partial_label_type> result;
     StorageNodeKey node_key{ trie_id, node_id };
     auto node_it = nodes_.find(node_key);
     if (node_it == nodes_.end()) {
-        get<0>(result) = 0;
-        get<1>(result) = {};
-        get<2>(result) = {};
-
-        return result;
+        return false;
     }
 
     auto load_result = CTNode::load(node_it->second.data());
-
-    node = std::get<0>(load_result);
-    std::get<1>(result) = std::get<1>(load_result);
-    std::get<2>(result) = std::get<2>(load_result);
-    std::get<0>(result) = std::get<3>(load_result);
-
-    return result;
+    node = get<0>(load_result);
+    return true;
 }
 
 void MemoryStorage::SaveCTNode(const vector<byte> &trie_id, const CTNode& node)

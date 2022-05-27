@@ -12,11 +12,18 @@
 // OZKS
 #include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
+//#include "oZKS/storage/storage.h"
 
 namespace ozks {
+    namespace storage {
+        class Storage;
+    }
+
     class CTNode {
     public:
         CTNode();
+
+        CTNode(std::shared_ptr<ozks::storage::Storage> storage, const std::vector<std::byte> &trie_id);
 
         CTNode(const CTNode &node);
 
@@ -25,7 +32,7 @@ namespace ozks {
         */
         bool is_empty() const
         {
-            return label.size() == 0;
+            return label.empty();
         }
 
         /**
@@ -33,13 +40,13 @@ namespace ozks {
         */
         bool is_leaf() const
         {
-            return left == nullptr && right == nullptr;
+            return left.empty() && right.empty();
         }
 
         /**
         Insert the given label and payload under this node.
         */
-        void insert(
+        partial_label_type insert(
             const partial_label_type &insert_label,
             const payload_type &insert_payload,
             const std::size_t epoch);
@@ -70,12 +77,12 @@ namespace ozks {
         /**
         Left child
         */
-        std::unique_ptr<CTNode> left;
+        partial_label_type left;
 
         /**
         Right child
         */
-        std::unique_ptr<CTNode> right;
+        partial_label_type right;
 
         /**
         Node label
@@ -142,6 +149,8 @@ namespace ozks {
     private:
         hash_type hash_ = {};
         bool is_dirty_ = false;
+        std::shared_ptr<ozks::storage::Storage> storage_;
+        std::vector<std::byte> trie_id_;
 
         /**
         Initialize node with given label and payload.

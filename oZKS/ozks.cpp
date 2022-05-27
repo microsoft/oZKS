@@ -7,6 +7,7 @@
 #include "oZKS/ozks_store_generated.h"
 #include "oZKS/utilities.h"
 #include "oZKS/version.h"
+#include "oZKS/storage/memory_storage.h"
 
 using namespace std;
 using namespace ozks;
@@ -14,6 +15,9 @@ using namespace ozks;
 OZKS::OZKS()
 {
     initialize_vrf();
+
+    storage_ = make_shared<storage::MemoryStorage>();
+    trie_ = make_unique<CompressedTrie>(storage_);
 }
 
 OZKS::OZKS(const OZKSConfig &config)
@@ -23,6 +27,9 @@ OZKS::OZKS(const OZKSConfig &config)
     if (config_.include_vrf()) {
         initialize_vrf();
     }
+
+    storage_ = make_shared<storage::MemoryStorage>();
+    trie_ = make_unique<CompressedTrie>(storage_);
 }
 
 shared_ptr<InsertResult> OZKS::insert(const key_type& key, const payload_type& payload)
@@ -73,10 +80,10 @@ void OZKS::do_pending_insertions()
     }
 
     append_proof_batch_type append_proofs;
-    trie_.insert(label_payload_batch, append_proofs);
+    trie_->insert(label_payload_batch, append_proofs);
 
     commitment_type commitment;
-    trie_.get_commitment(commitment);
+    trie_->get_commitment(commitment);
 
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
         auto &pending_result = pending_results_[idx];
@@ -98,7 +105,7 @@ QueryResult OZKS::query(const key_type &key) const
         vrf_proof = vrf_sk_.get_proof(key);
     }
 
-    if (!trie_.lookup(label, lookup_path)) {
+    if (!trie_->lookup(label, lookup_path)) {
         // Non-existence: return path to partial label that matches key and its two children
         payload_type payload;       // Empty payload
         randomness_type randomness; // Empty randomness
@@ -153,13 +160,13 @@ VRFPublicKey OZKS::get_public_key() const
 
 size_t OZKS::get_epoch() const
 {
-    return trie_.epoch();
+    return trie_->epoch();
 }
 
 Commitment OZKS::get_commitment() const
 {
     commitment_type commitment;
-    trie_.get_commitment(commitment);
+    trie_->get_commitment(commitment);
     return { get_public_key(), commitment };
 }
 
@@ -170,7 +177,7 @@ const OZKSConfig &OZKS::get_configuration() const
 
 void OZKS::clear()
 {
-    trie_.clear();
+    trie_->clear();
     store_.clear();
     pending_insertions_.clear();
     pending_results_.clear();
@@ -223,7 +230,7 @@ size_t OZKS::save(SerializationWriter &writer) const
     }
 
     // The tree needs to be saved separately because of its non-standard way of saving
-    size_t tree_size = trie_.save(writer);
+    size_t tree_size = trie_->save(writer);
 
     return tree_size + store_size + fbs_builder.GetSize();
 }
@@ -291,7 +298,7 @@ size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
     }
 
     // The tree needs to be loaded separately
-    size_t tree_size = CompressedTrie::load(ozks.trie_, reader);
+    size_t tree_size = CompressedTrie::load(*ozks.trie_, reader);
 
     return in_data.size() + store_size + tree_size;
 }

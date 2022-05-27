@@ -14,6 +14,7 @@ table CTNode {
     hash:[ubyte] (required);
     left:PartialLabel;
     right:PartialLabel;
+    is_dirty: bool;
 }
 
 root_type CTNode;

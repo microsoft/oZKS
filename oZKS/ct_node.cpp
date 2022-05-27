@@ -10,6 +10,7 @@
 #include "oZKS/ct_node.h"
 #include "oZKS/ct_node_generated.h"
 #include "oZKS/utilities.h"
+#include "oZKS/storage/storage.h"
 
 using namespace std;
 using namespace ozks;
@@ -20,6 +21,13 @@ CTNode::CTNode()
     memset(hash_.data(), 0, hash_.size());
 }
 
+CTNode::CTNode(shared_ptr<storage::Storage> storage, const vector<byte> &trie_id)
+    : storage_(storage)
+{
+    memset(hash_.data(), 0, hash_.size());
+    trie_id_ = trie_id;
+}
+
 CTNode::CTNode(const CTNode &node)
 {
     *this = node;
@@ -28,8 +36,8 @@ CTNode::CTNode(const CTNode &node)
 string CTNode::to_string(bool include_payload) const
 {
     stringstream ss;
-    string left_str = left == nullptr ? "(null)" : utils::to_string(left->label);
-    string right_str = right == nullptr ? "(null)" : utils::to_string(right->label);
+    string left_str = left.empty() ? "(empty)" : utils::to_string(left);
+    string right_str = right.empty() ? "(empty)" : utils::to_string(right);
 
     ss << "n:" << utils::to_string(label);
     ss << ":l:" << left_str << ":r:" << right_str;
@@ -40,12 +48,16 @@ string CTNode::to_string(bool include_payload) const
 
     ss << ";";
 
-    if (nullptr != left) {
-        string sub = left->to_string(include_payload);
+    if (!left.empty()) {
+        CTNode left_node;
+        storage_->LoadCTNode(trie_id_, left, left_node);
+        string sub = left_node.to_string(include_payload);
         ss << sub;
     }
-    if (nullptr != right) {
-        string sub = right->to_string(include_payload);
+    if (!right.empty()) {
+        CTNode right_node;
+        storage_->LoadCTNode(trie_id_, right, right_node);
+        string sub = right_node.to_string(include_payload);
         ss << sub;
     }
 
@@ -58,8 +70,10 @@ CTNode &CTNode::operator=(const CTNode &node)
     payload = node.payload;
     hash_ = node.hash_;
     is_dirty_ = node.is_dirty_;
-    left = nullptr;
-    right = nullptr;
+    left.clear();
+    right.clear();
+    storage_ = node.storage_;
+    trie_id_ = node.trie_id_;
 
     return *this;
 }
@@ -112,22 +126,26 @@ bool CTNode::update_hash()
     hash_type left_hash{};
     hash_type right_hash{};
 
-    if (nullptr != left) {
-        if (left->is_dirty_) {
+    if (!left.empty()) {
+        CTNode left_node;
+        storage_->LoadCTNode(trie_id_, left, left_node);
+        if (left_node.is_dirty_) {
             return false;
         }
 
-        left_hash = left->hash();
-        left_label = left->label;
+        left_hash = left_node.hash();
+        left_label = left_node.label;
     }
 
-    if (nullptr != right) {
-        if (right->is_dirty_) {
+    if (!right.empty()) {
+        CTNode right_node;
+        storage_->LoadCTNode(trie_id_, right, right_node);
+        if (right_node.is_dirty_) {
             return false;
         }
 
-        right_hash = right->hash();
-        right_label = right->label;
+        right_hash = right_node.hash();
+        right_label = right_node.label;
     }
 
     compute_node_hash(left_label, left_hash, right_label, right_hash, hash_);
@@ -136,7 +154,7 @@ bool CTNode::update_hash()
     return true;
 }
 
-void CTNode::insert(
+partial_label_type CTNode::insert(
     const partial_label_type &insert_label, const payload_type &insert_payload, const size_t epoch)
 {
     if (insert_label == label) {
@@ -153,75 +171,105 @@ void CTNode::insert(
 
     if (is_leaf() && !is_empty()) {
         // Convert current leaf to non-leaf
-        left = make_unique<CTNode>();
-        right = make_unique<CTNode>();
+        CTNode left_node(storage_, trie_id_);
+        CTNode right_node(storage_, trie_id_);
 
         if (next_bit == 0) {
-            left->init(insert_label, insert_payload, epoch);
-            right->init(label, payload, hash_);
-
+            left_node.init(insert_label, insert_payload, epoch);
+            right_node.init(label, payload, hash_);
+            left = insert_label;
+            right = label;
         } else {
-            left->init(label, payload, hash_);
-            right->init(insert_label, insert_payload, epoch);
+            left_node.init(label, payload, hash_);
+            right_node.init(insert_label, insert_payload, epoch);
+            left = label;
+            right = insert_label;
         }
 
         init(common);
-        return;
+        storage_->SaveCTNode(trie_id_, *this);
+        storage_->SaveCTNode(trie_id_, left_node);
+        storage_->SaveCTNode(trie_id_, right_node);
+
+        return common;
     }
 
     // If there is a route to follow, follow it
-    if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
-        right->insert(insert_label, insert_payload, epoch);
+    if (next_bit == 1 && !right.empty() && right[common.size()] == 1) {
+        CTNode right_node;
+        storage_->LoadCTNode(trie_id_, right, right_node);
+        partial_label_type new_right = right_node.insert(insert_label, insert_payload, epoch);
+        if (new_right != right) {
+            right = new_right;
+        }
         is_dirty_ = true;
-        return;
+        storage_->SaveCTNode(trie_id_, *this);
+        return label;
     }
 
-    if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
-        left->insert(insert_label, insert_payload, epoch);
+    if (next_bit == 0 && !left.empty() && left[common.size()] == 0) {
+        CTNode left_node;
+        storage_->LoadCTNode(trie_id_, left, left_node);
+        partial_label_type new_left = left_node.insert(insert_label, insert_payload, epoch);
+        if (new_left != left) {
+            left = new_left;
+        }
         is_dirty_ = true;
-        return;
+        storage_->SaveCTNode(trie_id_, *this);
+        return label;
     }
+
+    CTNode new_node(storage_, trie_id_);
+    new_node.init(common);
 
     // Node where new node will be inserted
-    unique_ptr<CTNode> *insert_node = nullptr;
+    partial_label_type *insert_node = nullptr;
     // Node that will get the value of this node
-    unique_ptr<CTNode> *transfer_node = nullptr;
+    partial_label_type *transfer_node = nullptr;
 
     // If there is no route to follow, insert here
     if (next_bit == 1) {
-        if (nullptr == right) {
-            right = make_unique<CTNode>();
-            right->init(insert_label, insert_payload, epoch);
+        if (right.empty()) {
+            CTNode right_node(storage_, trie_id_);
+            right_node.init(insert_label, insert_payload, epoch);
+            right = insert_label;
             is_dirty_ = true;
-            return;
+
+            storage_->SaveCTNode(trie_id_, *this);
+            storage_->SaveCTNode(trie_id_, right_node);
+            return label;
         }
 
-        insert_node = &right;
-        transfer_node = &left;
+        insert_node = &new_node.right;
+        transfer_node = &new_node.left;
     } else {
-        if (nullptr == left) {
-            left = make_unique<CTNode>();
-            left->init(insert_label, insert_payload, epoch);
+        if (left.empty()) {
+            CTNode left_node(storage_, trie_id_);
+            left_node.init(insert_label, insert_payload, epoch);
+            left = insert_label;
             is_dirty_ = true;
-            return;
+
+            storage_->SaveCTNode(trie_id_, *this);
+            storage_->SaveCTNode(trie_id_, left_node);
+            return label;
         }
 
-        insert_node = &left;
-        transfer_node = &right;
+        insert_node = &new_node.left;
+        transfer_node = &new_node.right;
     }
 
-    unique_ptr<CTNode> new_node = make_unique<CTNode>();
-    new_node->init(label, payload, hash_);
-    new_node->is_dirty_ = true;
-    new_node->left.swap(left);
-    new_node->right.swap(right);
+    *transfer_node = label;
+    *insert_node = insert_label;
 
-    label = common;
-    transfer_node->swap(new_node);
-
-    *insert_node = make_unique<CTNode>();
-    (*insert_node)->init(insert_label, insert_payload, epoch);
+    CTNode new_inserted_node(storage_, trie_id_);
+    new_inserted_node.init(insert_label, insert_payload, epoch);
     is_dirty_ = true;
+
+    storage_->SaveCTNode(trie_id_, new_node);
+    storage_->SaveCTNode(trie_id_, new_inserted_node);
+    storage_->SaveCTNode(trie_id_, *this);
+
+    return common;
 }
 
 bool CTNode::lookup(
@@ -273,25 +321,35 @@ bool CTNode::lookup(
 
     // If there is a route to follow, follow it
     bool found = false;
-    CTNode *sibling = nullptr;
+    CTNode sibling;
+    CTNode left_node;
+    CTNode right_node;
 
-    if (next_bit == 1 && right != nullptr && right->label[common.size()] == 1) {
-        found = right->lookup(lookup_label, path, include_searched, update_hashes);
-        sibling = left.get();
-    } else if (next_bit == 0 && left != nullptr && left->label[common.size()] == 0) {
-        found = left->lookup(lookup_label, path, include_searched, update_hashes);
-        sibling = right.get();
+    if (next_bit == 1 && !right.empty() && right[common.size()] == 1) {
+        storage_->LoadCTNode(trie_id_, right, right_node);
+        found = right_node.lookup(lookup_label, path, include_searched, update_hashes);
+        storage_->LoadCTNode(trie_id_, left, sibling);
+    } else if (next_bit == 0 && !left.empty() && left[common.size()] == 0) {
+        storage_->LoadCTNode(trie_id_, left, left_node);
+        found = left_node.lookup(lookup_label, path, include_searched, update_hashes);
+        storage_->LoadCTNode(trie_id_, right, sibling);
     }
 
     if (!found && path.empty()) {
         if (!update_hashes) {
             // Need to include non-existence proof in result.
-            if (nullptr != left) {
-                path.push_back({ left->label, left->hash() });
+            if (!left.empty()) {
+                if (left_node.is_empty())
+                    storage_->LoadCTNode(trie_id_, left, left_node);
+
+                path.push_back({ left_node.label, left_node.hash() });
             }
 
-            if (nullptr != right) {
-                path.push_back({ right->label, right->hash() });
+            if (!right.empty()) {
+                if (right_node.is_empty())
+                    storage_->LoadCTNode(trie_id_, right, right_node);
+
+                path.push_back({ right_node.label, right_node.hash() });
             }
 
             if (!is_empty()) {
@@ -299,17 +357,19 @@ bool CTNode::lookup(
             }
         }
     } else {
-        if (nullptr != sibling) {
+        if (!sibling.is_empty()) {
             if (update_hashes) {
-                sibling->update_hash();
+                sibling.update_hash();
+                storage_->SaveCTNode(trie_id_, sibling);
             } else {
                 // Add sibling to the path
-                path.push_back({ sibling->label, sibling->hash() });
+                path.push_back({ sibling.label, sibling.hash() });
             }
         }
 
         if (update_hashes) {
             update_hash();
+            storage_->SaveCTNode(trie_id_, *this);
         }
     }
 
@@ -318,9 +378,9 @@ bool CTNode::lookup(
 
 size_t CTNode::save(SerializationWriter &writer) const
 {
-    if (is_dirty_) {
-        throw runtime_error("Attempted to save node with out of date hash");
-    }
+    //if (is_dirty_) {
+    //    throw runtime_error("Attempted to save node with out of date hash");
+    //}
 
     flatbuffers::FlatBufferBuilder fbs_builder;
 
@@ -339,23 +399,23 @@ size_t CTNode::save(SerializationWriter &writer) const
     flatbuffers::Offset<ozks::fbs::PartialLabel> left_label;
     flatbuffers::Offset<ozks::fbs::PartialLabel> right_label;
 
-    if (nullptr != left) {
-        auto left_bytes = utils::bools_to_bytes(left->label);
+    if (!left.empty()) {
+        auto left_bytes = utils::bools_to_bytes(left);
         auto left_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(left_bytes.data()), left_bytes.size());
         left_label = fbs::CreatePartialLabel(
-            fbs_builder, left_data, static_cast<uint32_t>(left->label.size()));
+            fbs_builder, left_data, static_cast<uint32_t>(left.size()));
     } else {
         auto left_data = fbs_builder.CreateVector(empty_label);
         left_label = fbs::CreatePartialLabel(fbs_builder, left_data, 0);
     }
 
-    if (nullptr != right) {
-        auto right_bytes = utils::bools_to_bytes(right->label);
+    if (!right.empty()) {
+        auto right_bytes = utils::bools_to_bytes(right);
         auto right_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(right_bytes.data()), right_bytes.size());
         right_label = fbs::CreatePartialLabel(
-            fbs_builder, right_data, static_cast<uint32_t>(right->label.size()));
+            fbs_builder, right_data, static_cast<uint32_t>(right.size()));
     } else {
         auto right_data = fbs_builder.CreateVector(empty_label);
         right_label = fbs::CreatePartialLabel(fbs_builder, right_data, 0);
@@ -367,6 +427,7 @@ size_t CTNode::save(SerializationWriter &writer) const
     ctnode_builder.add_payload(payload_data);
     ctnode_builder.add_left(left_label);
     ctnode_builder.add_right(right_label);
+    ctnode_builder.add_is_dirty(is_dirty_);
 
     auto fbs_ctnode = ctnode_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_ctnode);
@@ -414,6 +475,8 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
     partial_label_type right = utils::bytes_to_bools(
         reinterpret_cast<const byte *>(fbs_ctnode->right()->data()->data()),
         fbs_ctnode->right()->size());
+    node.left = left;
+    node.right = right;
 
     node.payload.resize(fbs_ctnode->payload()->size());
     utils::copy_bytes(
@@ -421,7 +484,8 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
     utils::copy_bytes(fbs_ctnode->hash()->data(), fbs_ctnode->hash()->size(), node.hash_.data());
 
     // is_dirty is not saved because it is in an error if we attempt to save a dirty node
-    node.is_dirty_ = false;
+    //node.is_dirty_ = false;
+    node.is_dirty_ = fbs_ctnode->is_dirty();
 
     tuple<CTNode, partial_label_type, partial_label_type, size_t> result;
     get<0>(result) = node;

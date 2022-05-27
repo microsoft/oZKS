@@ -8,17 +8,18 @@
 
 // OZKS
 #include "oZKS/defines.h"
-#include "oZKS/ct_node.h"
-#include "oZKS/compressed_trie.h"
+
 
 namespace ozks {
+    class CTNode;
+
     namespace storage {
         class Storage {
         public:
             /**
             Get a node from storage
             */
-            virtual std::tuple<std::size_t, partial_label_type, partial_label_type> LoadCTNode(
+            virtual bool LoadCTNode(
                 const std::vector<std::byte> &trie_id,
                 const partial_label_type &node_id,
                 CTNode &node) = 0;
