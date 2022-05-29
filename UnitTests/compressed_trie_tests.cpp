@@ -2,9 +2,9 @@
 // Licensed under the MIT license.
 
 #include "oZKS/compressed_trie.h"
-#include "oZKS/utilities.h"
 #include "oZKS/fourq/random.h"
-
+#include "oZKS/storage/memory_storage.h"
+#include "oZKS/utilities.h"
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -33,7 +33,8 @@ TEST(CompressedTrie, InsertTest)
     label_type bytes7 = make_bytes(0xF0, 0xF0, 0xF0, 0xF0, 0xF0);
     append_proof_type append_proof;
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     trie.insert(bytes1, make_bytes(0x01, 0x02, 0x03), append_proof);
     string status = trie.to_string();
     EXPECT_EQ(
@@ -137,7 +138,8 @@ TEST(CompressedTrie, InsertSimpleTest)
     label_type bytes6 = make_bytes(0xFF);
     append_proof_type append_proof;
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     trie.insert(bytes1, make_bytes(0xA0, 0xB0, 0xC0), append_proof);
     string status = trie.to_string();
     EXPECT_EQ(
@@ -224,7 +226,8 @@ TEST(CompressedTrie, AppendProofTest)
     append_proof_type append_proof;
     partial_label_type partial_label;
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     trie.insert(bytes1, make_bytes(0xA0, 0xB0, 0xC0), append_proof);
     EXPECT_EQ(1, append_proof.size());
     partial_label = partial_label_type{ 0, 0, 0, 1, 0, 0, 0, 1 };
@@ -296,7 +299,8 @@ TEST(CompressedTrie, InsertSimpleBatchTest)
         pair<vector<byte>, vector<byte>>{ make_bytes(0xFF), make_bytes(0xA5, 0xB5, 0xC5) }
     };
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     EXPECT_EQ(0, trie.epoch());
 
     trie.insert(label_payload_batch, append_proofs);
@@ -330,7 +334,8 @@ TEST(CompressedTrie, AppendProofBatchTest)
     append_proof_batch_type append_proofs;
     partial_label_type partial_label;
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     EXPECT_EQ(0, trie.epoch());
 
     trie.insert(label_payload_batch, append_proofs);
@@ -398,7 +403,8 @@ TEST(CompressedTrie, AppendProofBatchTest)
 
 TEST(CompressedTrie, InsertInPartialLabelTest)
 {
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
 
     label_type bytes = make_bytes(0x07);
     append_proof_type append_proof;
@@ -508,7 +514,8 @@ TEST(CompressedTrie, LookupTest)
     };
     append_proof_batch_type append_proofs;
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
 
     trie.insert(label_payload_batch, append_proofs);
 
@@ -570,7 +577,8 @@ TEST(CompressedTrie, FailedLookupTest)
     };
     append_proof_batch_type append_proofs;
 
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
 
     trie.insert(label_payload_batch, append_proofs);
 
@@ -614,7 +622,8 @@ TEST(CompressedTrie, FailedLookupTest)
 
 TEST(CompressedTrie, SaveLoadTest)
 {
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     append_proof_type append_proof;
 
     trie.insert(make_bytes(0b00010000), make_bytes(0x01, 0x02, 0x03, 0x04, 0x05), append_proof);
@@ -645,7 +654,7 @@ TEST(CompressedTrie, SaveLoadTest)
 
     size_t save_size = trie.save(ss);
 
-    CompressedTrie trie2;
+    CompressedTrie trie2(storage);
     size_t load_size = CompressedTrie::load(trie2, ss);
     EXPECT_EQ(load_size, save_size);
 
@@ -656,7 +665,8 @@ TEST(CompressedTrie, SaveLoadTest)
 
 TEST(CompressedTrie, SaveLoadTest2)
 {
-    CompressedTrie trie;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie(storage);
     append_proof_type append_proof;
 
     trie.insert(make_bytes(0b10010000), make_bytes(0x01, 0x02, 0x03, 0x04, 0x05), append_proof);
@@ -687,7 +697,7 @@ TEST(CompressedTrie, SaveLoadTest2)
 
     size_t save_size = trie.save(ss);
 
-    CompressedTrie trie2;
+    CompressedTrie trie2(storage);
     size_t load_size = CompressedTrie::load(trie2, ss);
     EXPECT_EQ(load_size, save_size);
 
@@ -698,7 +708,8 @@ TEST(CompressedTrie, SaveLoadTest2)
 
 TEST(CompressedTrie, SaveLoadTest3)
 {
-    CompressedTrie trie1;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie1(storage);
 
     label_type label(40);
     payload_type payload(40);
@@ -717,7 +728,7 @@ TEST(CompressedTrie, SaveLoadTest3)
     stringstream ss;
     trie1.save(ss);
 
-    CompressedTrie trie2;
+    CompressedTrie trie2(storage);
     CompressedTrie::load(trie2, ss);
 
     for (size_t i = 0; i < labels.size(); i++) {
@@ -734,7 +745,8 @@ TEST(CompressedTrie, SaveLoadTest3)
 
 TEST(CompressedTrie, SaveLoadToVectorTest)
 {
-    CompressedTrie trie1;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie1(storage);
 
     label_type label(40);
     payload_type payload(40);
@@ -753,7 +765,7 @@ TEST(CompressedTrie, SaveLoadToVectorTest)
     vector<byte> vec;
     trie1.save(vec);
 
-    CompressedTrie trie2;
+    CompressedTrie trie2(storage);
     CompressedTrie::load(trie2, vec);
 
     for (size_t i = 0; i < labels.size(); i++) {
@@ -770,8 +782,9 @@ TEST(CompressedTrie, SaveLoadToVectorTest)
 
 TEST(CompressedTrie, EmptyTreesTest)
 {
-    CompressedTrie trie1;
-    CompressedTrie trie2;
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    CompressedTrie trie1(storage);
+    CompressedTrie trie2(storage);
 
     commitment_type comm1;
     commitment_type comm2;
