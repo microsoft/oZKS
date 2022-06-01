@@ -36,8 +36,8 @@ CTNode::CTNode(const CTNode &node)
 string CTNode::to_string(bool include_payload) const
 {
     stringstream ss;
-    string left_str = left.empty() ? "(empty)" : utils::to_string(left);
-    string right_str = right.empty() ? "(empty)" : utils::to_string(right);
+    string left_str = left.empty() ? "(null)" : utils::to_string(left);
+    string right_str = right.empty() ? "(null)" : utils::to_string(right);
 
     ss << "n:" << utils::to_string(label);
     ss << ":l:" << left_str << ":r:" << right_str;
@@ -50,13 +50,13 @@ string CTNode::to_string(bool include_payload) const
 
     if (!left.empty()) {
         CTNode left_node;
-        storage_->LoadCTNode(trie_id_, left, left_node);
+        load(left, left_node);
         string sub = left_node.to_string(include_payload);
         ss << sub;
     }
     if (!right.empty()) {
         CTNode right_node;
-        storage_->LoadCTNode(trie_id_, right, right_node);
+        load(right, right_node);
         string sub = right_node.to_string(include_payload);
         ss << sub;
     }
@@ -70,8 +70,8 @@ CTNode &CTNode::operator=(const CTNode &node)
     payload = node.payload;
     hash_ = node.hash_;
     is_dirty_ = node.is_dirty_;
-    left.clear();
-    right.clear();
+    left = node.left;
+    right = node.right;
     storage_ = node.storage_;
     trie_id_ = node.trie_id_;
 
@@ -102,12 +102,18 @@ void CTNode::init(
 
 void CTNode::init(const partial_label_type &init_label)
 {
-    if (is_leaf())
-        throw runtime_error("Should not be used for leaf nodes");
+    // if (is_leaf())
+    //     throw runtime_error("Should not be used for leaf nodes");
 
     label = init_label;
     payload = {};
     is_dirty_ = true;
+}
+
+void CTNode::init(shared_ptr<ozks::storage::Storage> storage, const vector<byte> &trie_id)
+{
+    storage_ = storage;
+    trie_id_ = trie_id;
 }
 
 bool CTNode::update_hash()
@@ -128,7 +134,7 @@ bool CTNode::update_hash()
 
     if (!left.empty()) {
         CTNode left_node;
-        storage_->LoadCTNode(trie_id_, left, left_node);
+        load(left, left_node);
         if (left_node.is_dirty_) {
             return false;
         }
@@ -139,7 +145,7 @@ bool CTNode::update_hash()
 
     if (!right.empty()) {
         CTNode right_node;
-        storage_->LoadCTNode(trie_id_, right, right_node);
+        load(right, right_node);
         if (right_node.is_dirty_) {
             return false;
         }
@@ -197,7 +203,7 @@ partial_label_type CTNode::insert(
     // If there is a route to follow, follow it
     if (next_bit == 1 && !right.empty() && right[common.size()] == 1) {
         CTNode right_node;
-        storage_->LoadCTNode(trie_id_, right, right_node);
+        load(right, right_node);
         partial_label_type new_right = right_node.insert(insert_label, insert_payload, epoch);
         if (new_right != right) {
             right = new_right;
@@ -209,7 +215,7 @@ partial_label_type CTNode::insert(
 
     if (next_bit == 0 && !left.empty() && left[common.size()] == 0) {
         CTNode left_node;
-        storage_->LoadCTNode(trie_id_, left, left_node);
+        load(left, left_node);
         partial_label_type new_left = left_node.insert(insert_label, insert_payload, epoch);
         if (new_left != left) {
             left = new_left;
@@ -326,13 +332,13 @@ bool CTNode::lookup(
     CTNode right_node;
 
     if (next_bit == 1 && !right.empty() && right[common.size()] == 1) {
-        storage_->LoadCTNode(trie_id_, right, right_node);
+        load(right, right_node);
         found = right_node.lookup(lookup_label, path, include_searched, update_hashes);
-        storage_->LoadCTNode(trie_id_, left, sibling);
+        load(left, sibling);
     } else if (next_bit == 0 && !left.empty() && left[common.size()] == 0) {
-        storage_->LoadCTNode(trie_id_, left, left_node);
+        load(left, left_node);
         found = left_node.lookup(lookup_label, path, include_searched, update_hashes);
-        storage_->LoadCTNode(trie_id_, right, sibling);
+        load(right, sibling);
     }
 
     if (!found && path.empty()) {
@@ -340,14 +346,14 @@ bool CTNode::lookup(
             // Need to include non-existence proof in result.
             if (!left.empty()) {
                 if (left_node.is_empty())
-                    storage_->LoadCTNode(trie_id_, left, left_node);
+                    load(left, left_node);
 
                 path.push_back({ left_node.label, left_node.hash() });
             }
 
             if (!right.empty()) {
                 if (right_node.is_empty())
-                    storage_->LoadCTNode(trie_id_, right, right_node);
+                    load(right, right_node);
 
                 path.push_back({ right_node.label, right_node.hash() });
             }
@@ -394,6 +400,8 @@ size_t CTNode::save(SerializationWriter &writer) const
         fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(hash_.data()), hash_.size());
     auto payload_data =
         fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(payload.data()), payload.size());
+    //auto trie_id_data = fbs_builder.CreateVector(
+    //    reinterpret_cast<const uint8_t *>(trie_id_.data()), trie_id_.size());
 
     vector<uint8_t> empty_label;
     flatbuffers::Offset<ozks::fbs::PartialLabel> left_label;
@@ -428,6 +436,7 @@ size_t CTNode::save(SerializationWriter &writer) const
     ctnode_builder.add_left(left_label);
     ctnode_builder.add_right(right_label);
     ctnode_builder.add_is_dirty(is_dirty_);
+    //ctnode_builder.add_trie_id(trie_id_data);
 
     auto fbs_ctnode = ctnode_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_ctnode);
@@ -479,9 +488,12 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
     node.right = right;
 
     node.payload.resize(fbs_ctnode->payload()->size());
+    //node.trie_id_.resize(fbs_ctnode->trie_id()->size());
     utils::copy_bytes(
         fbs_ctnode->payload()->data(), fbs_ctnode->payload()->size(), node.payload.data());
     utils::copy_bytes(fbs_ctnode->hash()->data(), fbs_ctnode->hash()->size(), node.hash_.data());
+    //utils::copy_bytes(
+    //    fbs_ctnode->trie_id()->data(), fbs_ctnode->trie_id()->size(), node.trie_id_.data());
 
     // is_dirty is not saved because it is in an error if we attempt to save a dirty node
     //node.is_dirty_ = false;
@@ -508,6 +520,18 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
 {
     VectorSerializationReader reader(&vec, position);
     return load(reader);
+}
+
+bool CTNode::load(
+    const partial_label_type label,
+    CTNode& node) const
+{
+    bool loaded = storage_->LoadCTNode(trie_id_, label, node);
+    if (loaded) {
+        node.init(storage_, trie_id_);
+    }
+
+    return loaded;
 }
 
 // Explicit instantiations

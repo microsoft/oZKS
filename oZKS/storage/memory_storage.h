@@ -51,19 +51,14 @@ namespace ozks {
 
         class StorageNode {
         public:
-            StorageNode(const std::vector<std::byte> &trie_id, const CTNode &node)
-                : key_(trie_id, node.label), data_()
+            StorageNode(const CTNode &node)
+                : data_()
             {
                 node.save(data_);
             }
 
-            StorageNode() : key_({}, {})
+            StorageNode()
             {
-            }
-
-            const StorageNodeKey &key()
-            {
-                return key_;
             }
 
             const std::vector<std::byte> &data()
@@ -72,7 +67,6 @@ namespace ozks {
             }
 
         private:
-            StorageNodeKey key_;
             std::vector<std::byte> data_;
         };
 

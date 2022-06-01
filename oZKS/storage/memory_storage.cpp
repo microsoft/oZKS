@@ -29,7 +29,7 @@ bool MemoryStorage::LoadCTNode(
 
 void MemoryStorage::SaveCTNode(const vector<byte> &trie_id, const CTNode& node)
 {
-    StorageNode stnode(trie_id, node);
+    StorageNode stnode(node);
     StorageNodeKey key(trie_id, node.label);
 
     nodes_[key] = stnode;

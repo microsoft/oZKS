@@ -142,6 +142,13 @@ namespace ozks {
             const std::vector<T> &vec, std::size_t position = 0);
 
         /**
+        Load a node from storage
+        */
+        bool load(
+            const partial_label_type label,
+            CTNode &node) const;
+
+        /**
         Update the hash of the current node
         */
         bool update_hash();
@@ -174,6 +181,8 @@ namespace ozks {
         Payload is cleared. Hash is updated.
         */
         void init(const partial_label_type &init_label);
+
+        void init(std::shared_ptr<ozks::storage::Storage> storage, const std::vector<std::byte> &trie_id);
 
         bool lookup(
             const partial_label_type &lookup_label,
