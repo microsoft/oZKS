@@ -6,7 +6,9 @@
 
 // OZKS
 #include "oZKS/ct_node.h"
+#include "oZKS/compressed_trie.h"
 #include "oZKS/insert_result.h"
+#include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
 
 #include "gtest/gtest.h"
@@ -17,7 +19,9 @@ using namespace ozks::utils;
 
 TEST(InsertResultTests, VerifyBatchInsertTest)
 {
-    CTNode root;
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage);
+    CTNode root(&trie);
 
     append_proof_type append_proof;
     vector<partial_label_type> labels;
@@ -71,7 +75,9 @@ TEST(InsertResultTests, VerifySingleInsertTest)
 {
     payload_type payload = make_bytes(0x01, 0x02);
     vector<partial_label_type> labels;
-    CTNode root;
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage);
+    CTNode root(&trie);
     commitment_type commitment(root.hash().size());
 
     labels.emplace_back(bytes_to_bools(make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE)));

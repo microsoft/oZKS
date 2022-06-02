@@ -512,6 +512,11 @@ bool CTNode::load(
     const partial_label_type label,
     CTNode& node) const
 {
+    if (nullptr == trie_)
+        throw runtime_error("trie_ is null");
+    if (nullptr == trie_->storage())
+        throw runtime_error("trie_->storage is null");
+
     bool loaded = trie_->storage()->LoadCTNode(trie_->id(), label, node);
     if (loaded) {
         node.init(trie_);
@@ -538,6 +543,11 @@ bool CTNode::load_right(CTNode& node) const
 
 void CTNode::save() const
 {
+    if (nullptr == trie_)
+        throw runtime_error("trie_ is null");
+    if (nullptr == trie_->storage())
+        throw runtime_error("trie_->storage is null");
+
     trie_->storage()->SaveCTNode(trie_->id(), *this);
 }
 

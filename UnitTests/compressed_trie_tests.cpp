@@ -622,7 +622,7 @@ TEST(CompressedTrie, FailedLookupTest)
 
 TEST(CompressedTrie, SaveLoadTest)
 {
-    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
     CompressedTrie trie(storage);
     append_proof_type append_proof;
 

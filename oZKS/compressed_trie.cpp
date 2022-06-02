@@ -163,7 +163,7 @@ size_t CompressedTrie::load(CompressedTrie &ct, SerializationReader &reader)
         throw runtime_error("Failed to load Compressed Trie: invalid buffer");
     }
 
-    ct.root_ = make_unique<CTNode>();
+    ct.root_ = make_unique<CTNode>(&ct);
 
     auto fbs_ct = fbs::GetSizePrefixedCompressedTrie(in_data.data());
     ct.epoch_ = fbs_ct->epoch();
