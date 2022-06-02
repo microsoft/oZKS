@@ -24,7 +24,7 @@ CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
     : epoch_(0), storage_(storage)
 {
     init_random_id();
-    root_ = make_unique<CTNode>(storage, trie_id_);
+    root_ = make_unique<CTNode>(this);
 }
 
 void CompressedTrie::insert(
@@ -212,13 +212,13 @@ void CompressedTrie::get_node_count(const CTNode *node, size_t &node_count) cons
 
     if (!node->left.empty()) {
         CTNode left_node;
-        node->load(node->left, left_node);
+        node->load_left(left_node);
         get_node_count(&left_node, node_count);
     }
 
     if (!node->right.empty()) {
         CTNode right_node;
-        node->load(node->right, right_node);
+        node->load_right(right_node);
         get_node_count(&right_node, node_count);
     }
 }
@@ -235,13 +235,13 @@ size_t CompressedTrie::save_tree(const CTNode *node, SerializationWriter &writer
 
     if (!node->left.empty()) {
         CTNode left_node;
-        node->load(node->left, left_node);
+        node->load_left(left_node);
         result += save_tree(&left_node, writer);
     }
 
     if (!node->right.empty()) {
         CTNode right_node;
-        node->load(node->right, right_node);
+        node->load_right(right_node);
         result += save_tree(&right_node, writer);
     }
 

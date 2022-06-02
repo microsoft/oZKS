@@ -6,6 +6,7 @@
 
 // OZKS
 #include "oZKS/ct_node.h"
+#include "oZKS/compressed_trie.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
 
@@ -20,8 +21,8 @@ using namespace ozks::utils;
 TEST(CTNodeTests, InsertTest)
 {
     shared_ptr storage = make_shared<ozks::storage::MemoryStorage>();
-    vector<byte> trie_id = make_bytes(0xaa, 0xbb);
-    CTNode root(storage, trie_id);
+    CompressedTrie trie(storage);
+    CTNode root(&trie);
 
     partial_label_type label1{ true, true, true, true };
     partial_label_type label2{ true, true, true, false };
@@ -80,9 +81,9 @@ TEST(CTNodeTests, InsertTest)
 
 TEST(CTNodeTests, UpdateHashTest)
 {
-    vector<byte> trie_id = make_bytes(0xaa, 0xbb, 0xcc);
     shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
-    CTNode node(storage, trie_id);
+    CompressedTrie trie(storage);
+    CTNode node(&trie);
 
     label_type label = make_bytes(0x01);
     payload_type payload = make_bytes(0xF0, 0xF1, 0xF2);
@@ -94,7 +95,7 @@ TEST(CTNodeTests, UpdateHashTest)
 
     CTNode left_node;
     CTNode right_node;
-    node.load(node.left, left_node);
+    node.load_left(left_node);
 
     EXPECT_EQ(lab, node.left);
     EXPECT_EQ(lab, left_node.label);
@@ -112,20 +113,20 @@ TEST(CTNodeTests, UpdateHashTest)
     node.update_hashes(lab);
 
     EXPECT_FALSE(node.left.empty());
-    node.load(node.left, left_node);
+    node.load_left(left_node);
 
     EXPECT_FALSE(left_node.left.empty());
     EXPECT_FALSE(left_node.right.empty());
 
     CTNode left_left_node;
-    left_node.load(left_node.left, left_left_node);
+    left_node.load_left(left_left_node);
     EXPECT_EQ(
         "2de2976b794dc48d2e939b2e16d7db73701dbf2c1641ca93e4ad74b8f029cf07f02d01fb9c0b31dc740056acc9"
         "c17ddfd5c7d5d4471b227e5033d0169180f1a2",
         to_string(left_left_node.hash()));
 
     CTNode left_right_node;
-    left_node.load(left_node.right, left_right_node);
+    left_node.load_right(left_right_node);
     EXPECT_EQ(
         "9aba28398d409188b8d44a66a2b29d489d37d0946617c72bddd4d6ac324deca00a4322da731f7bd137adb07ea5"
         "05d02296ea2ba1b53f71e733d83834e9d79961",
@@ -136,8 +137,8 @@ TEST(CTNodeTests, UpdateHashTest)
  TEST(CTNodeTests, AllNodesHashedTest)
  {
      shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
-     vector<byte> trie_id = make_bytes(0x01, 0x02);
-     CTNode node(storage, trie_id);
+     CompressedTrie trie(storage);
+     CTNode node(&trie);
 
      label_type label = make_bytes(0x01);
      payload_type payload = make_bytes(0x01, 0x02, 0x03);
@@ -154,7 +155,7 @@ TEST(CTNodeTests, UpdateHashTest)
 
      hash_root = node.hash();
      CTNode left_node;
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      hash_type hash_01 = left_node.hash();
 
      lab = bytes_to_bools(make_bytes(0x02));
@@ -166,19 +167,19 @@ TEST(CTNodeTests, UpdateHashTest)
      EXPECT_NE(hash_root, node.hash()); // Updated
      partial_label_type label_000000{ 0, 0, 0, 0, 0, 0 };
 
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      EXPECT_EQ(label_000000, left_node.label);
      hash_type hash_000000 = left_node.hash();
      partial_label_type label_01{ 0, 0, 0, 0, 0, 0, 0, 1 };
 
      CTNode left_left_node;
-     left_node.load(left_node.left, left_left_node);
+     left_node.load_left(left_left_node);
      EXPECT_EQ(label_01, left_left_node.label);
      EXPECT_EQ(hash_01, left_left_node.hash());
      partial_label_type label_02{ 0, 0, 0, 0, 0, 0, 1, 0 };
 
      CTNode left_right_node;
-     left_node.load(left_node.right, left_right_node);
+     left_node.load_right(left_right_node);
      EXPECT_EQ(label_02, left_right_node.label);
      hash_type hash_02 = left_right_node.hash();
      EXPECT_NE(hash_01, hash_02);
@@ -194,28 +195,28 @@ TEST(CTNodeTests, UpdateHashTest)
 
      EXPECT_NE(hash_root, node.hash());
 
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      EXPECT_EQ(label_000000, left_node.label);
      EXPECT_NE(hash_000000, left_node.hash()); // Updated
      hash_000000 = left_node.hash();
 
-     left_node.load(left_node.left, left_left_node);
+     left_node.load_left(left_left_node);
      EXPECT_EQ(label_01, left_left_node.label);
      EXPECT_EQ(hash_01, left_left_node.hash());
      partial_label_type label_0000001{ 0, 0, 0, 0, 0, 0, 1 };
 
-     left_node.load(left_node.right, left_right_node);
+     left_node.load_right(left_right_node);
      EXPECT_EQ(label_0000001, left_right_node.label);
      hash_type hash_0000001 = left_right_node.hash();
 
      CTNode left_right_left_node;
-     left_right_node.load(left_right_node.left, left_right_left_node);
+     left_right_node.load_left(left_right_left_node);
      EXPECT_EQ(label_02, left_right_left_node.label);
      EXPECT_EQ(hash_02, left_right_left_node.hash());
      partial_label_type label_03{ 0, 0, 0, 0, 0, 0, 1, 1 };
 
      CTNode left_right_right_node;
-     left_right_node.load(left_right_node.right, left_right_right_node);
+     left_right_node.load_right(left_right_right_node);
      EXPECT_EQ(label_03, left_right_right_node.label);
      hash_type hash_03 = left_right_right_node.hash();
      EXPECT_NE(hash_01, hash_03);
@@ -231,37 +232,37 @@ TEST(CTNodeTests, UpdateHashTest)
      EXPECT_NE(hash_root, node.hash()); // Updated
      partial_label_type label_00000{ 0, 0, 0, 0, 0 };
 
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      EXPECT_EQ(label_00000, left_node.label);
      hash_type hash_00000 = left_node.hash();
 
-     left_node.load(left_node.left, left_left_node);
+     left_node.load_left(left_left_node);
      EXPECT_EQ(label_000000, left_left_node.label);
      EXPECT_EQ(hash_000000, left_left_node.hash());
      hash_000000 = left_left_node.hash();
 
      CTNode left_left_left_node;
-     left_left_node.load(left_left_node.left, left_left_left_node);
+     left_left_node.load_left(left_left_left_node);
      EXPECT_EQ(label_01, left_left_left_node.label);
      EXPECT_EQ(hash_01, left_left_left_node.hash());
 
      CTNode left_left_right_node;
-     left_left_node.load(left_left_node.right, left_left_right_node);
+     left_left_node.load_right(left_left_right_node);
      EXPECT_EQ(label_0000001, left_left_right_node.label);
      EXPECT_EQ(hash_0000001, left_left_right_node.hash());
 
      CTNode left_left_right_left_node;
-     left_left_right_node.load(left_left_right_node.left, left_left_right_left_node);
+     left_left_right_node.load_left(left_left_right_left_node);
      EXPECT_EQ(label_02, left_left_right_left_node.label);
      EXPECT_EQ(hash_02, left_left_right_left_node.hash());
 
      CTNode left_left_right_right_node;
-     left_left_right_node.load(left_left_right_node.right, left_left_right_right_node);
+     left_left_right_node.load_right(left_left_right_right_node);
      EXPECT_EQ(label_03, left_left_right_right_node.label);
      EXPECT_EQ(hash_03, left_left_right_right_node.hash());
      partial_label_type label_04{ 0, 0, 0, 0, 0, 1, 0, 0 };
 
-     left_node.load(left_node.right, left_right_node);
+     left_node.load_right(left_right_node);
      EXPECT_EQ(label_04, left_right_node.label);
 
      hash_root = node.hash();
@@ -273,13 +274,13 @@ TEST(CTNodeTests, UpdateHashTest)
 
      EXPECT_NE(hash_root, node.hash()); // Updated
 
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      EXPECT_EQ(label_00000, left_node.label);
      EXPECT_EQ(hash_00000, left_node.hash());
      partial_label_type label_80{ 1, 0, 0, 0, 0, 0, 0, 0 };
 
      CTNode right_node;
-     node.load(node.right, right_node);
+     node.load_right(right_node);
      EXPECT_EQ(label_80, right_node.label);
      hash_type hash_80 = right_node.hash();
 
@@ -292,23 +293,23 @@ TEST(CTNodeTests, UpdateHashTest)
 
      EXPECT_NE(hash_root, node.hash()); // Updated
 
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      EXPECT_EQ(label_00000, left_node.label);
      EXPECT_EQ(hash_00000, left_node.hash());
      partial_label_type label_1000000{ 1, 0, 0, 0, 0, 0, 0 };
 
-     node.load(node.right, right_node);
+     node.load_right(right_node);
      EXPECT_EQ(label_1000000, right_node.label);
      hash_type hash_1000000 = right_node.hash();
 
      CTNode right_left_node;
-     right_node.load(right_node.left, right_left_node);
+     right_node.load_left(right_left_node);
      EXPECT_EQ(label_80, right_left_node.label);
      EXPECT_EQ(hash_80, right_left_node.hash());
      partial_label_type label_81{ 1, 0, 0, 0, 0, 0, 0, 1 };
 
      CTNode right_right_node;
-     right_node.load(right_node.right, right_right_node);
+     right_node.load_right(right_right_node);
      EXPECT_EQ(label_81, right_right_node.label);
      hash_type hash_81 = right_right_node.hash();
      EXPECT_NE(hash_80, hash_81);
@@ -323,30 +324,30 @@ TEST(CTNodeTests, UpdateHashTest)
 
      EXPECT_NE(hash_root, node.hash()); // Updated
 
-     node.load(node.left, left_node);
+     node.load_left(left_node);
      EXPECT_EQ(label_00000, left_node.label);
      EXPECT_EQ(hash_00000, left_node.hash());
      partial_label_type label_100000{ 1, 0, 0, 0, 0, 0 };
 
-     node.load(node.right, right_node);
+     node.load_right(right_node);
      EXPECT_EQ(label_100000, right_node.label);
 
-     right_node.load(right_node.left, right_left_node);
+     right_node.load_left(right_left_node);
      EXPECT_EQ(label_1000000, right_left_node.label);
      EXPECT_EQ(hash_1000000, right_left_node.hash());
 
      CTNode right_left_left_node;
-     right_left_node.load(right_left_node.left, right_left_left_node);
+     right_left_node.load_left(right_left_left_node);
      EXPECT_EQ(label_80, right_left_left_node.label);
      EXPECT_EQ(hash_80, right_left_left_node.hash());
 
      CTNode right_left_right_node;
-     right_left_node.load(right_left_node.right, right_left_right_node);
+     right_left_node.load_right(right_left_right_node);
      EXPECT_EQ(label_81, right_left_right_node.label);
      EXPECT_EQ(hash_81, right_left_right_node.hash());
      partial_label_type label_82{ 1, 0, 0, 0, 0, 0, 1, 0 };
 
-     right_node.load(right_node.right, right_right_node);
+     right_node.load_right(right_right_node);
      EXPECT_EQ(label_82, right_right_node.label);
      hash_type hash_82 = right_right_node.hash();
      EXPECT_NE(hash_82, hash_81);
@@ -355,9 +356,7 @@ TEST(CTNodeTests, UpdateHashTest)
 
  TEST(CTNodeTests, SaveLoadTest)
  {
-     vector<byte> trie_id = make_bytes(6, 7);
-     shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
-     CTNode node(storage, trie_id);
+     CTNode node;
 
      node.hash()[0] = byte{ 0x01 };
      node.hash()[1] = byte{ 0x02 };

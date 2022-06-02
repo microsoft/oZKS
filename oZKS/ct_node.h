@@ -12,18 +12,13 @@
 // OZKS
 #include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
-//#include "oZKS/storage/storage.h"
 
 namespace ozks {
-    namespace storage {
-        class Storage;
-    }
+    class CompressedTrie;
 
     class CTNode {
     public:
-        CTNode();
-
-        CTNode(std::shared_ptr<ozks::storage::Storage> storage, const std::vector<std::byte> &trie_id);
+        CTNode(const CompressedTrie *trie = nullptr);
 
         CTNode(const CTNode &node);
 
@@ -142,11 +137,14 @@ namespace ozks {
             const std::vector<T> &vec, std::size_t position = 0);
 
         /**
-        Load a node from storage
+        Load left node from storage
         */
-        bool load(
-            const partial_label_type label,
-            CTNode &node) const;
+        bool load_left(CTNode &node) const;
+
+        /**
+        Load right node from storage
+        */
+        bool load_right(CTNode &node) const;
 
         /**
         Update the hash of the current node
@@ -156,8 +154,11 @@ namespace ozks {
     private:
         hash_type hash_ = {};
         bool is_dirty_ = false;
-        std::shared_ptr<ozks::storage::Storage> storage_;
-        std::vector<std::byte> trie_id_;
+
+        /**
+        Non-owning pointer to the owning CompressedTrie
+        */
+        const CompressedTrie *trie_;
 
         /**
         Initialize node with given label and payload.
@@ -182,12 +183,25 @@ namespace ozks {
         */
         void init(const partial_label_type &init_label);
 
-        void init(std::shared_ptr<ozks::storage::Storage> storage, const std::vector<std::byte> &trie_id);
+        /**
+        Initialize a node with the given Trie pointer
+        */
+        void init(const CompressedTrie *trie);
 
         bool lookup(
             const partial_label_type &lookup_label,
             lookup_path_type &path,
             bool include_searched,
             bool update_hashes);
+
+        /**
+        Load a node from storage
+        */
+        bool load(const partial_label_type label, CTNode &node) const;
+
+        /**
+        Save a node to storage
+        */
+        void save() const;
     };
 } // namespace ozks

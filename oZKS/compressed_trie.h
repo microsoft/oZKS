@@ -69,6 +69,14 @@ namespace ozks {
         }
 
         /**
+        Get the current Storage
+        */
+        std::shared_ptr<ozks::storage::Storage> storage() const
+        {
+            return storage_;
+        }
+
+        /**
         Return a string representation of the tree
         */
         std::string to_string(bool include_payload = false) const;
@@ -117,7 +125,6 @@ namespace ozks {
         std::size_t epoch_;
         std::vector<std::byte> id_;
         std::shared_ptr<ozks::storage::Storage> storage_;
-        std::vector<std::byte> trie_id_;
 
         bool lookup(const label_type &label, lookup_path_type &path, bool include_searched) const;
 
