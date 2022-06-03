@@ -18,7 +18,7 @@
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
-//#include "oZKS/storage/storage.h"
+#include "oZKS/storage/storage.h"
 
 namespace {
     struct store_type {
@@ -40,12 +40,12 @@ namespace ozks {
         /**
         Contructor for OZKS class
         */
-        OZKS();
+        OZKS(std::shared_ptr<ozks::storage::Storage> storage);
 
         /**
         Contructor for OZKS class
         */
-        OZKS(const OZKSConfig &config);
+        OZKS(std::shared_ptr<ozks::storage::Storage> storage, const OZKSConfig &config);
 
         /**
         Insert a key and payload into this instance
@@ -116,7 +116,6 @@ namespace ozks {
 
     private:
         VRFSecretKey vrf_sk_;
-
         VRFPublicKey vrf_pk_;
 
         std::shared_ptr<ozks::storage::Storage> storage_;

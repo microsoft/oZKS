@@ -147,6 +147,16 @@ namespace ozks {
         bool load_right(CTNode &node) const;
 
         /**
+        Load a node from storage
+        */
+        bool load(const partial_label_type label, CTNode &node) const;
+
+        /**
+        Save a node to storage
+        */
+        void save() const;
+
+        /**
         Update the hash of the current node
         */
         bool update_hash();
@@ -193,15 +203,5 @@ namespace ozks {
             lookup_path_type &path,
             bool include_searched,
             bool update_hashes);
-
-        /**
-        Load a node from storage
-        */
-        bool load(const partial_label_type label, CTNode &node) const;
-
-        /**
-        Save a node to storage
-        */
-        void save() const;
     };
 } // namespace ozks

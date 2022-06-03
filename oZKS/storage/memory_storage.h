@@ -10,11 +10,10 @@
 // OZKS
 #include "oZKS/storage/storage.h"
 #include "oZKS/ct_node.h"
+#include "oZKS/compressed_trie.h"
 
 
 namespace ozks {
-    class CTNode;
-
     namespace storage {
         class StorageNodeKey {
         public:
@@ -49,6 +48,38 @@ namespace ozks {
             }
         };
 
+        class StorageTrieKey {
+        public:
+            StorageTrieKey(const std::vector<std::byte> &trie_id) : trie_id_(trie_id)
+            {}
+
+            const std::vector<std::byte>& trie_id() const
+            {
+                return trie_id_;
+            }
+
+            bool operator==(const StorageTrieKey& other) const
+            {
+                return trie_id_ == other.trie_id_;
+            }
+
+        private:
+            std::vector<std::byte> trie_id_;
+        };
+
+        struct StorageTrieKeyHasher {
+            std::size_t operator()(const StorageTrieKey& key) const
+            {
+                std::size_t result = 0;
+                for (auto keyb : key.trie_id()) {
+                    auto keybch = static_cast<unsigned char>(keyb);
+                    result = std::hash<unsigned char>()(keybch) ^ (result << 1);
+                }
+
+                return result;
+            }
+        };
+
         class StorageNode {
         public:
             StorageNode(const CTNode &node)
@@ -58,10 +89,28 @@ namespace ozks {
             }
 
             StorageNode()
+            {}
+
+            const std::vector<std::byte> &data() const
             {
+                return data_;
             }
 
-            const std::vector<std::byte> &data()
+        private:
+            std::vector<std::byte> data_;
+        };
+
+        class StorageTrie {
+        public:
+            StorageTrie(const CompressedTrie &trie) : data_()
+            {
+                trie.save(data_);
+            }
+
+            StorageTrie()
+            {}
+
+            const std::vector<std::byte>& data() const
             {
                 return data_;
             }
@@ -88,18 +137,20 @@ namespace ozks {
             virtual void SaveCTNode(
                 const std::vector<std::byte> &trie_id, const CTNode &node);
 
-            ///**
-            //Get a compressed trie from storage
-            //*/
-            //virtual std::size_t LoadCompressedTrie(CompressedTrie &trie);
+            /**
+            Get a compressed trie from storage
+            */
+            virtual bool LoadCompressedTrie(
+                const std::vector<std::byte> &trie_id, CompressedTrie &trie);
 
-            ///**
-            //Save a compressed trie to storage
-            //*/
-            //virtual std::size_t SaveCompressedTrie(const CompressedTrie &trie);
+            /**
+            Save a compressed trie to storage
+            */
+            virtual void SaveCompressedTrie(const CompressedTrie &trie);
 
         private:
             std::unordered_map<StorageNodeKey, StorageNode, StorageNodeKeyHasher> nodes_;
+            std::unordered_map<StorageTrieKey, StorageTrie, StorageTrieKeyHasher> tries_;
         };
     } // namespace storage
 } // namespace ozks

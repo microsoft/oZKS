@@ -7,6 +7,7 @@
 #include "oZKS/fourq/random.h"
 #include "oZKS/ozks.h"
 #include "oZKS/utilities.h"
+#include "oZKS/storage/memory_storage.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -30,7 +31,7 @@ namespace {
 
 TEST(OZKSTests, InsertTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     auto key = make_bytes(0x01, 0x02, 0x03);
     auto payload = make_bytes(0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA);
@@ -61,7 +62,7 @@ TEST(OZKSTests, InsertTest)
 TEST(OZKSTests, NoRandomInsertTest)
 {
     OZKSConfig config{ false, false };
-    OZKS ozks(config);
+    OZKS ozks({} , config);
 
     auto key = make_bytes(0x01, 0x02, 0x03);
     auto payload = make_bytes(0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA);
@@ -87,7 +88,7 @@ TEST(OZKSTests, NoRandomInsertTest)
 
 TEST(OZKSTests, InsertBatchTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     auto key = make_bytes(0x01, 0x01, 0x01);
     auto payload = make_bytes(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
@@ -139,7 +140,7 @@ TEST(OZKSTests, InsertBatchTest)
 
 TEST(OZKSTests, QueryTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     auto key = make_bytes(0x01, 0x01, 0x01);
     auto payload = make_bytes(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
@@ -168,7 +169,7 @@ TEST(OZKSTests, QueryTest)
 
 TEST(OZKSTests, MultiInsertQueryTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     key_payload_batch_type batch{
         pair<key_type, payload_type>{ make_bytes(0x01, 0x02, 0x03),
@@ -218,7 +219,7 @@ TEST(OZKSTests, MultiInsertQueryTest)
 
 TEST(OZKSTests, InsertResultVerificationTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     auto key = make_bytes(0x01, 0x02, 0x03, 0x04);
     auto payload = make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF);
@@ -287,7 +288,7 @@ TEST(OZKSTests, InsertResultVerificationTest)
 
 TEST(OZKSTests, RandomInsertVerificationTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     key_type key(16);
     payload_type payload(40);
@@ -331,7 +332,7 @@ TEST(OZKSTests, RandomInsertVerificationTest)
 
 TEST(OZKSTests, RandomMultiInsertVerificationTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
     key_type key(16);
     payload_type payload(40);
     vector<key_type> valid_keys;
@@ -382,7 +383,7 @@ TEST(OZKSTests, RandomMultiInsertVerificationTest)
 
 TEST(OZKSTests, QueryResultVerificationTest)
 {
-    OZKS ozks;
+    OZKS ozks({});
 
     key_payload_batch_type batch{
         pair<key_type, payload_type>{ make_bytes(0x01, 0x02, 0x03),
@@ -428,7 +429,8 @@ TEST(OZKSTests, QueryResultVerificationTest)
 
 TEST(OZKSTests, SaveLoadTest)
 {
-    OZKS ozks;
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    OZKS ozks(storage);
 
     key_type key(40);
     payload_type payload(40);
@@ -451,7 +453,7 @@ TEST(OZKSTests, SaveLoadTest)
     stringstream ss;
     size_t save_size = ozks.save(ss);
 
-    OZKS ozks2;
+    OZKS ozks2(storage);
     size_t load_size = OZKS::load(ozks2, ss);
 
     EXPECT_EQ(load_size, save_size);
@@ -474,7 +476,8 @@ TEST(OZKSTests, SaveLoadTest)
 TEST(OZKSTests, NonRandomSaveLoadTest)
 {
     OZKSConfig config{ false, false };
-    OZKS ozks(config);
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    OZKS ozks(storage, config);
 
     EXPECT_EQ(false, ozks.get_configuration().payload_randomness());
     EXPECT_EQ(false, ozks.get_configuration().include_vrf());
@@ -500,7 +503,7 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
     stringstream ss;
     size_t save_size = ozks.save(ss);
 
-    OZKS ozks2;
+    OZKS ozks2(storage);
     EXPECT_EQ(true, ozks2.get_configuration().payload_randomness());
     EXPECT_EQ(true, ozks2.get_configuration().include_vrf());
 
@@ -527,7 +530,8 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
 
 TEST(OZKSTests, SaveLoadToVectorTest)
 {
-    OZKS ozks;
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    OZKS ozks(storage);
 
     key_type key(40);
     payload_type payload(40);
@@ -550,7 +554,7 @@ TEST(OZKSTests, SaveLoadToVectorTest)
     vector<byte> vec;
     size_t save_size = ozks.save(vec);
 
-    OZKS ozks2;
+    OZKS ozks2(storage);
     size_t load_size = OZKS::load(ozks2, vec);
 
     EXPECT_EQ(load_size, save_size);
@@ -572,8 +576,8 @@ TEST(OZKSTests, SaveLoadToVectorTest)
 
 TEST(OZKSTests, EmptyOZKSTest)
 {
-    OZKS ozks1;
-    OZKS ozks2;
+    OZKS ozks1({});
+    OZKS ozks2({});
 
     Commitment comm1 = ozks1.get_commitment();
     Commitment comm2 = ozks2.get_commitment();
@@ -585,8 +589,8 @@ TEST(OZKSTests, ConfigurationTest)
 {
     OZKSConfig config{ false, false }; // No commit randomness, do not include vrf
 
-    OZKS ozks1(config);
-    OZKS ozks2(config);
+    OZKS ozks1({}, config);
+    OZKS ozks2({}, config);
 
     EXPECT_EQ(false, ozks1.get_configuration().payload_randomness());
     EXPECT_EQ(false, ozks2.get_configuration().payload_randomness());
@@ -613,8 +617,8 @@ TEST(OZKSTests, ConfigurationTest)
     EXPECT_EQ(false, config2.include_vrf());
     EXPECT_EQ(true, config2.payload_randomness());
 
-    OZKS ozks3(config2);
-    OZKS ozks4(config2);
+    OZKS ozks3({}, config2);
+    OZKS ozks4({}, config2);
 
     comm1 = ozks3.get_commitment();
     comm2 = ozks4.get_commitment();
@@ -635,25 +639,25 @@ TEST(OZKSTests, ConfigurationTest)
 
 TEST(OZKSTests, ConstructorTest)
 {
-    OZKS ozks1;
+    OZKS ozks1({});
 
     EXPECT_EQ(true, ozks1.get_configuration().payload_randomness());
     EXPECT_EQ(true, ozks1.get_configuration().include_vrf());
 
     OZKSConfig config{ false, false };
-    OZKS ozks2(config);
+    OZKS ozks2({}, config);
 
     EXPECT_EQ(false, ozks2.get_configuration().payload_randomness());
     EXPECT_EQ(false, ozks2.get_configuration().include_vrf());
 
     config = { true, false };
-    OZKS ozks3(config);
+    OZKS ozks3({}, config);
 
     EXPECT_EQ(true, ozks3.get_configuration().payload_randomness());
     EXPECT_EQ(false, ozks3.get_configuration().include_vrf());
 
     config = { false, true };
-    OZKS ozks4(config);
+    OZKS ozks4({}, config);
 
     EXPECT_EQ(false, ozks4.get_configuration().payload_randomness());
     EXPECT_EQ(true, ozks4.get_configuration().include_vrf());

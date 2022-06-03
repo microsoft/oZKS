@@ -12,15 +12,18 @@
 using namespace std;
 using namespace ozks;
 
-OZKS::OZKS()
+OZKS::OZKS(shared_ptr<storage::Storage> storage) : storage_(storage)
 {
     initialize_vrf();
 
-    storage_ = make_shared<storage::MemoryStorage>();
+    if (nullptr == storage) {
+        storage_ = make_shared<storage::MemoryStorage>();
+    }
+
     trie_ = make_unique<CompressedTrie>(storage_);
 }
 
-OZKS::OZKS(const OZKSConfig &config)
+OZKS::OZKS(shared_ptr<storage::Storage> storage, const OZKSConfig &config) : storage_(storage)
 {
     config_ = config;
 
@@ -28,7 +31,10 @@ OZKS::OZKS(const OZKSConfig &config)
         initialize_vrf();
     }
 
-    storage_ = make_shared<storage::MemoryStorage>();
+    if (nullptr == storage) {
+        storage_ = make_shared<storage::MemoryStorage>();
+    }
+
     trie_ = make_unique<CompressedTrie>(storage_);
 }
 

@@ -115,13 +115,26 @@ namespace ozks {
             CompressedTrie &ct, const std::vector<T> &vec, std::size_t position = 0);
 
         /**
+        Save the current compressed trie to Storage
+        */
+        void save() const;
+
+        /**
+        Load a compressed trie from Storage
+        */
+        static bool load(
+            const std::vector<std::byte> &trie_id,
+            ozks::storage::Storage *storage,
+            CompressedTrie &trie);
+
+        /**
         Clear the contents of this instance.
         Sets epoch back to zero.
         */
         void clear();
 
     private:
-        std::unique_ptr<CTNode> root_;
+        partial_label_type root_;
         std::size_t epoch_;
         std::vector<std::byte> id_;
         std::shared_ptr<ozks::storage::Storage> storage_;
@@ -131,10 +144,10 @@ namespace ozks {
         std::size_t get_node_count() const;
         void get_node_count(const CTNode *node, std::size_t &node_count) const;
 
-        std::size_t save_tree(const CTNode *node, SerializationWriter &writer) const;
-        static std::size_t load_tree(
-            CTNode &node, std::size_t &node_count, SerializationReader &reader);
-
         void init_random_id();
+
+        CTNode load_root() const;
+
+        void init(std::shared_ptr<ozks::storage::Storage> storage);
     };
 } // namespace ozks

@@ -35,14 +35,22 @@ void MemoryStorage::SaveCTNode(const vector<byte> &trie_id, const CTNode& node)
     nodes_[key] = stnode;
 }
 
-//size_t MemoryStorage::LoadCompressedTrie(CompressedTrie& trie)
-//{
-//    size_t result = CompressedTrie::load(trie, v_);
-//    return result;
-//}
-//
-//size_t MemoryStorage::SaveCompressedTrie(const CompressedTrie& trie)
-//{
-//    size_t result = trie.save(v_);
-//    return result;
-//}
+bool MemoryStorage::LoadCompressedTrie(const vector<byte> &trie_id, CompressedTrie &trie)
+{
+    StorageTrieKey trie_key{ trie_id };
+    auto trie_it = tries_.find(trie_key);
+    if (trie_it == tries_.end()) {
+        return false;
+    }
+
+    CompressedTrie::load(trie, trie_it->second.data());
+    return true;
+}
+
+void MemoryStorage::SaveCompressedTrie(const CompressedTrie &trie)
+{
+    StorageTrie sttrie(trie);
+    StorageTrieKey key(trie.id());
+
+    tries_[key] = sttrie;
+}

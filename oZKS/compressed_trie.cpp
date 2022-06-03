@@ -21,10 +21,12 @@ using namespace ozks::utils;
 size_t const ID_SIZE = 16;
 
 CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
-    : epoch_(0), storage_(storage)
+    : epoch_(0), storage_(storage), root_({})
 {
     init_random_id();
-    root_ = make_unique<CTNode>(this);
+    
+    CTNode root(this);
+    root.save();
 }
 
 void CompressedTrie::insert(
@@ -34,8 +36,11 @@ void CompressedTrie::insert(
     append_proof.clear();
 
     epoch_++;
-    root_->insert(lab, payload, epoch_);
-    root_->update_hashes(lab);
+    
+    CTNode root = load_root();
+
+    root.insert(lab, payload, epoch_);
+    root.update_hashes(lab);
 
     // To get the append proof we need to lookup the item we just inserted after hashes have been
     // updated
@@ -52,6 +57,8 @@ void CompressedTrie::insert(
     append_proofs.resize(label_payload_batch.size());
     epoch_++;
 
+    CTNode root = load_root();
+
     for (size_t idx = 0; idx < label_payload_batch.size(); idx++) {
         const auto &label = label_payload_batch[idx].first;
         const auto &payload = label_payload_batch[idx].second;
@@ -59,14 +66,14 @@ void CompressedTrie::insert(
         labs.emplace_back(bytes_to_bools(label));
         const auto &lab = labs[idx];
 
-        root_->insert(lab, payload, epoch_);
+        root.insert(lab, payload, epoch_);
     }
 
     for (size_t idx = 0; idx < label_payload_batch.size(); idx++) {
         const auto &label = label_payload_batch[idx].first;
         const auto &lab = labs[idx];
 
-        root_->update_hashes(lab);
+        root.update_hashes(lab);
     }
 
     // To get the append proof we need to lookup the item we just inserted
@@ -92,17 +99,20 @@ bool CompressedTrie::lookup(
 {
     path.clear();
     partial_label_type partial_label = bytes_to_bools(label);
-    return root_->lookup(partial_label, path, include_searched);
+    CTNode root = load_root();
+    return root.lookup(partial_label, path, include_searched);
 }
 
 string CompressedTrie::to_string(bool include_payload) const
 {
-    return root_->to_string(include_payload);
+    CTNode root = load_root();
+    return root.to_string(include_payload);
 }
 
 void CompressedTrie::get_commitment(commitment_type &commitment) const
 {
-    hash_type root_hash = root_->hash();
+    CTNode root = load_root();
+    hash_type root_hash = root.hash();
     if (root_hash.size() == 0) {
         throw runtime_error("No commitment has been computed");
     }
@@ -114,28 +124,41 @@ void CompressedTrie::get_commitment(commitment_type &commitment) const
 void CompressedTrie::clear()
 {
     epoch_ = 0;
-    root_ = make_unique<CTNode>();
+    root_ = {};
     init_random_id();
+
+    CTNode root(this);
+    // This will overwrite any existing root
+    // TODO: Delete existing nodes in storage?
+    root.save();
 }
 
 size_t CompressedTrie::save(SerializationWriter &writer) const
 {
     flatbuffers::FlatBufferBuilder fbs_builder;
 
+    auto label_bytes = utils::bools_to_bytes(root_);
+    auto label_data = fbs_builder.CreateVector(
+        reinterpret_cast<const uint8_t *>(label_bytes.data()), label_bytes.size());
+    auto partial_label =
+        fbs::CreatePartialLabel(fbs_builder, label_data, static_cast<uint32_t>(root_.size()));
+
+    auto id_data =
+        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(id_.data()), id_.size());
+
     fbs::CompressedTrieBuilder ct_builder(fbs_builder);
     ct_builder.add_epoch(epoch());
     ct_builder.add_node_count(get_node_count());
     ct_builder.add_version(ozks_serialization_version);
+    ct_builder.add_root(partial_label);
+    ct_builder.add_id(id_data);
 
     auto fbs_ct = ct_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_ct);
 
     writer.write(fbs_builder.GetBufferPointer(), fbs_builder.GetSize());
 
-    // Save the tree as individual nodes
-    size_t tree_size = save_tree(root_.get(), writer);
-
-    return (fbs_builder.GetSize() + tree_size);
+    return (fbs_builder.GetSize());
 }
 
 size_t CompressedTrie::save(ostream &stream) const
@@ -163,23 +186,23 @@ size_t CompressedTrie::load(CompressedTrie &ct, SerializationReader &reader)
         throw runtime_error("Failed to load Compressed Trie: invalid buffer");
     }
 
-    ct.root_ = make_unique<CTNode>(&ct);
-
     auto fbs_ct = fbs::GetSizePrefixedCompressedTrie(in_data.data());
     ct.epoch_ = fbs_ct->epoch();
     size_t node_count = fbs_ct->node_count();
+
+    ct.root_ = utils::bytes_to_bools(
+        reinterpret_cast<const byte *>(fbs_ct->root()->data()->data()),
+        fbs_ct->root()->size());
+
+    ct.id_.resize(fbs_ct->id()->size());
+    utils::copy_bytes(
+        fbs_ct->id()->data(), fbs_ct->id()->size(), ct.id_.data());
 
     if (node_count < 1) {
         throw runtime_error("Failed to load Compressed Trie: should have at least root node");
     }
 
-    size_t tree_size = load_tree(*ct.root_, node_count, reader);
-
-    if (node_count != 0) {
-        throw runtime_error("Failed to load Compressed Trie: Stream contains extra nodes");
-    }
-
-    return (tree_size + in_data.size());
+    return (in_data.size());
 }
 
 size_t CompressedTrie::load(CompressedTrie &ct, istream &stream)
@@ -195,10 +218,30 @@ size_t CompressedTrie::load(CompressedTrie &ct, const vector<T> &vec, size_t pos
     return load(ct, reader);
 }
 
+void CompressedTrie::save() const
+{
+    if (nullptr == storage_)
+        throw runtime_error("Storage is null");
+
+    storage_->SaveCompressedTrie(*this);
+}
+
+bool CompressedTrie::load(
+    const vector<byte> &trie_id, storage::Storage *storage, CompressedTrie &trie)
+{
+    if (nullptr == storage)
+        throw invalid_argument("storage is null");
+    if (trie_id.empty())
+        throw invalid_argument("trie_id is empty");
+
+    return storage->LoadCompressedTrie(trie_id, trie);
+}
+
 size_t CompressedTrie::get_node_count() const
 {
     size_t node_count = 0;
-    get_node_count(root_.get(), node_count);
+    CTNode root = load_root();
+    get_node_count(&root, node_count);
     return node_count;
 }
 
@@ -223,72 +266,21 @@ void CompressedTrie::get_node_count(const CTNode *node, size_t &node_count) cons
     }
 }
 
-size_t CompressedTrie::save_tree(const CTNode *node, SerializationWriter &writer) const
+CTNode CompressedTrie::load_root() const
 {
-    size_t result = 0;
+    CTNode loader(this);
+    CTNode root;
+    if (!loader.load({}, root))
+        throw runtime_error("Could not load root node");
 
-    if (nullptr == node) {
-        return result;
-    }
-
-    result = node->save(writer);
-
-    if (!node->left.empty()) {
-        CTNode left_node;
-        node->load_left(left_node);
-        result += save_tree(&left_node, writer);
-    }
-
-    if (!node->right.empty()) {
-        CTNode right_node;
-        node->load_right(right_node);
-        result += save_tree(&right_node, writer);
-    }
-
-    return result;
-}
-
-size_t CompressedTrie::load_tree(CTNode &node, size_t &node_count, SerializationReader &reader)
-{
-    if (node_count <= 0) {
-        throw runtime_error("Failed to load Compressed Trie: Not enough nodes are available");
-    }
-
-    size_t size = 0;
-
-    // Load the current node
-    auto loaded_node = CTNode::load(reader);
-    node_count--;
-
-    node = get<0>(loaded_node);
-
-    //partial_label_type left_label = get<1>(loaded_node);
-    //partial_label_type right_label = get<2>(loaded_node);
-    size += get<3>(loaded_node);
-
-    if (!node.left.empty()) {
-        CTNode left_node;
-        size += load_tree(left_node, node_count, reader);
-        if (left_node.label != node.left) {
-            throw runtime_error("Failed to load Compressed Trie: Left label does not match");
-        }
-    }
-
-    if (!node.right.empty()) {
-        CTNode right_node;
-        size += load_tree(right_node, node_count, reader);
-        if (right_node.label != node.right) {
-            throw runtime_error("Failed to load Compressed Trie: Right label does not match");
-        }
-    }
-
-    return size;
+    return root;
 }
 
 void CompressedTrie::init_random_id()
 {
     id_.resize(ID_SIZE);
-    random_bytes(reinterpret_cast<unsigned char *>(id_.data()), static_cast<unsigned int>(id_.size()));
+    random_bytes(
+        reinterpret_cast<unsigned char *>(id_.data()), static_cast<unsigned int>(id_.size()));
 }
 
 // Explicit instantiations

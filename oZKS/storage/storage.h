@@ -12,6 +12,7 @@
 
 namespace ozks {
     class CTNode;
+    class CompressedTrie;
 
     namespace storage {
         class Storage {
@@ -30,15 +31,16 @@ namespace ozks {
             virtual void SaveCTNode(
                 const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
 
-            ///**
-            //Get a compressed trie from storage
-            //*/
-            //virtual std::size_t LoadCompressedTrie(CompressedTrie &trie) = 0;
+            /**
+            Get a compressed trie from storage
+            */
+            virtual bool LoadCompressedTrie(
+                const std::vector<std::byte> &trie_id, CompressedTrie &trie) = 0;
 
-            ///**
-            //Save a compressed trie to storage
-            //*/
-            //virtual std::size_t SaveCompressedTrie(const CompressedTrie &trie) = 0;
+            /**
+            Save a compressed trie to storage
+            */
+            virtual void SaveCompressedTrie(const CompressedTrie &trie) = 0;
         };
     } // namespace storage
 } // namespace ozks
