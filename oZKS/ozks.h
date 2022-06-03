@@ -10,7 +10,6 @@
 
 // oZKS
 #include "oZKS/commitment.h"
-#include "oZKS/compressed_trie.h"
 #include "oZKS/defines.h"
 #include "oZKS/insert_result.h"
 #include "oZKS/ozks_config.h"
@@ -119,7 +118,8 @@ namespace ozks {
         VRFPublicKey vrf_pk_;
 
         std::shared_ptr<ozks::storage::Storage> storage_;
-        std::unique_ptr<CompressedTrie> trie_;
+        std::vector<std::byte> trie_id_;
+        ;
 
         std::unordered_map<key_type, store_type, utils::byte_vector_hash> store_;
 
@@ -139,6 +139,8 @@ namespace ozks {
         std::size_t save(SerializationWriter &writer) const;
 
         static std::size_t load(SerializationReader &reader, OZKS &ozks);
+
+        void load_trie(CompressedTrie &trie) const;
 
         void initialize_vrf();
 

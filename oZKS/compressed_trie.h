@@ -124,7 +124,7 @@ namespace ozks {
         */
         static bool load(
             const std::vector<std::byte> &trie_id,
-            ozks::storage::Storage *storage,
+            std::shared_ptr<ozks::storage::Storage> storage,
             CompressedTrie &trie);
 
         /**

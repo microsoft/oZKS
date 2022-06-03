@@ -9,6 +9,7 @@ table OZKS {
     vrf_pk:[ubyte];
     configuration:[ubyte] (required);
     store_count:uint64;
+    trie_id:[ubyte];
 }
 
 root_type OZKS;

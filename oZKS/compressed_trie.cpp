@@ -47,6 +47,8 @@ void CompressedTrie::insert(
     if (!lookup(label, append_proof, /* include_searched */ true)) {
         throw runtime_error("Should have been able to find the item we just inserted");
     }
+
+    save();
 }
 
 void CompressedTrie::insert(
@@ -85,6 +87,8 @@ void CompressedTrie::insert(
             throw runtime_error("Should have been able to find the item we just inserted");
         }
     }
+
+    save();
 }
 
 bool CompressedTrie::lookup(const label_type &label, lookup_path_type &path) const
@@ -131,6 +135,7 @@ void CompressedTrie::clear()
     // This will overwrite any existing root
     // TODO: Delete existing nodes in storage?
     root.save();
+    save();
 }
 
 size_t CompressedTrie::save(SerializationWriter &writer) const
@@ -227,14 +232,19 @@ void CompressedTrie::save() const
 }
 
 bool CompressedTrie::load(
-    const vector<byte> &trie_id, storage::Storage *storage, CompressedTrie &trie)
+    const vector<byte> &trie_id, shared_ptr<storage::Storage> storage, CompressedTrie &trie)
 {
     if (nullptr == storage)
         throw invalid_argument("storage is null");
     if (trie_id.empty())
         throw invalid_argument("trie_id is empty");
 
-    return storage->LoadCompressedTrie(trie_id, trie);
+    bool loaded = storage->LoadCompressedTrie(trie_id, trie);
+    if (loaded) {
+        trie.init(storage);
+    }
+
+    return loaded;
 }
 
 size_t CompressedTrie::get_node_count() const
@@ -274,6 +284,11 @@ CTNode CompressedTrie::load_root() const
         throw runtime_error("Could not load root node");
 
     return root;
+}
+
+void CompressedTrie::init(shared_ptr<storage::Storage> storage)
+{
+    storage_ = storage;
 }
 
 void CompressedTrie::init_random_id()
