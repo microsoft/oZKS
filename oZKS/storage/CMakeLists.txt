@@ -11,6 +11,7 @@ set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}
 install(
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/memory_storage.h
+        ${CMAKE_CURRENT_LIST_DIR}/memory_storage_helpers.h
         ${CMAKE_CURRENT_LIST_DIR}/storage.h
     DESTINATION
         ${OZKS_INCLUDES_INSTALL_DIR}/oZKS/storage
