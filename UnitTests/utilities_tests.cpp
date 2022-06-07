@@ -285,3 +285,23 @@ TEST(Utilities, ComputeHash)
     EXPECT_NE(hash2, hash3);
     EXPECT_NE(hash1, hash3);
 }
+
+TEST(Utilities, ByteVectorHashTest)
+{
+    byte_vector_hash hasher;
+
+    size_t hash1 = hasher(make_bytes(1, 2, 3, 4, 5, 6));
+    size_t hash2 = hasher(make_bytes(1, 2, 3, 4, 5, 6));
+    size_t hash3 = hasher(make_bytes(1, 2, 3, 4, 5, 6, 7));
+    size_t hash4 = hasher(make_bytes(1, 2, 3, 4, 5, 6, 7, 8));
+    size_t hash5 = hasher(make_bytes(1, 2, 3, 4, 5, 6, 7, 8, 9));
+    size_t hash6 = hasher(make_bytes(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
+    size_t hash7 = hasher(make_bytes(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17));
+
+    EXPECT_EQ(hash1, hash2);
+    EXPECT_NE(hash1, hash3);
+    EXPECT_NE(hash3, hash4);
+    EXPECT_NE(hash4, hash5);
+    EXPECT_NE(hash5, hash6);
+    EXPECT_NE(hash6, hash7);
+}
