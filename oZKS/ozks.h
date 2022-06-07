@@ -20,11 +20,6 @@
 #include "oZKS/storage/storage.h"
 
 namespace {
-    struct store_type {
-        ozks::payload_type payload;
-        ozks::randomness_type randomness;
-    };
-
     using pending_insertion = std::pair<ozks::key_type, ozks::payload_type>;
     using pending_result = std::pair<ozks::key_type, std::shared_ptr<ozks::InsertResult>>;
 }
@@ -45,6 +40,14 @@ namespace ozks {
         Contructor for OZKS class
         */
         OZKS(std::shared_ptr<ozks::storage::Storage> storage, const OZKSConfig &config);
+
+        /**
+        ID of the OZKS instance
+        */
+        const std::vector<std::byte> &id() const
+        {
+            return trie_id_;
+        }
 
         /**
         Insert a key and payload into this instance
@@ -109,6 +112,19 @@ namespace ozks {
         static std::size_t load(OZKS &ozks, const std::vector<T> &vec, std::size_t position = 0);
 
         /**
+        Save the current oZKS instance to storage
+        */
+        void save() const;
+
+        /**
+        Load the current oZKS instance from storage
+        */
+        static bool load(
+            const std::vector<std::byte> &trie_id,
+            std::shared_ptr<ozks::storage::Storage> storage,
+            OZKS &ozks);
+
+        /**
         Clear the contents of this instance. Secret/Public keys are not cleared.
         */
         void clear();
@@ -119,9 +135,6 @@ namespace ozks {
 
         std::shared_ptr<ozks::storage::Storage> storage_;
         std::vector<std::byte> trie_id_;
-        ;
-
-        std::unordered_map<key_type, store_type, utils::byte_vector_hash> store_;
 
         std::vector<pending_insertion> pending_insertions_;
         std::vector<pending_result> pending_results_;
@@ -129,12 +142,6 @@ namespace ozks {
         std::pair<payload_type, randomness_type> commit(const payload_type &payload);
 
         OZKSConfig config_;
-
-        std::size_t save_store_element(
-            const std::pair<const key_type, store_type> &store_element,
-            SerializationWriter &writer) const;
-
-        std::size_t load_store_element(SerializationReader &reader);
 
         std::size_t save(SerializationWriter &writer) const;
 

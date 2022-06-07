@@ -128,10 +128,19 @@ namespace ozks {
         struct byte_vector_hash {
             std::size_t operator()(std::vector<std::byte> const &v) const
             {
-                hash_type hash = compute_hash(v, "vector_hash");
-                std::size_t result;
-                copy_bytes(&hash, sizeof(std::size_t), &result);
+                //hash_type hash = compute_hash(v, "vector_hash");
+                //std::size_t result;
+                //copy_bytes(&hash, sizeof(std::size_t), &result);
+                //return result;
+
+                std::size_t result = 0;
+                for (auto vb : v) {
+                    auto vbch = static_cast<unsigned char>(vb);
+                    result = std::hash<unsigned char>()(vbch) ^ (result << 1);
+                }
+
                 return result;
+
             }
         };
 

@@ -8,7 +8,6 @@ table OZKS {
     vrf_sk:[ubyte];
     vrf_pk:[ubyte];
     configuration:[ubyte] (required);
-    store_count:uint64;
     trie_id:[ubyte];
 }
 

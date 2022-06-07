@@ -24,10 +24,13 @@ CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
     : epoch_(0), storage_(storage), root_({})
 {
     init_random_id();
-    
+
     CTNode root(this);
     root.save();
 }
+
+CompressedTrie::CompressedTrie() : epoch_(0), storage_(nullptr), root_({})
+{}
 
 void CompressedTrie::insert(
     const label_type &label, const payload_type &payload, append_proof_type &append_proof)

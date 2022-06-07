@@ -27,6 +27,11 @@ namespace ozks {
         CompressedTrie(std::shared_ptr<ozks::storage::Storage> storage);
 
         /**
+        Constructor
+        */
+        CompressedTrie();
+
+        /**
         Insert a single label into the tree. Increments the epoch and computes updated hashes.
         */
         void insert(

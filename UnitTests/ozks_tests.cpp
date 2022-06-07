@@ -16,7 +16,7 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
-constexpr size_t random_iterations = 100000;
+constexpr size_t random_iterations = 10000;
 
 namespace {
     /**
@@ -558,6 +558,47 @@ TEST(OZKSTests, SaveLoadToVectorTest)
     size_t load_size = OZKS::load(ozks2, vec);
 
     EXPECT_EQ(load_size, save_size);
+
+    for (size_t i = 0; i < some_keys.size(); i++) {
+        QueryResult qr1 = ozks.query(some_keys[i]);
+        QueryResult qr2 = ozks2.query(some_keys[i]);
+
+        EXPECT_TRUE(qr1.is_member());
+        EXPECT_TRUE(qr2.is_member());
+        EXPECT_EQ(qr1.payload(), qr2.payload());
+        EXPECT_EQ(qr1.randomness(), qr2.randomness());
+        EXPECT_EQ(qr1.lookup_proof().size(), qr2.lookup_proof().size());
+
+        EXPECT_TRUE(qr1.verify(some_keys[i], ozks2.get_commitment()));
+        EXPECT_TRUE(qr2.verify(some_keys[i], ozks.get_commitment()));
+    }
+}
+
+TEST(OZKSTests, LoadSaveToStorageTest)
+{
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    OZKS ozks(storage);
+
+    key_type key(40);
+    payload_type payload(40);
+    vector<key_type> some_keys(100);
+
+    for (size_t i = 0; i < 10000; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
+
+        ozks.insert(key, payload);
+
+        if (i < some_keys.size()) {
+            some_keys[i] = key;
+        }
+    }
+
+    ozks.flush();
+    ozks.save();
+
+    OZKS ozks2(storage);
+    EXPECT_TRUE(OZKS::load(ozks.id(), storage, ozks2));
 
     for (size_t i = 0; i < some_keys.size(); i++) {
         QueryResult qr1 = ozks.query(some_keys[i]);

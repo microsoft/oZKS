@@ -31,4 +31,9 @@ namespace ozks {
     using append_proof_batch_type = std::vector<append_proof_type>;
 
     using key_payload_batch_type = std::vector<std::pair<key_type, payload_type>>;
+
+    struct store_value_type {
+        payload_type payload;
+        randomness_type randomness;
+    };
 } // namespace ozks

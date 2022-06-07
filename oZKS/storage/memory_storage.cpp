@@ -54,3 +54,91 @@ void MemoryStorage::SaveCompressedTrie(const CompressedTrie &trie)
 
     tries_[key] = sttrie;
 }
+
+bool MemoryStorage::LoadOZKS(const vector<byte> &trie_id, OZKS &ozks)
+{
+    StorageOZKSKey ozks_key(trie_id);
+    auto ozks_it = ozks_.find(ozks_key);
+    if (ozks_it == ozks_.end()) {
+        return false;
+    }
+
+    OZKS::load(ozks, ozks_it->second.data());
+    return true;
+}
+
+void MemoryStorage::SaveOZKS(const OZKS& ozks)
+{
+    StorageOZKSKey key(ozks.id());
+    StorageOZKS stozks(ozks);
+
+    ozks_[key] = stozks;
+}
+
+bool MemoryStorage::LoadStoreElement(
+    const vector<byte> &trie_id, const vector<byte> &key, store_value_type &value)
+{
+    StorageStoreElementKey se_key(trie_id, key);
+    auto se_it = store_.find(se_key);
+    if (se_it == store_.end()) {
+        return false;
+    }
+
+    se_it->second.load_store_element(value.payload, value.randomness);
+    return true;
+}
+
+void MemoryStorage::SaveStoreElement(
+    const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
+{
+    StorageStoreElementKey se_key(trie_id, key);
+    StorageStoreElement selem(value.payload, value.randomness);
+
+    store_[se_key] = selem;
+}
+
+void StorageStoreElement::load_store_element(payload_type& payload, randomness_type& randomness)
+{
+    size_t position = 0;
+    load_bvector(payload, position);
+    load_bvector(randomness, position);
+}
+
+void StorageStoreElement::save_store_element(const payload_type& payload, const randomness_type& randomness)
+{
+    data_.clear();
+    save_bvector(payload);
+    save_bvector(randomness);
+}
+
+void StorageStoreElement::save_bvector(const vector<byte>& value)
+{
+    size_t write_pos = data_.size();
+    size_t new_size = data_.size() + sizeof(size_t) + value.size();
+
+    data_.resize(new_size);
+
+    size_t value_size = value.size();
+    utils::copy_bytes(&value_size, sizeof(size_t), data_.data() + write_pos);
+    write_pos += sizeof(size_t);
+
+    utils::copy_bytes(value.data(), value.size(), data_.data() + write_pos);
+}
+
+void StorageStoreElement::load_bvector(vector<byte>& value, size_t& position)
+{
+    size_t vec_size = 0;
+
+    if (position + sizeof(size_t) > data_.size())
+        throw runtime_error("Ran out of bytes while reading size");
+
+    utils::copy_bytes(data_.data() + position, sizeof(size_t), &vec_size);
+    position += sizeof(size_t);
+
+    if (position + vec_size > data_.size())
+        throw runtime_error("Ran out of bytes while reading vector");
+    
+    value.resize(vec_size);
+    utils::copy_bytes(data_.data() + position, vec_size, value.data());
+    position += vec_size;
+}

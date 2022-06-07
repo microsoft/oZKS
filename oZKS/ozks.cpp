@@ -80,10 +80,12 @@ void OZKS::do_pending_insertions()
         hash_type vrf_value = get_key_hash(key_payload.first);
         auto payload_commit = commit(key_payload.second);
 
-        if (store_.find(key_payload.first) != store_.end()) {
+        store_value_type store_element;
+        if (storage_->LoadStoreElement(trie_id_, key_payload.first, store_element)) {
             throw runtime_error("Key is already contained");
         }
-        store_[key_payload.first] = { key_payload.second, payload_commit.second };
+        store_element = store_value_type{ key_payload.second, payload_commit.second };
+        storage_->SaveStoreElement(trie_id_, key_payload.first, store_element);
 
         label_type label(vrf_value.begin(), vrf_value.end());
 
@@ -92,7 +94,7 @@ void OZKS::do_pending_insertions()
 
     append_proof_batch_type append_proofs;
     
-    CompressedTrie trie({});
+    CompressedTrie trie;
     load_trie(trie);
     trie.insert(label_payload_batch, append_proofs);
 
@@ -119,7 +121,7 @@ QueryResult OZKS::query(const key_type &key) const
         vrf_proof = vrf_sk_.get_proof(key);
     }
 
-    CompressedTrie trie({});
+    CompressedTrie trie;
     load_trie(trie);
 
     if (!trie.lookup(label, lookup_path)) {
@@ -134,17 +136,17 @@ QueryResult OZKS::query(const key_type &key) const
 
     // Existence: Returns payload, proof (proof = path type) and VRFProof that label was computed
     // correctly and commitment randomness
-    auto iter = store_.find(key);
-    if (iter == store_.end())
-        throw runtime_error("Should contain the key we found");
+    store_value_type store_element;
+    if (!storage_->LoadStoreElement(trie_id_, key, store_element))
+        throw runtime_error("Store should contain the key we found");
 
     QueryResult result(
         config_,
         /* is_member */ true,
-        iter->second.payload,
+        store_element.payload,
         lookup_path,
         vrf_proof,
-        iter->second.randomness);
+        store_element.randomness);
 
     return result;
 }
@@ -177,7 +179,7 @@ VRFPublicKey OZKS::get_public_key() const
 
 size_t OZKS::get_epoch() const
 {
-    CompressedTrie trie({});
+    CompressedTrie trie;
     load_trie(trie);
     return trie.epoch();
 }
@@ -185,7 +187,7 @@ size_t OZKS::get_epoch() const
 Commitment OZKS::get_commitment() const
 {
     commitment_type commitment;
-    CompressedTrie trie({});
+    CompressedTrie trie;
     load_trie(trie);
     trie.get_commitment(commitment);
     return { get_public_key(), commitment };
@@ -198,11 +200,10 @@ const OZKSConfig &OZKS::get_configuration() const
 
 void OZKS::clear()
 {
-    CompressedTrie trie({});
+    CompressedTrie trie;
     load_trie(trie);
     trie.clear();
 
-    store_.clear();
     pending_insertions_.clear();
     pending_results_.clear();
     vrf_pk_ = {};
@@ -210,6 +211,7 @@ void OZKS::clear()
     config_ = {};
 
     // TODO: delete contents of previous Trie?
+    // TODO: delete contents of previous Store?
 }
 
 size_t OZKS::save(SerializationWriter &writer) const
@@ -244,7 +246,6 @@ size_t OZKS::save(SerializationWriter &writer) const
     ozks_builder.add_vrf_pk(pk_data);
     ozks_builder.add_vrf_sk(sk_data);
     ozks_builder.add_configuration(config_data);
-    ozks_builder.add_store_count(store_.size());
     ozks_builder.add_trie_id(trie_id_data);
 
     auto fbs_ozks = ozks_builder.Finish();
@@ -252,13 +253,7 @@ size_t OZKS::save(SerializationWriter &writer) const
 
     writer.write(fbs_builder.GetBufferPointer(), fbs_builder.GetSize());
 
-    // The actual store needs to be saved separately, as it may be quite large
-    size_t store_size = 0;
-    for (auto store_elem : store_) {
-        store_size += save_store_element(store_elem, writer);
-    }
-
-    return store_size + fbs_builder.GetSize();
+    return fbs_builder.GetSize();
 }
 
 size_t OZKS::save(ostream &stream) const
@@ -319,15 +314,7 @@ size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
             fbs_ozks->vrf_sk()->size()));
     }
 
-    // The store needs to be loaded separately
-    size_t store_size = 0;
-    size_t store_count = fbs_ozks->store_count();
-    ozks.store_.clear();
-    for (size_t i = 0; i < store_count; i++) {
-        store_size += ozks.load_store_element(reader);
-    }
-
-    return in_data.size() + store_size;
+    return in_data.size();
 }
 
 size_t OZKS::load(OZKS &ozks, istream &stream)
@@ -347,78 +334,35 @@ size_t OZKS::load(OZKS &ozks, const vector<T> &vec, size_t position)
 void OZKS::load_trie(CompressedTrie &trie) const
 {
     if (nullptr == storage_)
-        throw invalid_argument("storage_ is null");
+        throw runtime_error("storage_ is null");
     if (trie_id_.empty())
-        throw invalid_argument("trie_id_ is empty");
+        throw runtime_error("trie_id_ is empty");
 
     if (!CompressedTrie::load(trie_id_, storage_, trie))
         throw runtime_error("Could not load trie");
 }
 
-size_t OZKS::save_store_element(
-    const pair<const key_type, store_type> &store_element, SerializationWriter &writer) const
+void OZKS::save() const
 {
-    flatbuffers::FlatBufferBuilder fbs_builder;
+    if (nullptr == storage_)
+        throw runtime_error("storage_ is null");
+    if (trie_id_.empty())
+        throw runtime_error("trie_id_ is empty");
 
-    auto key_data = fbs_builder.CreateVector(
-        reinterpret_cast<const uint8_t *>(store_element.first.data()), store_element.first.size());
-    auto payload_data = fbs_builder.CreateVector(
-        reinterpret_cast<const uint8_t *>(store_element.second.payload.data()),
-        store_element.second.payload.size());
-    auto randomness_data = fbs_builder.CreateVector(
-        reinterpret_cast<const uint8_t *>(store_element.second.randomness.data()),
-        store_element.second.randomness.size());
-
-    auto fbs_store_value = fbs::CreateStoreValue(fbs_builder, payload_data, randomness_data);
-
-    fbs::StoreElementBuilder store_element_builder(fbs_builder);
-    store_element_builder.add_key(key_data);
-    store_element_builder.add_value(fbs_store_value);
-
-    auto fbs_store_element = store_element_builder.Finish();
-    fbs_builder.FinishSizePrefixed(fbs_store_element);
-
-    writer.write(fbs_builder.GetBufferPointer(), fbs_builder.GetSize());
-
-    return fbs_builder.GetSize();
+    storage_->SaveOZKS(*this);
 }
 
-size_t OZKS::load_store_element(SerializationReader &reader)
+bool OZKS::load(
+    const vector<byte>& trie_id,
+    shared_ptr<ozks::storage::Storage> storage,
+    OZKS& ozks)
 {
-    vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
+    if (nullptr == storage)
+        throw invalid_argument("storage is null");
+    if (trie_id.empty())
+        throw invalid_argument("trie_id is empty");
 
-    auto verifier =
-        flatbuffers::Verifier(reinterpret_cast<uint8_t *>(in_data.data()), in_data.size());
-    bool safe = fbs::VerifySizePrefixedStoreElementBuffer(verifier);
-
-    if (!safe) {
-        throw runtime_error("Failed to load Store element: invalid buffer");
-    }
-
-    auto fbs_store_element = fbs::GetSizePrefixedStoreElement(in_data.data());
-
-    key_type key;
-    transform(
-        fbs_store_element->key()->cbegin(),
-        fbs_store_element->key()->cend(),
-        back_inserter(key),
-        [](const uint8_t ui) { return static_cast<byte>(ui); });
-
-    store_type value;
-    transform(
-        fbs_store_element->value()->payload()->cbegin(),
-        fbs_store_element->value()->payload()->cend(),
-        back_inserter(value.payload),
-        [](const uint8_t ui) { return static_cast<byte>(ui); });
-    transform(
-        fbs_store_element->value()->randomness()->cbegin(),
-        fbs_store_element->value()->randomness()->cend(),
-        back_inserter(value.randomness),
-        [](const uint8_t ui) { return static_cast<byte>(ui); });
-
-    store_[key] = value;
-
-    return in_data.size();
+    return storage->LoadOZKS(trie_id, ozks);
 }
 
 void OZKS::initialize_vrf()

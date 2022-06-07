@@ -11,6 +11,8 @@
 #include "oZKS/storage/storage.h"
 #include "oZKS/ct_node.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/ozks.h"
+#include "oZKS/utilities.h"
 
 
 namespace ozks {
@@ -41,13 +43,6 @@ namespace ozks {
             partial_label_type node_id_;
         };
 
-        struct StorageNodeKeyHasher {
-            std::size_t operator()(const StorageNodeKey& key) const
-            {
-                return std::hash<std::vector<bool>>()(key.node_id());
-            }
-        };
-
         class StorageTrieKey {
         public:
             StorageTrieKey(const std::vector<std::byte> &trie_id) : trie_id_(trie_id)
@@ -67,16 +62,80 @@ namespace ozks {
             std::vector<std::byte> trie_id_;
         };
 
+        class StorageOZKSKey {
+        public:
+            StorageOZKSKey(const std::vector<std::byte> &trie_id) : trie_id_(trie_id)
+            {}
+
+            const std::vector<std::byte>& trie_id() const
+            {
+                return trie_id_;
+            }
+
+            bool operator==(const StorageOZKSKey& other) const
+            {
+                return trie_id_ == other.trie_id_;
+            }
+
+        private:
+            std::vector<std::byte> trie_id_;
+        };
+
+        class StorageStoreElementKey {
+        public:
+            StorageStoreElementKey(
+                const std::vector<std::byte> &trie_id, const std::vector<std::byte> &key)
+                : trie_id_(trie_id), key_(key)
+            {}
+
+            const std::vector<std::byte>& trie_id() const
+            {
+                return trie_id_;
+            }
+
+            const std::vector<std::byte>& key() const
+            {
+                return key_;
+            }
+
+            bool operator==(const StorageStoreElementKey& other) const
+            {
+                return (trie_id_ == other.trie_id_ && key_ == other.key_);
+            }
+
+        private:
+            std::vector<std::byte> trie_id_;
+            std::vector<std::byte> key_;
+        };
+
+        struct StorageNodeKeyHasher {
+            std::size_t operator()(const StorageNodeKey &key) const
+            {
+                return std::hash<std::vector<bool>>()(key.node_id());
+            }
+        };
+
         struct StorageTrieKeyHasher {
             std::size_t operator()(const StorageTrieKey& key) const
             {
-                std::size_t result = 0;
-                for (auto keyb : key.trie_id()) {
-                    auto keybch = static_cast<unsigned char>(keyb);
-                    result = std::hash<unsigned char>()(keybch) ^ (result << 1);
-                }
+                utils::byte_vector_hash hasher;
+                return hasher(key.trie_id());
+            }
+        };
 
-                return result;
+        struct StorageOZKSKeyHasher {
+            std::size_t operator()(const StorageOZKSKey& key) const
+            {
+                utils::byte_vector_hash hasher;
+                return hasher(key.trie_id());
+            }
+        };
+
+        struct StorageStoreElementKeyHasher {
+            std::size_t operator()(const StorageStoreElementKey& key) const
+            {
+                utils::byte_vector_hash hasher;
+                return hasher(key.key());
             }
         };
 
@@ -119,6 +178,45 @@ namespace ozks {
             std::vector<std::byte> data_;
         };
 
+        class StorageOZKS {
+        public:
+            StorageOZKS(const OZKS& ozks) : data_()
+            {
+                ozks.save(data_);
+            }
+
+            StorageOZKS()
+            {}
+
+            const std::vector<std::byte>& data() const
+            {
+                return data_;
+            }
+
+        private:
+            std::vector<std::byte> data_;
+        };
+
+        class StorageStoreElement {
+        public:
+            StorageStoreElement(const payload_type& payload, const randomness_type& randomness)
+            {
+                save_store_element(payload, randomness);
+            }
+
+            StorageStoreElement()
+            {}
+
+            void load_store_element(payload_type &payload, randomness_type &randomness);
+
+        private:
+            std::vector<std::byte> data_;
+
+            void save_store_element(const payload_type &payload, const randomness_type &randomness);
+            void save_bvector(const std::vector<std::byte> &value);
+            void load_bvector(std::vector<std::byte> &value, std::size_t &position);
+        };
+
         class MemoryStorage : public Storage {
         public:
             MemoryStorage();
@@ -148,9 +246,41 @@ namespace ozks {
             */
             virtual void SaveCompressedTrie(const CompressedTrie &trie);
 
+            /**
+            Get an OZKS instance from storage
+            */
+            virtual bool LoadOZKS(const std::vector<std::byte> &trie_id, OZKS &ozks);
+
+            /**
+            Save an OZKS instance to storage
+            */
+            virtual void SaveOZKS(const OZKS &ozks);
+
+            /**
+            Get a store element from storage
+            */
+            virtual bool LoadStoreElement(
+                const std::vector<std::byte> &trie_id,
+                const std::vector<std::byte> &key,
+                store_value_type &value);
+
+            /**
+            Save a store element to storage
+            */
+            virtual void SaveStoreElement(
+                const std::vector<std::byte> &trie_id,
+                const std::vector<std::byte> &key,
+                const store_value_type &value);
+
         private:
             std::unordered_map<StorageNodeKey, StorageNode, StorageNodeKeyHasher> nodes_;
             std::unordered_map<StorageTrieKey, StorageTrie, StorageTrieKeyHasher> tries_;
+            std::unordered_map<StorageOZKSKey, StorageOZKS, StorageOZKSKeyHasher> ozks_;
+            std::unordered_map<
+                StorageStoreElementKey,
+                StorageStoreElement,
+                StorageStoreElementKeyHasher>
+                store_;
         };
     } // namespace storage
 } // namespace ozks
