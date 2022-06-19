@@ -146,9 +146,6 @@ namespace ozks {
 
         bool lookup(const label_type &label, lookup_path_type &path, bool include_searched) const;
 
-        std::size_t get_node_count() const;
-        void get_node_count(const CTNode *node, std::size_t &node_count) const;
-
         void init_random_id();
 
         CTNode load_root() const;

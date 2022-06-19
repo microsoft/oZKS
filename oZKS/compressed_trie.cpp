@@ -156,7 +156,6 @@ size_t CompressedTrie::save(SerializationWriter &writer) const
 
     fbs::CompressedTrieBuilder ct_builder(fbs_builder);
     ct_builder.add_epoch(epoch());
-    ct_builder.add_node_count(get_node_count());
     ct_builder.add_version(ozks_serialization_version);
     ct_builder.add_root(partial_label);
     ct_builder.add_id(id_data);
@@ -196,7 +195,6 @@ size_t CompressedTrie::load(CompressedTrie &ct, SerializationReader &reader)
 
     auto fbs_ct = fbs::GetSizePrefixedCompressedTrie(in_data.data());
     ct.epoch_ = fbs_ct->epoch();
-    size_t node_count = fbs_ct->node_count();
 
     ct.root_ = utils::bytes_to_bools(
         reinterpret_cast<const byte *>(fbs_ct->root()->data()->data()),
@@ -205,10 +203,6 @@ size_t CompressedTrie::load(CompressedTrie &ct, SerializationReader &reader)
     ct.id_.resize(fbs_ct->id()->size());
     utils::copy_bytes(
         fbs_ct->id()->data(), fbs_ct->id()->size(), ct.id_.data());
-
-    if (node_count < 1) {
-        throw runtime_error("Failed to load Compressed Trie: should have at least root node");
-    }
 
     return (in_data.size());
 }
@@ -248,35 +242,6 @@ bool CompressedTrie::load(
     }
 
     return loaded;
-}
-
-size_t CompressedTrie::get_node_count() const
-{
-    size_t node_count = 0;
-    CTNode root = load_root();
-    get_node_count(&root, node_count);
-    return node_count;
-}
-
-void CompressedTrie::get_node_count(const CTNode *node, size_t &node_count) const
-{
-    if (nullptr == node) {
-        return;
-    }
-
-    node_count++;
-
-    if (!node->left.empty()) {
-        CTNode left_node;
-        node->load_left(left_node);
-        get_node_count(&left_node, node_count);
-    }
-
-    if (!node->right.empty()) {
-        CTNode right_node;
-        node->load_right(right_node);
-        get_node_count(&right_node, node_count);
-    }
 }
 
 CTNode CompressedTrie::load_root() const
