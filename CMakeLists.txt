@@ -101,6 +101,14 @@ else()
     include(CompileSchemaCXX)
 endif()
 
+# Poco
+find_package(Poco CONFIG REQUIRED COMPONENTS Foundation)
+if (NOT Poco_FOUND)
+    message(FATAL_ERROR "Poco: not found")
+else()
+    message(STATUS "Poco: found")
+endif()
+
 # [Option] OZKS_BUILD_TESTS (default: ON)
 set(OZKS_BUILD_TESTS_OPTION_STR "Build unit and integration tests for OZKS")
 option(OZKS_BUILD_TESTS ${OZKS_BUILD_TESTS_OPTION_STR} ON)
@@ -146,7 +154,10 @@ ozks_install_target(ozks OZKSTargets)
 
 target_link_libraries(ozks
     PUBLIC Microsoft.GSL::GSL
-    PUBLIC flatbuffers::flatbuffers)
+    PUBLIC flatbuffers::flatbuffers
+    PUBLIC Poco::Foundation)
+
+target_compile_options(ozks PUBLIC -DNOMINMAX)
 
 # Ensure PDB is generated even in Release mode
 if(MSVC)
@@ -237,7 +248,8 @@ if(OZKS_OPENENCLAVE)
 
     target_link_libraries(ozks.enclave
         PUBLIC Microsoft.GSL::GSL
-        PUBLIC flatbuffers::flatbuffers)
+        PUBLIC flatbuffers::flatbuffers
+        PUBLIC Poco::Foundation)
 
     # Configurations for FourQlib: system, arch, SIMD, and assembler
     target_compile_options(ozks.enclave PUBLIC -DHAVE_CONFIG)

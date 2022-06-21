@@ -4,23 +4,28 @@
 #pragma once
 
 // STD
-#include <unordered_map>
-#include <vector>
+#include <memory>
+
+// Poco
+#include "Poco/LRUCache.h"
 
 // OZKS
-#include "oZKS/storage/storage.h"
-#include "oZKS/storage/memory_storage_helpers.h"
+#include "oZKS/defines.h"
 #include "oZKS/ct_node.h"
 #include "oZKS/compressed_trie.h"
 #include "oZKS/ozks.h"
-#include "oZKS/utilities.h"
-
+#include "oZKS/storage/storage.h"
+#include "oZKS/storage/memory_storage_helpers.h"
 
 namespace ozks {
     namespace storage {
-        class MemoryStorage : public Storage {
+        class MemoryStorageCache : public Storage {
         public:
-            MemoryStorage();
+            MemoryStorageCache(
+                std::shared_ptr<ozks::storage::Storage> backing_storage, std::size_t cache_size)
+                : storage_(backing_storage), node_cache_(cache_size), trie_cache_(cache_size),
+                  ozks_cache_(cache_size), store_element_cache_(cache_size)
+            {}
 
             /**
             Get a node from storage
@@ -33,8 +38,7 @@ namespace ozks {
             /**
             Save a node to storage
             */
-            void SaveCTNode(
-                const std::vector<std::byte> &trie_id, const CTNode &node) override;
+            void SaveCTNode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
 
             /**
             Get a compressed trie from storage
@@ -74,14 +78,11 @@ namespace ozks {
                 const store_value_type &value) override;
 
         private:
-            std::unordered_map<StorageNodeKey, StorageNode, StorageNodeKeyHasher> nodes_;
-            std::unordered_map<StorageTrieKey, StorageTrie, StorageTrieKeyHasher> tries_;
-            std::unordered_map<StorageOZKSKey, StorageOZKS, StorageOZKSKeyHasher> ozks_;
-            std::unordered_map<
-                StorageStoreElementKey,
-                StorageStoreElement,
-                StorageStoreElementKeyHasher>
-                store_;
+            std::shared_ptr<ozks::storage::Storage> storage_;
+            Poco::LRUCache<StorageNodeKey, CTNode> node_cache_;
+            Poco::LRUCache<StorageTrieKey, CompressedTrie> trie_cache_;
+            Poco::LRUCache<StorageOZKSKey, OZKS> ozks_cache_;
+            Poco::LRUCache<StorageStoreElementKey, store_value_type> store_element_cache_;
         };
     } // namespace storage
 } // namespace ozks

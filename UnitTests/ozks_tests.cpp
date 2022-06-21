@@ -8,6 +8,7 @@
 #include "oZKS/ozks.h"
 #include "oZKS/utilities.h"
 #include "oZKS/storage/memory_storage.h"
+#include "oZKS/storage/memory_storage_cache.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -16,7 +17,7 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
-constexpr size_t random_iterations = 100000;
+constexpr size_t random_iterations = 50000;
 
 namespace {
     /**
@@ -28,6 +29,49 @@ namespace {
             throw runtime_error("Failed to get random bytes");
     }
 } // namespace
+
+void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t iterations)
+{
+    OZKS ozks(storage);
+
+    key_type key(16);
+    payload_type payload(40);
+    vector<key_type> valid_keys;
+
+    for (size_t i = 0; i < iterations; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
+
+        auto insert_result = ozks.insert(key, payload);
+        ozks.flush();
+        EXPECT_EQ(true, insert_result->verify());
+
+        // Add some keys at random to check later (up to 100)
+        unsigned char c;
+        get_random_bytes(&c, 1);
+        if (valid_keys.size() < 100 && c > 128) {
+            valid_keys.push_back(key);
+        }
+    }
+
+    // Check the valid keys are found and that their path is verified correctly
+    for (size_t i = 0; i < valid_keys.size(); i++) {
+        auto result = ozks.query(valid_keys[i]);
+        EXPECT_TRUE(result.is_member());
+        EXPECT_NE(0, result.payload().size());
+        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+    }
+
+    // Check that invalid keys are not found and that their path is verified correctly
+    for (size_t i = 0; i < 1000; i++) {
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
+
+        auto result = ozks.query(key);
+        EXPECT_FALSE(result.is_member());
+        EXPECT_EQ(0, result.payload().size());
+        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
+    }
+}
 
 TEST(OZKSTests, InsertTest)
 {
@@ -288,46 +332,28 @@ TEST(OZKSTests, InsertResultVerificationTest)
 
 TEST(OZKSTests, RandomInsertVerificationTest)
 {
-    OZKS ozks({});
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    RandomInsertTestCore(storage, random_iterations);
+}
 
-    key_type key(16);
-    payload_type payload(40);
-    vector<key_type> valid_keys;
+TEST(OZKSTests, RandomInsertVerificationCacheTest)
+{
+    shared_ptr<ozks::storage::Storage> backing_storage =
+        make_shared<ozks::storage::MemoryStorage>();
+    shared_ptr<ozks::storage::Storage> storage =
+        make_shared<ozks::storage::MemoryStorageCache>(backing_storage, /* cache_size */ random_iterations);
 
-    for (size_t i = 0; i < random_iterations / 10; i++) {
-        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
-        get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
+    RandomInsertTestCore(storage, random_iterations);
+}
 
-        auto insert_result = ozks.insert(key, payload);
-        ozks.flush();
-        EXPECT_EQ(true, insert_result->verify());
+TEST(OZKSTests, RandomInsertVerificationSmallerCacheTest)
+{
+    shared_ptr<ozks::storage::Storage> backing_storage =
+        make_shared<ozks::storage::MemoryStorage>();
+    shared_ptr<ozks::storage::Storage> storage =
+        make_shared<ozks::storage::MemoryStorageCache>(backing_storage, /* cache_size */ random_iterations / 4);
 
-        // Add some keys at random to check later (up to 100)
-        unsigned char c;
-        get_random_bytes(&c, 1);
-        if (valid_keys.size() < 100 && c > 128) {
-            valid_keys.push_back(key);
-        }
-    }
-
-    // Check the valid keys are found and that their path is verified correctly
-    for (size_t i = 0; i < valid_keys.size(); i++) {
-        auto result = ozks.query(valid_keys[i]);
-        EXPECT_TRUE(result.is_member());
-        EXPECT_NE(0, result.payload().size());
-        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
-    }
-
-    // Check that invalid keys are not found and that their path is verified correctly
-    for (size_t i = 0; i < 1000; i++) {
-        get_random_bytes(
-            reinterpret_cast<unsigned char *>(key.data()), key.size());
-
-        auto result = ozks.query(key);
-        EXPECT_FALSE(result.is_member());
-        EXPECT_EQ(0, result.payload().size());
-        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
-    }
+    RandomInsertTestCore(storage, random_iterations);
 }
 
 TEST(OZKSTests, RandomMultiInsertVerificationTest)

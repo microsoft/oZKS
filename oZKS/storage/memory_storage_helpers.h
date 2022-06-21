@@ -35,6 +35,14 @@ namespace ozks {
                 return (trie_id_ == other.trie_id_ && node_id_ == other.node_id_);
             }
 
+            bool operator<(const StorageNodeKey &other) const
+            {
+                if (trie_id_ == other.trie_id_)
+                    return node_id_ < other.node_id_;
+
+                return trie_id_ < other.trie_id_;
+            }
+
         private:
             std::vector<std::byte> trie_id_;
             partial_label_type node_id_;
@@ -55,6 +63,11 @@ namespace ozks {
                 return trie_id_ == other.trie_id_;
             }
 
+            bool operator<(const StorageTrieKey& other) const
+            {
+                return trie_id_ < other.trie_id_;
+            }
+
         private:
             std::vector<std::byte> trie_id_;
         };
@@ -72,6 +85,11 @@ namespace ozks {
             bool operator==(const StorageOZKSKey &other) const
             {
                 return trie_id_ == other.trie_id_;
+            }
+
+            bool operator<(const StorageOZKSKey& other)const
+            {
+                return trie_id_ < other.trie_id_;
             }
 
         private:
@@ -98,6 +116,14 @@ namespace ozks {
             bool operator==(const StorageStoreElementKey &other) const
             {
                 return (trie_id_ == other.trie_id_ && key_ == other.key_);
+            }
+
+            bool operator<(const StorageStoreElementKey& other) const
+            {
+                if (trie_id_ == other.trie_id_)
+                    return key_ < other.key_;
+
+                return trie_id_ < other.trie_id_;
             }
 
         private:
