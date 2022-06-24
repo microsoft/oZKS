@@ -225,7 +225,7 @@ void CompressedTrie::save() const
     if (nullptr == storage_)
         throw runtime_error("Storage is null");
 
-    storage_->SaveCompressedTrie(*this);
+    storage_->save_compressed_trie(*this);
 }
 
 bool CompressedTrie::load(
@@ -236,7 +236,7 @@ bool CompressedTrie::load(
     if (trie_id.empty())
         throw invalid_argument("trie_id is empty");
 
-    bool loaded = storage->LoadCompressedTrie(trie_id, trie);
+    bool loaded = storage->load_compressed_trie(trie_id, trie);
     if (loaded) {
         trie.init(storage);
     }

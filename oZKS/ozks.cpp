@@ -81,11 +81,11 @@ void OZKS::do_pending_insertions()
         auto payload_commit = commit(key_payload.second);
 
         store_value_type store_element;
-        if (storage_->LoadStoreElement(trie_id_, key_payload.first, store_element)) {
+        if (storage_->load_store_element(trie_id_, key_payload.first, store_element)) {
             throw runtime_error("Key is already contained");
         }
         store_element = store_value_type{ key_payload.second, payload_commit.second };
-        storage_->SaveStoreElement(trie_id_, key_payload.first, store_element);
+        storage_->save_store_element(trie_id_, key_payload.first, store_element);
 
         label_type label(vrf_value.begin(), vrf_value.end());
 
@@ -137,7 +137,7 @@ QueryResult OZKS::query(const key_type &key) const
     // Existence: Returns payload, proof (proof = path type) and VRFProof that label was computed
     // correctly and commitment randomness
     store_value_type store_element;
-    if (!storage_->LoadStoreElement(trie_id_, key, store_element))
+    if (!storage_->load_store_element(trie_id_, key, store_element))
         throw runtime_error("Store should contain the key we found");
 
     QueryResult result(
@@ -349,7 +349,7 @@ void OZKS::save() const
     if (trie_id_.empty())
         throw runtime_error("trie_id_ is empty");
 
-    storage_->SaveOZKS(*this);
+    storage_->save_ozks(*this);
 }
 
 bool OZKS::load(
@@ -362,7 +362,7 @@ bool OZKS::load(
     if (trie_id.empty())
         throw invalid_argument("trie_id is empty");
 
-    return storage->LoadOZKS(trie_id, ozks);
+    return storage->load_ozks(trie_id, ozks);
 }
 
 void OZKS::initialize_vrf()

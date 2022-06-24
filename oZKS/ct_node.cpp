@@ -517,7 +517,7 @@ bool CTNode::load(
     if (nullptr == trie_->storage())
         throw runtime_error("trie_->storage is null");
 
-    bool loaded = trie_->storage()->LoadCTNode(trie_->id(), label, node);
+    bool loaded = trie_->storage()->load_ctnode(trie_->id(), label, node);
     if (loaded) {
         node.init(trie_);
     }
@@ -548,7 +548,7 @@ void CTNode::save() const
     if (nullptr == trie_->storage())
         throw runtime_error("trie_->storage is null");
 
-    trie_->storage()->SaveCTNode(trie_->id(), *this);
+    trie_->storage()->save_ctnode(trie_->id(), *this);
 }
 
 // Explicit instantiations

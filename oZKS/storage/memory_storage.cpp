@@ -13,7 +13,7 @@ using namespace ozks::storage;
 MemoryStorage::MemoryStorage()
 {}
 
-bool MemoryStorage::LoadCTNode(
+bool MemoryStorage::load_ctnode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
 {
     StorageNodeKey node_key{ trie_id, node_id };
@@ -27,7 +27,7 @@ bool MemoryStorage::LoadCTNode(
     return true;
 }
 
-void MemoryStorage::SaveCTNode(const vector<byte> &trie_id, const CTNode& node)
+void MemoryStorage::save_ctnode(const vector<byte> &trie_id, const CTNode& node)
 {
     StorageNode stnode(node);
     StorageNodeKey key(trie_id, node.label);
@@ -35,7 +35,7 @@ void MemoryStorage::SaveCTNode(const vector<byte> &trie_id, const CTNode& node)
     nodes_[key] = stnode;
 }
 
-bool MemoryStorage::LoadCompressedTrie(const vector<byte> &trie_id, CompressedTrie &trie)
+bool MemoryStorage::load_compressed_trie(const vector<byte> &trie_id, CompressedTrie &trie)
 {
     StorageTrieKey trie_key{ trie_id };
     auto trie_it = tries_.find(trie_key);
@@ -47,7 +47,7 @@ bool MemoryStorage::LoadCompressedTrie(const vector<byte> &trie_id, CompressedTr
     return true;
 }
 
-void MemoryStorage::SaveCompressedTrie(const CompressedTrie &trie)
+void MemoryStorage::save_compressed_trie(const CompressedTrie &trie)
 {
     StorageTrie sttrie(trie);
     StorageTrieKey key(trie.id());
@@ -55,7 +55,7 @@ void MemoryStorage::SaveCompressedTrie(const CompressedTrie &trie)
     tries_[key] = sttrie;
 }
 
-bool MemoryStorage::LoadOZKS(const vector<byte> &trie_id, OZKS &ozks)
+bool MemoryStorage::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
 {
     StorageOZKSKey ozks_key(trie_id);
     auto ozks_it = ozks_.find(ozks_key);
@@ -67,7 +67,7 @@ bool MemoryStorage::LoadOZKS(const vector<byte> &trie_id, OZKS &ozks)
     return true;
 }
 
-void MemoryStorage::SaveOZKS(const OZKS& ozks)
+void MemoryStorage::save_ozks(const OZKS& ozks)
 {
     StorageOZKSKey key(ozks.id());
     StorageOZKS stozks(ozks);
@@ -75,7 +75,7 @@ void MemoryStorage::SaveOZKS(const OZKS& ozks)
     ozks_[key] = stozks;
 }
 
-bool MemoryStorage::LoadStoreElement(
+bool MemoryStorage::load_store_element(
     const vector<byte> &trie_id, const vector<byte> &key, store_value_type &value)
 {
     StorageStoreElementKey se_key(trie_id, key);
@@ -88,7 +88,7 @@ bool MemoryStorage::LoadStoreElement(
     return true;
 }
 
-void MemoryStorage::SaveStoreElement(
+void MemoryStorage::save_store_element(
     const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
 {
     StorageStoreElementKey se_key(trie_id, key);
@@ -97,7 +97,12 @@ void MemoryStorage::SaveStoreElement(
     store_[se_key] = selem;
 }
 
-void StorageStoreElement::load_store_element(payload_type& payload, randomness_type& randomness)
+void MemoryStorage::flush()
+{
+    // Nothing to do
+}
+
+void StorageStoreElement::load_store_element(payload_type &payload, randomness_type &randomness)
 {
     size_t position = 0;
     load_bvector(payload, position);

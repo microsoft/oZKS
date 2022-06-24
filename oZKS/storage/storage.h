@@ -21,7 +21,7 @@ namespace ozks {
             /**
             Get a node from storage
             */
-            virtual bool LoadCTNode(
+            virtual bool load_ctnode(
                 const std::vector<std::byte> &trie_id,
                 const partial_label_type &node_id,
                 CTNode &node) = 0;
@@ -29,34 +29,34 @@ namespace ozks {
             /**
             Save a node to storage
             */
-            virtual void SaveCTNode(
+            virtual void save_ctnode(
                 const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
 
             /**
             Get a compressed trie from storage
             */
-            virtual bool LoadCompressedTrie(
+            virtual bool load_compressed_trie(
                 const std::vector<std::byte> &trie_id, CompressedTrie &trie) = 0;
 
             /**
             Save a compressed trie to storage
             */
-            virtual void SaveCompressedTrie(const CompressedTrie &trie) = 0;
+            virtual void save_compressed_trie(const CompressedTrie &trie) = 0;
 
             /**
             Get an OZKS instance from storage
             */
-            virtual bool LoadOZKS(const std::vector<std::byte> &trie_id, OZKS &ozks) = 0;
+            virtual bool load_ozks(const std::vector<std::byte> &trie_id, OZKS &ozks) = 0;
 
             /**
             Save an OZKS instance to storage
             */
-            virtual void SaveOZKS(const OZKS &ozks) = 0;
+            virtual void save_ozks(const OZKS &ozks) = 0;
 
             /**
             Get a store element from storage
             */
-            virtual bool LoadStoreElement(
+            virtual bool load_store_element(
                 const std::vector<std::byte> &trie_id,
                 const std::vector<std::byte> &key,
                 store_value_type &value) = 0;
@@ -64,10 +64,15 @@ namespace ozks {
             /**
             Save a store element to storage
             */
-            virtual void SaveStoreElement(
+            virtual void save_store_element(
                 const std::vector<std::byte> &trie_id,
                 const std::vector<std::byte> &key,
                 const store_value_type &value) = 0;
+
+            /**
+            Flush changes if appropriate
+            */
+            virtual void flush() = 0;
         };
     } // namespace storage
 } // namespace ozks

@@ -30,7 +30,7 @@ namespace ozks {
             /**
             Get a node from storage
             */
-            bool LoadCTNode(
+            bool load_ctnode(
                 const std::vector<std::byte> &trie_id,
                 const partial_label_type &node_id,
                 CTNode &node) override;
@@ -38,33 +38,33 @@ namespace ozks {
             /**
             Save a node to storage
             */
-            void SaveCTNode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
+            void save_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
 
             /**
             Get a compressed trie from storage
             */
-            bool LoadCompressedTrie(
+            bool load_compressed_trie(
                 const std::vector<std::byte> &trie_id, CompressedTrie &trie) override;
 
             /**
             Save a compressed trie to storage
             */
-            void SaveCompressedTrie(const CompressedTrie &trie) override;
+            void save_compressed_trie(const CompressedTrie &trie) override;
 
             /**
             Get an OZKS instance from storage
             */
-            bool LoadOZKS(const std::vector<std::byte> &trie_id, OZKS &ozks) override;
+            bool load_ozks(const std::vector<std::byte> &trie_id, OZKS &ozks) override;
 
             /**
             Save an OZKS instance to storage
             */
-            void SaveOZKS(const OZKS &ozks) override;
+            void save_ozks(const OZKS &ozks) override;
 
             /**
             Get a store element from storage
             */
-            bool LoadStoreElement(
+            bool load_store_element(
                 const std::vector<std::byte> &trie_id,
                 const std::vector<std::byte> &key,
                 store_value_type &value) override;
@@ -72,10 +72,15 @@ namespace ozks {
             /**
             Save a store element to storage
             */
-            void SaveStoreElement(
+            void save_store_element(
                 const std::vector<std::byte> &trie_id,
                 const std::vector<std::byte> &key,
                 const store_value_type &value) override;
+
+            /**
+            Flush changes if appropriate
+            */
+            void flush() override;
 
         private:
             std::shared_ptr<ozks::storage::Storage> storage_;
