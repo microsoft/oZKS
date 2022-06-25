@@ -5,26 +5,18 @@
 
 // STD
 #include <memory>
-
-// Poco
-#include "Poco/LRUCache.h"
+#include <unordered_map>
 
 // OZKS
-#include "oZKS/defines.h"
-#include "oZKS/ct_node.h"
-#include "oZKS/compressed_trie.h"
-#include "oZKS/ozks.h"
-#include "oZKS/storage/storage.h"
+#include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage_helpers.h"
 
 namespace ozks {
     namespace storage {
-        class MemoryStorageCache : public Storage {
+        class MemoryStorageBatchInserter : public Storage {
         public:
-            MemoryStorageCache(
-                std::shared_ptr<ozks::storage::Storage> backing_storage, std::size_t cache_size)
-                : storage_(backing_storage), node_cache_(cache_size), trie_cache_(cache_size),
-                  ozks_cache_(cache_size), store_element_cache_(cache_size)
+            MemoryStorageBatchInserter(std::shared_ptr<BatchStorage> backing_storage)
+                : storage_(backing_storage)
             {}
 
             /**
@@ -83,11 +75,16 @@ namespace ozks {
             void flush(const std::vector<std::byte> &trie_id) override;
 
         private:
-            std::shared_ptr<ozks::storage::Storage> storage_;
-            Poco::LRUCache<StorageNodeKey, CTNode> node_cache_;
-            Poco::LRUCache<StorageTrieKey, CompressedTrie> trie_cache_;
-            Poco::LRUCache<StorageOZKSKey, OZKS> ozks_cache_;
-            Poco::LRUCache<StorageStoreElementKey, store_value_type> store_element_cache_;
+            std::shared_ptr<BatchStorage> storage_;
+
+            std::unordered_map<StorageNodeKey, CTNode, StorageNodeKeyHasher> unsaved_nodes_;
+            std::unordered_map<StorageTrieKey, CompressedTrie, StorageTrieKeyHasher> unsaved_tries_;
+            std::unordered_map<StorageOZKSKey, OZKS, StorageOZKSKeyHasher> unsaved_ozks_;
+            std::unordered_map<
+                StorageStoreElementKey,
+                store_value_type,
+                StorageStoreElementKeyHasher>
+                unsaved_store_elements_;
         };
     } // namespace storage
 } // namespace ozks

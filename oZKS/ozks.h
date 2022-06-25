@@ -34,6 +34,11 @@ namespace ozks {
         /**
         Contructor for OZKS class
         */
+        OZKS();
+
+        /**
+        Contructor for OZKS class
+        */
         OZKS(std::shared_ptr<ozks::storage::Storage> storage);
 
         /**

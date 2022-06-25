@@ -107,7 +107,7 @@ void MemoryStorageCache::save_store_element(
     store_element_cache_.update(key, value);
 }
 
-void MemoryStorageCache::flush()
+void MemoryStorageCache::flush(const vector<byte> &trie_id)
 {
     // Nothing to do
 }

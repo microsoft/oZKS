@@ -75,7 +75,27 @@ namespace ozks {
             /**
             Flush changes if appropriate
             */
-            void flush() override;
+            void flush(const std::vector<std::byte> &trie_id) override;
+
+            std::size_t node_count() const
+            {
+                return nodes_.size();
+            }
+
+            std::size_t store_element_count() const
+            {
+                return store_.size();
+            }
+
+            std::size_t trie_count() const
+            {
+                return tries_.size();
+            }
+
+            std::size_t ozks_count() const
+            {
+                return ozks_.size();
+            }
 
         private:
             std::unordered_map<StorageNodeKey, StorageNode, StorageNodeKeyHasher> nodes_;

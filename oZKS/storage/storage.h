@@ -72,7 +72,7 @@ namespace ozks {
             /**
             Flush changes if appropriate
             */
-            virtual void flush() = 0;
+            virtual void flush(const std::vector<std::byte> &trie_id) = 0;
         };
     } // namespace storage
 } // namespace ozks

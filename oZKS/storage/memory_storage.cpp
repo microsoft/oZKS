@@ -97,7 +97,7 @@ void MemoryStorage::save_store_element(
     store_[se_key] = selem;
 }
 
-void MemoryStorage::flush()
+void MemoryStorage::flush(const vector<byte> &trie_id)
 {
     // Nothing to do
 }

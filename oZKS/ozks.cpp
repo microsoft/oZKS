@@ -13,6 +13,10 @@
 using namespace std;
 using namespace ozks;
 
+OZKS::OZKS() : OZKS(nullptr)
+{
+}
+
 OZKS::OZKS(shared_ptr<storage::Storage> storage) : storage_(storage)
 {
     initialize_vrf();
@@ -108,6 +112,7 @@ void OZKS::do_pending_insertions()
 
     pending_insertions_.clear();
     pending_results_.clear();
+    storage_->flush(id());
 }
 
 QueryResult OZKS::query(const key_type &key) const
