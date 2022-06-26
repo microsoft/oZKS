@@ -124,10 +124,15 @@ void MemoryStorageBatchInserter::flush(const vector<byte> &trie_id)
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
 
-    vector<CTNode> nodes(unsaved_nodes_.size());
-    vector<CompressedTrie> tries(unsaved_tries_.size());
-    vector<OZKS> ozkss(unsaved_ozks_.size());
-    vector<pair<vector<byte>, store_value_type>> store_elements(unsaved_store_elements_.size());
+    vector<CTNode> nodes;
+    vector<CompressedTrie> tries;
+    vector<OZKS> ozkss;
+    vector<pair<vector<byte>, store_value_type>> store_elements;
+
+    nodes.reserve(unsaved_nodes_.size());
+    tries.reserve(unsaved_tries_.size());
+    ozkss.reserve(unsaved_ozks_.size());
+    store_elements.reserve(unsaved_store_elements_.size());
 
     for (auto node_pair : unsaved_nodes_) {
         nodes.emplace_back(node_pair.second);

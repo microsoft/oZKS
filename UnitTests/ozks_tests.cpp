@@ -34,9 +34,9 @@ namespace {
     /**
     Class for testing Batch storage
     */
-    class SimpleBatchingStorage : public ozks::storage::BatchStorage {
+    class TestBackingStorage : public ozks::storage::BatchStorage {
     public:
-        SimpleBatchingStorage()
+        TestBackingStorage()
         {}
 
         bool load_ctnode(
@@ -126,6 +126,16 @@ namespace {
         size_t store_element_count() const
         {
             return storage_.store_element_count();
+        }
+
+        size_t trie_count() const
+        {
+            return storage_.trie_count();
+        }
+
+        size_t ozks_count() const
+        {
+            return storage_.ozks_count();
         }
 
     private:
@@ -465,12 +475,12 @@ TEST(OZKSTests, RandomInsertVerificationSmallerCacheTest)
 
 TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
 {
-    shared_ptr<ozks::storage::BatchStorage> backing_storage = make_shared<SimpleBatchingStorage>();
+    shared_ptr<ozks::storage::BatchStorage> backing_storage = make_shared<TestBackingStorage>();
     shared_ptr<ozks::storage::Storage> batching_storage = make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
 
-    SimpleBatchingStorage *sbs =
-        dynamic_cast<SimpleBatchingStorage *>(backing_storage.get());
-    EXPECT_NE(nullptr, sbs);
+    TestBackingStorage *tbs =
+        dynamic_cast<TestBackingStorage *>(backing_storage.get());
+    EXPECT_NE(nullptr, tbs);
 
     OZKS ozks(batching_storage);
 
@@ -497,14 +507,18 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
     }
 
     // At this point memory storage should be empty
-    EXPECT_EQ(0, sbs->node_count());
-    EXPECT_EQ(0, sbs->store_element_count());
+    EXPECT_EQ(0, tbs->node_count());
+    EXPECT_EQ(0, tbs->store_element_count());
+    EXPECT_EQ(0, tbs->trie_count());
+    EXPECT_EQ(0, tbs->ozks_count());
 
     ozks.flush();
 
     // Now memory storage should have everything
-    EXPECT_GE(sbs->node_count(), random_iterations);
-    EXPECT_EQ(random_iterations + 1, sbs->store_element_count());
+    EXPECT_GE(tbs->node_count(), random_iterations);
+    EXPECT_EQ(random_iterations, tbs->store_element_count());
+    EXPECT_EQ(1, tbs->trie_count());
+    EXPECT_EQ(0, tbs->ozks_count());
 
     // And we can verify results
     for (auto insert_result : insert_results) {
