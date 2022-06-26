@@ -31,6 +31,9 @@ namespace {
             throw runtime_error("Failed to get random bytes");
     }
 
+    /**
+    Class for testing Batch storage
+    */
     class SimpleBatchingStorage : public ozks::storage::BatchStorage {
     public:
         SimpleBatchingStorage()
@@ -138,6 +141,7 @@ void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t ite
     key_type key(16);
     payload_type payload(40);
     vector<key_type> valid_keys;
+    vector<payload_type> valid_payloads;
 
     for (size_t i = 0; i < iterations; i++) {
         get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
@@ -152,6 +156,7 @@ void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t ite
         get_random_bytes(&c, 1);
         if (valid_keys.size() < 100 && c > 128) {
             valid_keys.push_back(key);
+            valid_payloads.push_back(payload);
         }
     }
 
@@ -161,6 +166,7 @@ void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t ite
         EXPECT_TRUE(result.is_member());
         EXPECT_NE(0, result.payload().size());
         EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+        EXPECT_EQ(valid_payloads[i], result.payload());
     }
 
     // Check that invalid keys are not found and that their path is verified correctly
@@ -471,6 +477,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
     key_type key(16);
     payload_type payload(40);
     vector<key_type> valid_keys;
+    vector<payload_type> valid_payloads;
     vector<shared_ptr<InsertResult>> insert_results;
 
     for (size_t i = 0; i < random_iterations; i++) {
@@ -485,6 +492,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
         get_random_bytes(&c, 1);
         if (valid_keys.size() < 100 && c > 128) {
             valid_keys.push_back(key);
+            valid_payloads.push_back(payload);
         }
     }
 
@@ -509,6 +517,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
         EXPECT_TRUE(result.is_member());
         EXPECT_NE(0, result.payload().size());
         EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+        EXPECT_EQ(valid_payloads[i], result.payload());
     }
 
     // Check that invalid keys are not found and that their path is verified correctly
