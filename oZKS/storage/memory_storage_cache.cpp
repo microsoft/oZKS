@@ -109,5 +109,5 @@ void MemoryStorageCache::save_store_element(
 
 void MemoryStorageCache::flush(const vector<byte> &trie_id)
 {
-    // Nothing to do
+    storage_->flush(trie_id);
 }

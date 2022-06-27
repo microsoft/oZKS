@@ -99,7 +99,7 @@ void MemoryStorage::save_store_element(
 
 void MemoryStorage::flush(const vector<byte> &trie_id)
 {
-    // Nothing to do
+    // Nothing to do because there is nowhere to flush to
 }
 
 void StorageStoreElement::load_store_element(payload_type &payload, randomness_type &randomness)
