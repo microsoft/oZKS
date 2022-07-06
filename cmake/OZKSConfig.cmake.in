@@ -38,6 +38,7 @@ set(OZKS_BUILD_TYPE @CMAKE_BUILD_TYPE@)
 # We must look for dependencies
 ozks_find_dependency(Microsoft.GSL)
 ozks_find_dependency(Flatbuffers)
+ozks_find_dependency(Poco)
 
 # Add the current directory to the module search path
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
