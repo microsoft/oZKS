@@ -6,6 +6,7 @@
 // STL
 #include <memory>
 #include <iostream>
+#include <stdexcept>
 
 // oZKS
 #include "oZKS/defines.h"

@@ -23,6 +23,8 @@ namespace ozks {
     using label_payload_batch_type =
         std::vector<std::pair<std::vector<std::byte>, std::vector<std::byte>>>;
     using partial_label_type = std::vector<bool>;
+
+    constexpr std::size_t randomness_size = 64;
     using randomness_type = std::vector<std::byte>;
 
     using lookup_path_type = std::vector<std::pair<partial_label_type, hash_type>>;

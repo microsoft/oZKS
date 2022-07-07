@@ -49,22 +49,20 @@ OZKS::OZKS(shared_ptr<storage::Storage> storage, const OZKSConfig &config) : sto
 
 shared_ptr<InsertResult> OZKS::insert(const key_type& key, const payload_type& payload)
 {
-    pending_insertion pending{ key, payload };
-    pending_insertions_.emplace_back(pending);
-    pending_result pending_res{ key, make_shared<InsertResult>() };
-    pending_results_.emplace_back(pending_res);
-    return pending_res.second;
+    pending_insertions_.emplace_back(pending_insertion{ key, payload });
+    auto insert_result = make_shared<InsertResult>();
+    pending_results_.emplace_back(pending_result{ key, insert_result });
+    return insert_result;
 }
 
 InsertResultBatch OZKS::insert(const key_payload_batch_type &input)
 {
     InsertResultBatch result;
     for (const auto &i : input) {
-        pending_insertion pending{ i.first, i.second };
-        pending_insertions_.emplace_back(pending);
-        pending_result pending_res{ i.first, make_shared<InsertResult>() };
-        pending_results_.emplace_back(pending_res);
-        result.emplace_back(pending_res.second);
+        pending_insertions_.emplace_back(pending_insertion{ i.first, i.second });
+        auto insert_result = make_shared<InsertResult>();
+        pending_results_.emplace_back(pending_result{ i.first, insert_result });
+        result.emplace_back(move(insert_result));
     }
 
     return result;

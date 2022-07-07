@@ -19,11 +19,6 @@
 namespace ozks {
     namespace utils {
         /**
-        Size of a hash
-        */
-        const std::size_t hash_size = 64;
-
-        /**
         Convert the given partial label to a hexadecimal string
         */
         std::string to_string(const partial_label_type &label);
@@ -70,7 +65,7 @@ namespace ozks {
         template <typename... Ts>
         std::vector<std::byte> make_bytes(Ts &&... args) noexcept
         {
-            return { std::byte(std::forward<Ts>(args))... };
+            return { static_cast<std::byte>(std::forward<Ts>(args))... };
         }
 
         /**

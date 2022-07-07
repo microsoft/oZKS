@@ -134,25 +134,25 @@ void MemoryStorageBatchInserter::flush(const vector<byte> &trie_id)
     ozkss.reserve(unsaved_ozks_.size());
     store_elements.reserve(unsaved_store_elements_.size());
 
-    for (auto node_pair : unsaved_nodes_) {
-        nodes.emplace_back(node_pair.second);
+    for (auto &node_pair : unsaved_nodes_) {
+        nodes.emplace_back(move(node_pair.second));
     }
     unsaved_nodes_.clear();
 
-    for (auto trie_pair : unsaved_tries_) {
-        tries.emplace_back(trie_pair.second);
+    for (auto &trie_pair : unsaved_tries_) {
+        tries.emplace_back(move(trie_pair.second));
     }
     unsaved_tries_.clear();
 
-    for (auto ozks_pair : unsaved_ozks_) {
-        ozkss.emplace_back(ozks_pair.second);
+    for (auto &ozks_pair : unsaved_ozks_) {
+        ozkss.emplace_back(move(ozks_pair.second));
     }
     unsaved_ozks_.clear();
 
     for (auto store_element_pair : unsaved_store_elements_) {
         pair<vector<byte>, store_value_type> se(
             store_element_pair.first.key(), store_element_pair.second);
-        store_elements.emplace_back(se);
+        store_elements.emplace_back(move(se));
     }
     unsaved_store_elements_.clear();
 

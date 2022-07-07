@@ -5,6 +5,7 @@
 
 // STD
 #include <memory>
+#include <cstddef>
 
 // Poco
 #include "Poco/LRUCache.h"
