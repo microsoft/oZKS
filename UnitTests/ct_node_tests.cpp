@@ -371,7 +371,7 @@ TEST(CTNodeTests, UpdateHashTest)
 
      size_t save_size = node.save(ss);
 
-     auto result = CTNode::load(ss);
+     auto result = CTNode::Load(ss);
 
      EXPECT_EQ(node.hash(), get<0>(result).hash());
      EXPECT_EQ(node.payload, get<0>(result).payload);
@@ -392,7 +392,7 @@ TEST(CTNodeTests, UpdateHashTest)
      stringstream ss2;
 
      save_size = node2.save(ss2);
-     result = CTNode::load(ss2);
+     result = CTNode::Load(ss2);
 
      EXPECT_EQ(node2.hash(), get<0>(result).hash());
      EXPECT_EQ(node2.payload, get<0>(result).payload);
@@ -419,7 +419,7 @@ TEST(CTNodeTests, UpdateHashTest)
 
      size_t save_size = node.save(vec);
 
-     auto result = CTNode::load(vec);
+     auto result = CTNode::Load(vec);
 
      EXPECT_EQ(node.hash(), get<0>(result).hash());
      EXPECT_EQ(node.payload, get<0>(result).payload);
@@ -440,7 +440,7 @@ TEST(CTNodeTests, UpdateHashTest)
      stringstream ss2;
 
      save_size = node2.save(ss2);
-     result = CTNode::load(ss2);
+     result = CTNode::Load(ss2);
 
      EXPECT_EQ(node2.hash(), get<0>(result).hash());
      EXPECT_EQ(node2.payload, get<0>(result).payload);

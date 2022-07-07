@@ -131,7 +131,7 @@ TEST(InsertResultTests, SaveLoadVectorTest)
 
     InsertResult ir2;
     EXPECT_FALSE(ir2.initialized());
-    size_t load_size = InsertResult::load(ir2, buffer);
+    size_t load_size = InsertResult::Load(ir2, buffer);
 
     EXPECT_EQ(save_size, load_size);
     EXPECT_TRUE(ir2.initialized());
@@ -170,7 +170,7 @@ TEST(InsertResultTests, SaveLoadStreamTest)
 
     InsertResult ir2;
     EXPECT_FALSE(ir2.initialized());
-    size_t load_size = InsertResult::load(ir2, ss);
+    size_t load_size = InsertResult::Load(ir2, ss);
 
     EXPECT_EQ(save_size, load_size);
     EXPECT_TRUE(ir2.initialized());

@@ -88,18 +88,18 @@ namespace ozks {
         /**
         Load an insert result from a serialization reader
         */
-        static std::size_t load(InsertResult &insert_result, SerializationReader &reader);
+        static std::size_t Load(InsertResult &insert_result, SerializationReader &reader);
 
         /**
         Load an insert result from a stream
         */
-        static std::size_t load(InsertResult &insert_result, std::istream &stream);
+        static std::size_t Load(InsertResult &insert_result, std::istream &stream);
 
         /**
         Load an insert result from a vector
         */
         template <class T>
-        static std::size_t load(
+        static std::size_t Load(
             InsertResult &insert_result, const std::vector<T> &vector, std::size_t position = 0);
 
     private:

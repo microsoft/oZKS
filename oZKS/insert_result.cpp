@@ -124,7 +124,7 @@ namespace ozks {
         return fbs_builder.GetSize();
     }
 
-    size_t InsertResult::load(InsertResult& insert_result, SerializationReader& reader)
+    size_t InsertResult::Load(InsertResult& insert_result, SerializationReader& reader)
     {
         vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -172,26 +172,26 @@ namespace ozks {
         return in_data.size();
     }
 
-    size_t InsertResult::load(InsertResult& insert_result, istream& stream)
+    size_t InsertResult::Load(InsertResult& insert_result, istream& stream)
     {
         StreamSerializationReader reader(&stream);
-        return load(insert_result, reader);
+        return Load(insert_result, reader);
     }
 
     template <class T>
-    size_t InsertResult::load(
+    size_t InsertResult::Load(
         InsertResult& insert_result, const vector<T>& vector, size_t position)
     {
         VectorSerializationReader reader(&vector, position);
-        return load(insert_result, reader);
+        return Load(insert_result, reader);
     }
 
     // Explicit instantiations
     template size_t InsertResult::save(vector<uint8_t> &vector) const;
     template size_t InsertResult::save(vector<byte> &vector) const;
-    template size_t InsertResult::load(
+    template size_t InsertResult::Load(
         InsertResult &query_result, const vector<uint8_t> &vector, size_t position);
-    template size_t InsertResult::load(
+    template size_t InsertResult::Load(
         InsertResult &query_result, const vector<byte> &vector, size_t position);
 
 } // namespace ozks

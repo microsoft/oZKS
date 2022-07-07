@@ -669,7 +669,7 @@ TEST(OZKSTests, SaveLoadTest)
     size_t save_size = ozks.save(ss);
 
     OZKS ozks2(storage);
-    size_t load_size = OZKS::load(ozks2, ss);
+    size_t load_size = OZKS::Load(ozks2, ss);
 
     EXPECT_EQ(load_size, save_size);
 
@@ -722,7 +722,7 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
     EXPECT_EQ(true, ozks2.get_configuration().payload_randomness());
     EXPECT_EQ(true, ozks2.get_configuration().include_vrf());
 
-    size_t load_size = OZKS::load(ozks2, ss);
+    size_t load_size = OZKS::Load(ozks2, ss);
     EXPECT_EQ(false, ozks2.get_configuration().payload_randomness());
     EXPECT_EQ(false, ozks2.get_configuration().include_vrf());
 
@@ -770,7 +770,7 @@ TEST(OZKSTests, SaveLoadToVectorTest)
     size_t save_size = ozks.save(vec);
 
     OZKS ozks2(storage);
-    size_t load_size = OZKS::load(ozks2, vec);
+    size_t load_size = OZKS::Load(ozks2, vec);
 
     EXPECT_EQ(load_size, save_size);
 
@@ -813,7 +813,7 @@ TEST(OZKSTests, LoadSaveToStorageTest)
     ozks.save();
 
     OZKS ozks2(storage);
-    EXPECT_TRUE(OZKS::load(ozks.id(), storage, ozks2));
+    EXPECT_TRUE(OZKS::Load(ozks.id(), storage, ozks2));
 
     for (size_t i = 0; i < some_keys.size(); i++) {
         QueryResult qr1 = ozks.query(some_keys[i]);

@@ -181,7 +181,7 @@ size_t CompressedTrie::save(vector<T> &vec) const
     return save(writer);
 }
 
-size_t CompressedTrie::load(CompressedTrie &ct, SerializationReader &reader)
+size_t CompressedTrie::Load(CompressedTrie &ct, SerializationReader &reader)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -207,17 +207,17 @@ size_t CompressedTrie::load(CompressedTrie &ct, SerializationReader &reader)
     return (in_data.size());
 }
 
-size_t CompressedTrie::load(CompressedTrie &ct, istream &stream)
+size_t CompressedTrie::Load(CompressedTrie &ct, istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(ct, reader);
+    return Load(ct, reader);
 }
 
 template <class T>
-size_t CompressedTrie::load(CompressedTrie &ct, const vector<T> &vec, size_t position)
+size_t CompressedTrie::Load(CompressedTrie &ct, const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(ct, reader);
+    return Load(ct, reader);
 }
 
 void CompressedTrie::save() const
@@ -228,7 +228,7 @@ void CompressedTrie::save() const
     storage_->save_compressed_trie(*this);
 }
 
-bool CompressedTrie::load(
+bool CompressedTrie::Load(
     const vector<byte> &trie_id, shared_ptr<storage::Storage> storage, CompressedTrie &trie)
 {
     if (nullptr == storage)
@@ -269,6 +269,6 @@ void CompressedTrie::init_random_id()
 // Explicit instantiations
 template size_t CompressedTrie::save(vector<uint8_t> &vec) const;
 template size_t CompressedTrie::save(vector<byte> &vec) const;
-template size_t CompressedTrie::load(
+template size_t CompressedTrie::Load(
     CompressedTrie &ct, const vector<uint8_t> &vec, size_t position);
-template size_t CompressedTrie::load(CompressedTrie &ct, const vector<byte> &vec, size_t position);
+template size_t CompressedTrie::Load(CompressedTrie &ct, const vector<byte> &vec, size_t position);

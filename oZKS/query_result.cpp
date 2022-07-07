@@ -167,7 +167,7 @@ size_t QueryResult::save(SerializationWriter &writer) const
     return fbs_builder.GetSize();
 }
 
-size_t QueryResult::load(QueryResult &query_result, SerializationReader &reader)
+size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -240,23 +240,23 @@ size_t QueryResult::load(QueryResult &query_result, SerializationReader &reader)
     return in_data.size();
 }
 
-size_t QueryResult::load(QueryResult &query_result, istream &stream)
+size_t QueryResult::Load(QueryResult &query_result, istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(query_result, reader);
+    return Load(query_result, reader);
 }
 
 template <class T>
-size_t QueryResult::load(QueryResult &query_result, const vector<T> &vector, size_t position)
+size_t QueryResult::Load(QueryResult &query_result, const vector<T> &vector, size_t position)
 {
     VectorSerializationReader reader(&vector, position);
-    return load(query_result, reader);
+    return Load(query_result, reader);
 }
 
 // Explicit instantiations
 template size_t QueryResult::save(vector<uint8_t> &vector) const;
 template size_t QueryResult::save(vector<byte> &vector) const;
-template size_t QueryResult::load(
+template size_t QueryResult::Load(
     QueryResult &query_result, const vector<uint8_t> &vector, size_t position);
-template size_t QueryResult::load(
+template size_t QueryResult::Load(
     QueryResult &query_result, const vector<byte> &vector, size_t position);

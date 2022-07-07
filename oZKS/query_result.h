@@ -118,18 +118,18 @@ namespace ozks {
         /**
         Load a query result from a serialization reader
         */
-        static std::size_t load(QueryResult &query_result, SerializationReader &reader);
+        static std::size_t Load(QueryResult &query_result, SerializationReader &reader);
 
         /**
         Load a query result from a stream
         */
-        static std::size_t load(QueryResult &query_result, std::istream &stream);
+        static std::size_t Load(QueryResult &query_result, std::istream &stream);
 
         /**
         Load a query result from a vector
         */
         template <class T>
-        static std::size_t load(
+        static std::size_t Load(
             QueryResult &query_result, const std::vector<T> &vector, std::size_t position = 0);
 
     private:

@@ -450,7 +450,7 @@ size_t CTNode::save(vector<T> &vec) const
     return save(writer);
 }
 
-tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     SerializationReader &reader)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
@@ -494,18 +494,18 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
     return result;
 }
 
-tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(istream &stream)
+tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(reader);
+    return Load(reader);
 }
 
 template <class T>
-tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(reader);
+    return Load(reader);
 }
 
 bool CTNode::load(
@@ -554,7 +554,7 @@ void CTNode::save() const
 // Explicit instantiations
 template size_t CTNode::save(vector<uint8_t> &vec) const;
 template size_t CTNode::save(vector<byte> &vec) const;
-template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     const vector<uint8_t> &vec, size_t position);
-template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     const vector<byte> &vec, size_t position);

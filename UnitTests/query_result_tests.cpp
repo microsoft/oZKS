@@ -59,7 +59,7 @@ void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKS
     QueryResult qr2(config);
     EXPECT_FALSE(qr2.is_member());
 
-    size_t load_size = QueryResult::load(qr2, reader);
+    size_t load_size = QueryResult::Load(qr2, reader);
 
     EXPECT_EQ(load_size, save_size);
 

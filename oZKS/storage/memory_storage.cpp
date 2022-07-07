@@ -22,7 +22,7 @@ bool MemoryStorage::load_ctnode(
         return false;
     }
 
-    auto load_result = CTNode::load(node_it->second.data());
+    auto load_result = CTNode::Load(node_it->second.data());
     node = get<0>(load_result);
     return true;
 }
@@ -43,7 +43,7 @@ bool MemoryStorage::load_compressed_trie(const vector<byte> &trie_id, Compressed
         return false;
     }
 
-    CompressedTrie::load(trie, trie_it->second.data());
+    CompressedTrie::Load(trie, trie_it->second.data());
     return true;
 }
 
@@ -63,7 +63,7 @@ bool MemoryStorage::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
         return false;
     }
 
-    OZKS::load(ozks, ozks_it->second.data());
+    OZKS::Load(ozks, ozks_it->second.data());
     return true;
 }
 

@@ -51,7 +51,7 @@ size_t Commitment::save(vector<T> &vec) const
     return save(writer);
 }
 
-pair<Commitment, size_t> Commitment::load(SerializationReader &reader)
+pair<Commitment, size_t> Commitment::Load(SerializationReader &reader)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -86,21 +86,21 @@ pair<Commitment, size_t> Commitment::load(SerializationReader &reader)
     return { commitment, in_data.size() };
 }
 
-pair<Commitment, size_t> Commitment::load(istream &stream)
+pair<Commitment, size_t> Commitment::Load(istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(reader);
+    return Load(reader);
 }
 
 template <class T>
-pair<Commitment, size_t> Commitment::load(const vector<T> &vec, size_t position)
+pair<Commitment, size_t> Commitment::Load(const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(reader);
+    return Load(reader);
 }
 
 // Explicit specializations
 template size_t Commitment::save(vector<uint8_t> &vec) const;
 template size_t Commitment::save(vector<byte> &vec) const;
-template pair<Commitment, size_t> Commitment::load(const vector<uint8_t> &vec, size_t position);
-template pair<Commitment, size_t> Commitment::load(const vector<byte> &vec, size_t position);
+template pair<Commitment, size_t> Commitment::Load(const vector<uint8_t> &vec, size_t position);
+template pair<Commitment, size_t> Commitment::Load(const vector<byte> &vec, size_t position);

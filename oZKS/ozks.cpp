@@ -272,7 +272,7 @@ size_t OZKS::save(vector<T> &vec) const
     return save(writer);
 }
 
-size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
+size_t OZKS::Load(SerializationReader &reader, OZKS &ozks)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -294,7 +294,7 @@ size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
     vector<byte> config_vec(fbs_ozks->configuration()->size());
     utils::copy_bytes(
         fbs_ozks->configuration()->data(), fbs_ozks->configuration()->size(), config_vec.data());
-    OZKSConfig::load(ozks.config_, config_vec);
+    OZKSConfig::Load(ozks.config_, config_vec);
 
     ozks.trie_id_.resize(fbs_ozks->trie_id()->size());
     utils::copy_bytes(
@@ -320,19 +320,18 @@ size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
     return in_data.size();
 }
 
-size_t OZKS::load(OZKS &ozks, istream &stream)
+size_t OZKS::Load(OZKS &ozks, istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(reader, ozks);
+    return Load(reader, ozks);
 }
 
 template <class T>
-size_t OZKS::load(OZKS &ozks, const vector<T> &vec, size_t position)
+size_t OZKS::Load(OZKS &ozks, const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(reader, ozks);
+    return Load(reader, ozks);
 }
-
 
 void OZKS::load_trie(CompressedTrie &trie) const
 {
@@ -341,7 +340,7 @@ void OZKS::load_trie(CompressedTrie &trie) const
     if (trie_id_.empty())
         throw runtime_error("trie_id_ is empty");
 
-    if (!CompressedTrie::load(trie_id_, storage_, trie))
+    if (!CompressedTrie::Load(trie_id_, storage_, trie))
         throw runtime_error("Could not load trie");
 }
 
@@ -355,7 +354,7 @@ void OZKS::save() const
     storage_->save_ozks(*this);
 }
 
-bool OZKS::load(
+bool OZKS::Load(
     const vector<byte>& trie_id,
     shared_ptr<ozks::storage::Storage> storage,
     OZKS& ozks)
@@ -387,5 +386,5 @@ hash_type OZKS::get_key_hash(const key_type &key) const
 // Explicit instantiations
 template size_t OZKS::save(vector<uint8_t> &vec) const;
 template size_t OZKS::save(vector<byte> &vec) const;
-template size_t OZKS::load(OZKS &ozks, const vector<uint8_t> &vec, size_t position);
-template size_t OZKS::load(OZKS &ozks, const vector<byte> &vec, size_t position);
+template size_t OZKS::Load(OZKS &ozks, const vector<uint8_t> &vec, size_t position);
+template size_t OZKS::Load(OZKS &ozks, const vector<byte> &vec, size_t position);
