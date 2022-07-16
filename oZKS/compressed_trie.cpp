@@ -18,10 +18,8 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
-size_t const ID_SIZE = 16;
-
 CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
-    : epoch_(0), storage_(storage), root_({})
+    : epoch_(0), storage_(move(storage)), root_({})
 {
     init_random_id();
 
@@ -261,7 +259,7 @@ void CompressedTrie::init(shared_ptr<storage::Storage> storage)
 
 void CompressedTrie::init_random_id()
 {
-    id_.resize(ID_SIZE);
+    id_.resize(id_size_);
     random_bytes(
         reinterpret_cast<unsigned char *>(id_.data()), static_cast<unsigned int>(id_.size()));
 }

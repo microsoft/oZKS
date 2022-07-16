@@ -139,6 +139,8 @@ namespace ozks {
         void clear();
 
     private:
+        static constexpr std::size_t id_size_ = 16;
+
         partial_label_type root_;
         std::size_t epoch_;
         std::vector<std::byte> id_;

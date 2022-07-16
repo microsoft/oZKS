@@ -44,7 +44,7 @@ namespace ozks {
         partial_label_type insert(
             const partial_label_type &insert_label,
             const payload_type &insert_payload,
-            const std::size_t epoch);
+            std::size_t epoch);
 
         /**
         Lookup a given label and return the path to it (including its sibling) if found.
@@ -174,7 +174,7 @@ namespace ozks {
         void init(
             const partial_label_type &init_label,
             const payload_type &init_payload,
-            const std::size_t epoch);
+            std::size_t epoch);
 
         /**
         Initialize node with given label, payload and hash.

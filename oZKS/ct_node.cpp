@@ -72,7 +72,7 @@ CTNode &CTNode::operator=(const CTNode &node)
 }
 
 void CTNode::init(
-    const partial_label_type &init_label, const payload_type &init_payload, const size_t epoch)
+    const partial_label_type &init_label, const payload_type &init_payload, size_t epoch)
 {
     if (!is_leaf())
         throw runtime_error("Should only be used for leaf nodes");
@@ -153,7 +153,7 @@ bool CTNode::update_hash()
 }
 
 partial_label_type CTNode::insert(
-    const partial_label_type &insert_label, const payload_type &insert_payload, const size_t epoch)
+    const partial_label_type &insert_label, const payload_type &insert_payload, size_t epoch)
 {
     if (insert_label == label) {
         throw runtime_error("Attempting to insert the same label");
@@ -282,7 +282,7 @@ void CTNode::update_hashes(const partial_label_type& label)
 {
     lookup_path_type path;
     if (!lookup(label, path, /* include_searched */ false, /* update_hashes */ true)) {
-        throw runtime_error("Should have found the path of the lable to update hashes");
+        throw runtime_error("Should have found the path of the label to update hashes");
     }
 }
 
@@ -378,10 +378,6 @@ bool CTNode::lookup(
 
 size_t CTNode::save(SerializationWriter &writer) const
 {
-    //if (is_dirty_) {
-    //    throw runtime_error("Attempted to save node with out of date hash");
-    //}
-
     flatbuffers::FlatBufferBuilder fbs_builder;
 
     auto label_bytes = utils::bools_to_bytes(label);

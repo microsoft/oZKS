@@ -172,7 +172,7 @@ pair<payload_type, randomness_type> OZKS::commit(const payload_type &payload)
 
     // Returns hash and the randomness used to compute it
     vector<byte> pld(hash.begin(), hash.end());
-    return { pld, randomness };
+    return { move(pld), move(randomness) };
 }
 
 VRFPublicKey OZKS::get_public_key() const
@@ -193,7 +193,7 @@ Commitment OZKS::get_commitment() const
     CompressedTrie trie;
     load_trie(trie);
     trie.get_commitment(commitment);
-    return { get_public_key(), commitment };
+    return { get_public_key(), move(commitment) };
 }
 
 const OZKSConfig &OZKS::get_configuration() const
