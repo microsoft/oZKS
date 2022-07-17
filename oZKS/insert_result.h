@@ -4,8 +4,8 @@
 #pragma once
 
 // STL
-#include <memory>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 
 // oZKS
@@ -58,7 +58,7 @@ namespace ozks {
         /**
         Initialize this InsertResult
         */
-        void init_result(const commitment_type& commitment, const append_proof_type& append_proof)
+        void init_result(const commitment_type &commitment, const append_proof_type &append_proof)
         {
             commitment_ = std::make_unique<commitment_type>(commitment);
             append_proof_ = std::make_unique<append_proof_type>(append_proof);

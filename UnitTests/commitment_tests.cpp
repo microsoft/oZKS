@@ -5,15 +5,14 @@
 #include <sstream>
 
 // OZKS
-#include "gtest/gtest.h"
 #include "oZKS/commitment.h"
-#include "oZKS/vrf.h"
 #include "oZKS/utilities.h"
+#include "oZKS/vrf.h"
+#include "gtest/gtest.h"
 
 using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
-
 
 TEST(CommitmentTests, SerializeTest)
 {

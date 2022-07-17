@@ -9,7 +9,6 @@
 // OZKS
 #include "oZKS/defines.h"
 
-
 namespace ozks {
     class CTNode;
     class CompressedTrie;
@@ -29,8 +28,7 @@ namespace ozks {
             /**
             Save a node to storage
             */
-            virtual void save_ctnode(
-                const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
+            virtual void save_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
 
             /**
             Get a compressed trie from storage

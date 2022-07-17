@@ -13,13 +13,12 @@
 #elif defined(__APPLE__) && defined(__MACH__)
 #include <mach/mach.h>
 #elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
-#include <unistd.h>
-#include <sys/resource.h>
 #include <stdio.h>
+#include <sys/resource.h>
+#include <unistd.h>
 #else
 #error "Unknown OS"
 #endif
-
 
 using namespace std;
 

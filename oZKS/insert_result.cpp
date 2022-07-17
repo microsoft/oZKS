@@ -6,9 +6,9 @@
 
 // oZKS
 #include "oZKS/insert_result.h"
-#include "oZKS/utilities.h"
 #include "oZKS/insert_result_generated.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/utilities.h"
 
 using namespace std;
 
@@ -68,20 +68,20 @@ namespace ozks {
         return (hash_commitment == *commitment_);
     }
 
-    size_t InsertResult::save(ostream& stream) const
+    size_t InsertResult::save(ostream &stream) const
     {
         StreamSerializationWriter writer(&stream);
         return save(writer);
     }
 
     template <class T>
-    size_t InsertResult::save(vector<T>& vector) const
+    size_t InsertResult::save(vector<T> &vector) const
     {
         VectorSerializationWriter writer(&vector);
         return save(writer);
     }
 
-    size_t InsertResult::save(SerializationWriter& writer) const
+    size_t InsertResult::save(SerializationWriter &writer) const
     {
         if (!initialized()) {
             throw logic_error("Cannot save an uninitialized insert result");
@@ -124,7 +124,7 @@ namespace ozks {
         return fbs_builder.GetSize();
     }
 
-    size_t InsertResult::Load(InsertResult& insert_result, SerializationReader& reader)
+    size_t InsertResult::Load(InsertResult &insert_result, SerializationReader &reader)
     {
         vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -172,15 +172,14 @@ namespace ozks {
         return in_data.size();
     }
 
-    size_t InsertResult::Load(InsertResult& insert_result, istream& stream)
+    size_t InsertResult::Load(InsertResult &insert_result, istream &stream)
     {
         StreamSerializationReader reader(&stream);
         return Load(insert_result, reader);
     }
 
     template <class T>
-    size_t InsertResult::Load(
-        InsertResult& insert_result, const vector<T>& vector, size_t position)
+    size_t InsertResult::Load(InsertResult &insert_result, const vector<T> &vector, size_t position)
     {
         VectorSerializationReader reader(&vector, position);
         return Load(insert_result, reader);

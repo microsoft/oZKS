@@ -2,20 +2,19 @@
 // Licensed under the MIT license.
 
 // oZKS
-#include "oZKS/ozks.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/ozks.h"
 #include "oZKS/ozks_generated.h"
 #include "oZKS/ozks_store_generated.h"
+#include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
 #include "oZKS/version.h"
-#include "oZKS/storage/memory_storage.h"
 
 using namespace std;
 using namespace ozks;
 
 OZKS::OZKS() : OZKS(nullptr)
-{
-}
+{}
 
 OZKS::OZKS(shared_ptr<storage::Storage> storage) : storage_(storage)
 {
@@ -47,7 +46,7 @@ OZKS::OZKS(shared_ptr<storage::Storage> storage, const OZKSConfig &config) : sto
     trie.save();
 }
 
-shared_ptr<InsertResult> OZKS::insert(const key_type& key, const payload_type& payload)
+shared_ptr<InsertResult> OZKS::insert(const key_type &key, const payload_type &payload)
 {
     pending_insertions_.emplace_back(pending_insertion{ key, payload });
     auto insert_result = make_shared<InsertResult>();
@@ -95,7 +94,7 @@ void OZKS::do_pending_insertions()
     }
 
     append_proof_batch_type append_proofs;
-    
+
     CompressedTrie trie;
     load_trie(trie);
     trie.insert(label_payload_batch, append_proofs);
@@ -225,8 +224,8 @@ size_t OZKS::save(SerializationWriter &writer) const
     config_.save(config_saved);
     auto config_data = fbs_builder.CreateVector(
         reinterpret_cast<uint8_t *>(config_saved.data()), config_saved.size());
-    auto trie_id_data =
-        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(trie_id_.data()), trie_id_.size());
+    auto trie_id_data = fbs_builder.CreateVector(
+        reinterpret_cast<const uint8_t *>(trie_id_.data()), trie_id_.size());
 
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> pk_data;
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> sk_data;
@@ -354,10 +353,7 @@ void OZKS::save() const
     storage_->save_ozks(*this);
 }
 
-bool OZKS::Load(
-    const vector<byte>& trie_id,
-    shared_ptr<ozks::storage::Storage> storage,
-    OZKS& ozks)
+bool OZKS::Load(const vector<byte> &trie_id, shared_ptr<ozks::storage::Storage> storage, OZKS &ozks)
 {
     if (nullptr == storage)
         throw invalid_argument("storage is null");

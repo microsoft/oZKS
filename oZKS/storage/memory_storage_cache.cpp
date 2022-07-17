@@ -6,11 +6,9 @@
 // OZKS
 #include "oZKS/storage/memory_storage_cache.h"
 
-
 using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
-
 
 bool MemoryStorageCache::load_ctnode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
@@ -29,15 +27,14 @@ bool MemoryStorageCache::load_ctnode(
     return true;
 }
 
-void MemoryStorageCache::save_ctnode(const vector<byte>& trie_id, const CTNode& node)
+void MemoryStorageCache::save_ctnode(const vector<byte> &trie_id, const CTNode &node)
 {
     StorageNodeKey key(trie_id, node.label);
     storage_->save_ctnode(trie_id, node);
     node_cache_.update(key, node);
 }
 
-bool MemoryStorageCache::load_compressed_trie(
-    const vector<byte>& trie_id, CompressedTrie& trie)
+bool MemoryStorageCache::load_compressed_trie(const vector<byte> &trie_id, CompressedTrie &trie)
 {
     StorageTrieKey key(trie_id);
     auto cached_trie = trie_cache_.get(key);
@@ -52,14 +49,14 @@ bool MemoryStorageCache::load_compressed_trie(
     return true;
 }
 
-void MemoryStorageCache::save_compressed_trie(const CompressedTrie& trie)
+void MemoryStorageCache::save_compressed_trie(const CompressedTrie &trie)
 {
     StorageTrieKey key(trie.id());
     storage_->save_compressed_trie(trie);
     trie_cache_.update(key, trie);
 }
 
-bool MemoryStorageCache::load_ozks(const vector<byte>& trie_id, OZKS& ozks)
+bool MemoryStorageCache::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
 {
     StorageOZKSKey key(trie_id);
     auto cached_ozks = ozks_cache_.get(key);
@@ -75,7 +72,7 @@ bool MemoryStorageCache::load_ozks(const vector<byte>& trie_id, OZKS& ozks)
     return true;
 }
 
-void MemoryStorageCache::save_ozks(const OZKS& ozks)
+void MemoryStorageCache::save_ozks(const OZKS &ozks)
 {
     StorageOZKSKey key(ozks.id());
     storage_->save_ozks(ozks);

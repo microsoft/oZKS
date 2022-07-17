@@ -15,14 +15,14 @@
 #include "oZKS/ozks_config.h"
 #include "oZKS/query_result.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/storage/storage.h"
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
-#include "oZKS/storage/storage.h"
 
 namespace {
     using pending_insertion = std::pair<ozks::key_type, ozks::payload_type>;
     using pending_result = std::pair<ozks::key_type, std::shared_ptr<ozks::InsertResult>>;
-}
+} // namespace
 
 namespace ozks {
     namespace storage {
@@ -159,6 +159,5 @@ namespace ozks {
         hash_type get_key_hash(const key_type &key) const;
 
         void do_pending_insertions();
-
     };
 } // namespace ozks

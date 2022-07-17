@@ -5,12 +5,11 @@
 #include <sstream>
 
 // OZKS
-#include "oZKS/ct_node.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/ct_node.h"
 #include "oZKS/insert_result.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
-
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -27,11 +26,11 @@ TEST(InsertResultTests, VerifyBatchInsertTest)
     vector<partial_label_type> labels;
     payload_type payload = make_bytes(0xFF, 0xFE);
 
-    labels.emplace_back(partial_label_type { true, true, true, true });
-    labels.emplace_back(partial_label_type { true, true, true, false });
-    labels.emplace_back(partial_label_type { true, false, false, false });
-    labels.emplace_back(partial_label_type { true, false, false, true });
-    labels.emplace_back(partial_label_type { true, false, true, true });
+    labels.emplace_back(partial_label_type{ true, true, true, true });
+    labels.emplace_back(partial_label_type{ true, true, true, false });
+    labels.emplace_back(partial_label_type{ true, false, false, false });
+    labels.emplace_back(partial_label_type{ true, false, false, true });
+    labels.emplace_back(partial_label_type{ true, false, true, true });
 
     for (const auto label : labels) {
         root.insert(label, payload, /* epoch */ 1);

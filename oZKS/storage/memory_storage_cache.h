@@ -4,19 +4,19 @@
 #pragma once
 
 // STD
-#include <memory>
 #include <cstddef>
+#include <memory>
 
 // Poco
 #include "Poco/LRUCache.h"
 
 // OZKS
-#include "oZKS/defines.h"
-#include "oZKS/ct_node.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/ct_node.h"
+#include "oZKS/defines.h"
 #include "oZKS/ozks.h"
-#include "oZKS/storage/storage.h"
 #include "oZKS/storage/memory_storage_helpers.h"
+#include "oZKS/storage/storage.h"
 
 namespace ozks {
     namespace storage {

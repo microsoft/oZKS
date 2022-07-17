@@ -120,18 +120,21 @@ namespace ozks {
         /**
         Load a node from a serialization reader
         */
-        static auto Load(SerializationReader &reader) -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
+        static auto Load(SerializationReader &reader)
+            -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
 
         /**
         Load a node from a stream
         */
-        static auto Load(std::istream &stream) -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
+        static auto Load(std::istream &stream)
+            -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
 
         /**
         Load a node from a vector
         */
         template <class T>
-        static auto Load(const std::vector<T> &vec, std::size_t position = 0) -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
+        static auto Load(const std::vector<T> &vec, std::size_t position = 0)
+            -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
 
         /**
         Load left node from storage

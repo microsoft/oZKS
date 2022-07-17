@@ -75,12 +75,12 @@ static void OZKSInsert(benchmark::State &state)
     state.counters["Elapsed"] = benchmark::Counter((double)total_ms.count());
 }
 
-static void OZKSInsertFlush(benchmark::State& state)
+static void OZKSInsertFlush(benchmark::State &state)
 {
     key_type key(40);
     payload_type payload(40);
     OZKS ozks(ozks_config_);
-    
+
     // Measure total duration
     auto start = chrono::high_resolution_clock::now();
 
@@ -90,7 +90,7 @@ static void OZKSInsertFlush(benchmark::State& state)
         get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
         state.ResumeTiming();
-        
+
         ozks.insert(key, payload);
     }
 

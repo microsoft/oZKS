@@ -7,9 +7,9 @@
 #include <sstream>
 
 // OZKS
+#include "oZKS/compressed_trie.h"
 #include "oZKS/ct_node.h"
 #include "oZKS/ct_node_generated.h"
-#include "oZKS/compressed_trie.h"
 #include "oZKS/storage/storage.h"
 #include "oZKS/utilities.h"
 
@@ -103,7 +103,7 @@ void CTNode::init(const partial_label_type &init_label)
     is_dirty_ = true;
 }
 
-void CTNode::init(const CompressedTrie* trie)
+void CTNode::init(const CompressedTrie *trie)
 {
     trie_ = trie;
 }
@@ -271,14 +271,12 @@ partial_label_type CTNode::insert(
 }
 
 bool CTNode::lookup(
-    const partial_label_type &lookup_label,
-    lookup_path_type &path,
-    bool include_searched)
+    const partial_label_type &lookup_label, lookup_path_type &path, bool include_searched)
 {
     return lookup(lookup_label, path, include_searched, /* update_hashes */ false);
 }
 
-void CTNode::update_hashes(const partial_label_type& label)
+void CTNode::update_hashes(const partial_label_type &label)
 {
     lookup_path_type path;
     if (!lookup(label, path, /* include_searched */ false, /* update_hashes */ true)) {
@@ -399,8 +397,8 @@ size_t CTNode::save(SerializationWriter &writer) const
         auto left_bytes = utils::bools_to_bytes(left);
         auto left_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(left_bytes.data()), left_bytes.size());
-        left_label = fbs::CreatePartialLabel(
-            fbs_builder, left_data, static_cast<uint32_t>(left.size()));
+        left_label =
+            fbs::CreatePartialLabel(fbs_builder, left_data, static_cast<uint32_t>(left.size()));
     } else {
         auto left_data = fbs_builder.CreateVector(empty_label);
         left_label = fbs::CreatePartialLabel(fbs_builder, left_data, 0);
@@ -410,8 +408,8 @@ size_t CTNode::save(SerializationWriter &writer) const
         auto right_bytes = utils::bools_to_bytes(right);
         auto right_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(right_bytes.data()), right_bytes.size());
-        right_label = fbs::CreatePartialLabel(
-            fbs_builder, right_data, static_cast<uint32_t>(right.size()));
+        right_label =
+            fbs::CreatePartialLabel(fbs_builder, right_data, static_cast<uint32_t>(right.size()));
     } else {
         auto right_data = fbs_builder.CreateVector(empty_label);
         right_label = fbs::CreatePartialLabel(fbs_builder, right_data, 0);
@@ -504,9 +502,7 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     return Load(reader);
 }
 
-bool CTNode::load(
-    const partial_label_type label,
-    CTNode& node) const
+bool CTNode::load(const partial_label_type label, CTNode &node) const
 {
     if (nullptr == trie_)
         throw runtime_error("trie_ is null");
@@ -529,7 +525,7 @@ bool CTNode::load_left(CTNode &node) const
     return load(left, node);
 }
 
-bool CTNode::load_right(CTNode& node) const
+bool CTNode::load_right(CTNode &node) const
 {
     if (right.empty())
         throw runtime_error("Tried to load empty right node");

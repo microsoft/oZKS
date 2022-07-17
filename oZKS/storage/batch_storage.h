@@ -10,7 +10,6 @@
 // OZKS
 #include "oZKS/storage/storage.h"
 
-
 namespace ozks {
     namespace storage {
         class BatchStorage : public Storage {
@@ -23,7 +22,8 @@ namespace ozks {
                 const std::vector<CTNode> &nodes,
                 const std::vector<CompressedTrie> &tries,
                 const std::vector<OZKS> &ozks,
-                const std::vector<std::pair<std::vector<std::byte>, store_value_type>> &store_elements) = 0;
+                const std::vector<std::pair<std::vector<std::byte>, store_value_type>>
+                    &store_elements) = 0;
         };
     } // namespace storage
 } // namespace ozks

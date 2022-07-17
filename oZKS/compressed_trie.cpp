@@ -9,10 +9,10 @@
 #include "oZKS/compressed_trie.h"
 #include "oZKS/compressed_trie_generated.h"
 #include "oZKS/ct_node.h"
-#include "oZKS/utilities.h"
-#include "oZKS/version.h"
 #include "oZKS/fourq/random.h"
 #include "oZKS/storage/storage.h"
+#include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 using namespace std;
 using namespace ozks;
@@ -37,7 +37,7 @@ void CompressedTrie::insert(
     append_proof.clear();
 
     epoch_++;
-    
+
     CTNode root = load_root();
 
     root.insert(lab, payload, epoch_);
@@ -98,9 +98,7 @@ bool CompressedTrie::lookup(const label_type &label, lookup_path_type &path) con
 }
 
 bool CompressedTrie::lookup(
-    const label_type &label,
-    lookup_path_type &path,
-    bool include_searched) const
+    const label_type &label, lookup_path_type &path, bool include_searched) const
 {
     path.clear();
     partial_label_type partial_label = bytes_to_bools(label);
@@ -195,12 +193,10 @@ size_t CompressedTrie::Load(CompressedTrie &ct, SerializationReader &reader)
     ct.epoch_ = fbs_ct->epoch();
 
     ct.root_ = utils::bytes_to_bools(
-        reinterpret_cast<const byte *>(fbs_ct->root()->data()->data()),
-        fbs_ct->root()->size());
+        reinterpret_cast<const byte *>(fbs_ct->root()->data()->data()), fbs_ct->root()->size());
 
     ct.id_.resize(fbs_ct->id()->size());
-    utils::copy_bytes(
-        fbs_ct->id()->data(), fbs_ct->id()->size(), ct.id_.data());
+    utils::copy_bytes(fbs_ct->id()->data(), fbs_ct->id()->size(), ct.id_.data());
 
     return (in_data.size());
 }

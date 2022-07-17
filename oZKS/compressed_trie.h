@@ -13,7 +13,6 @@
 #include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
 
-
 namespace ozks {
     namespace storage {
         class Storage;

@@ -38,7 +38,8 @@ static BLAKE2_INLINE uint32_t load32(const void *src)
     return w;
 #else
     const uint8_t *p = (const uint8_t *)src;
-    return ((uint32_t)(p[0]) << 0) | ((uint32_t)(p[1]) << 8) | ((uint32_t)(p[2]) << 16) | ((uint32_t)(p[3]) << 24);
+    return ((uint32_t)(p[0]) << 0) | ((uint32_t)(p[1]) << 8) | ((uint32_t)(p[2]) << 16) |
+           ((uint32_t)(p[3]) << 24);
 #endif
 }
 
@@ -50,8 +51,9 @@ static BLAKE2_INLINE uint64_t load64(const void *src)
     return w;
 #else
     const uint8_t *p = (const uint8_t *)src;
-    return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) | ((uint64_t)(p[3]) << 24) |
-           ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40) | ((uint64_t)(p[6]) << 48) | ((uint64_t)(p[7]) << 56);
+    return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) |
+           ((uint64_t)(p[3]) << 24) | ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40) |
+           ((uint64_t)(p[6]) << 48) | ((uint64_t)(p[7]) << 56);
 #endif
 }
 
@@ -112,8 +114,8 @@ static BLAKE2_INLINE void store64(void *dst, uint64_t w)
 static BLAKE2_INLINE uint64_t load48(const void *src)
 {
     const uint8_t *p = (const uint8_t *)src;
-    return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) | ((uint64_t)(p[3]) << 24) |
-           ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40);
+    return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) |
+           ((uint64_t)(p[3]) << 24) | ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40);
 }
 
 static BLAKE2_INLINE void store48(void *dst, uint64_t w)

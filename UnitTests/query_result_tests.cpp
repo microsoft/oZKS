@@ -6,15 +6,14 @@
 
 // OZKS
 #include "oZKS/query_result.h"
-#include "oZKS/utilities.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/utilities.h"
 
 // GTest
 #include "gtest/gtest.h"
 
 using namespace ozks;
 using namespace std;
-
 
 void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKSConfig &config)
 {

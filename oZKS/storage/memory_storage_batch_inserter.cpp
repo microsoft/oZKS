@@ -11,7 +11,6 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
 
-
 bool MemoryStorageBatchInserter::load_ctnode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
 {
@@ -39,7 +38,8 @@ void MemoryStorageBatchInserter::save_ctnode(const vector<byte> &trie_id, const 
     unsaved_nodes_[key] = node;
 }
 
-bool MemoryStorageBatchInserter::load_compressed_trie(const vector<byte>& trie_id, CompressedTrie& trie)
+bool MemoryStorageBatchInserter::load_compressed_trie(
+    const vector<byte> &trie_id, CompressedTrie &trie)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -56,7 +56,7 @@ bool MemoryStorageBatchInserter::load_compressed_trie(const vector<byte>& trie_i
     return storage_->load_compressed_trie(trie_id, trie);
 }
 
-void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie& trie)
+void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie &trie)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -65,7 +65,7 @@ void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie& trie
     unsaved_tries_[key] = trie;
 }
 
-bool MemoryStorageBatchInserter::load_ozks(const vector<byte>& trie_id, OZKS& ozks)
+bool MemoryStorageBatchInserter::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -82,7 +82,7 @@ bool MemoryStorageBatchInserter::load_ozks(const vector<byte>& trie_id, OZKS& oz
     return storage_->load_ozks(trie_id, ozks);
 }
 
-void MemoryStorageBatchInserter::save_ozks(const OZKS& ozks)
+void MemoryStorageBatchInserter::save_ozks(const OZKS &ozks)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
