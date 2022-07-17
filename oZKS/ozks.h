@@ -19,11 +19,6 @@
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
 
-namespace {
-    using pending_insertion = std::pair<ozks::key_type, ozks::payload_type>;
-    using pending_result = std::pair<ozks::key_type, std::shared_ptr<ozks::InsertResult>>;
-} // namespace
-
 namespace ozks {
     namespace storage {
         class Storage;
@@ -135,6 +130,9 @@ namespace ozks {
         void clear();
 
     private:
+        using pending_insertion = std::pair<key_type, payload_type>;
+        using pending_result = std::shared_ptr<InsertResult>;
+
         VRFSecretKey vrf_sk_;
         VRFPublicKey vrf_pk_;
 

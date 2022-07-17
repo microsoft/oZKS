@@ -47,7 +47,7 @@ namespace ozks {
         }
 
         // At the end, the resulting hash is either:
-        // - The commitment
+        // - the commitment
         // - the last child node hash we need to get the commitment
         commitment_type hash_commitment(hash.begin(), hash.end());
         if (hash_commitment == *commitment_) {

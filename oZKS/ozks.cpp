@@ -50,7 +50,7 @@ shared_ptr<InsertResult> OZKS::insert(const key_type &key, const payload_type &p
 {
     pending_insertions_.emplace_back(pending_insertion{ key, payload });
     auto insert_result = make_shared<InsertResult>();
-    pending_results_.emplace_back(pending_result{ key, insert_result });
+    pending_results_.push_back(insert_result);
     return insert_result;
 }
 
@@ -60,7 +60,7 @@ InsertResultBatch OZKS::insert(const key_payload_batch_type &input)
     for (const auto &i : input) {
         pending_insertions_.emplace_back(pending_insertion{ i.first, i.second });
         auto insert_result = make_shared<InsertResult>();
-        pending_results_.emplace_back(pending_result{ i.first, insert_result });
+        pending_results_.push_back(insert_result);
         result.emplace_back(move(insert_result));
     }
 
@@ -104,7 +104,10 @@ void OZKS::do_pending_insertions()
 
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
         auto &pending_result = pending_results_[idx];
-        pending_result.second->init_result(commitment, append_proofs[idx]);
+        if (!pending_result) {
+            throw runtime_error("Pending result is null");
+        }
+        pending_result->init_result(commitment, move(append_proofs[idx]));
     }
 
     pending_insertions_.clear();
