@@ -3,16 +3,10 @@
 
 namespace ozks.fbs;
 
-table PartialLabel {
-    data:[ubyte] (required);
-    size:uint32;
-}
-
 table CompressedTrie {
     version:uint32;
     epoch:uint64;
     id:[ubyte] (required);
-    root:PartialLabel (required);
 }
 
 root_type CompressedTrie;

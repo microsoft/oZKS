@@ -19,7 +19,7 @@ using namespace ozks;
 using namespace ozks::utils;
 
 CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
-    : epoch_(0), storage_(move(storage)), root_({})
+    : epoch_(0), storage_(move(storage))
 {
     init_random_id();
 
@@ -27,7 +27,7 @@ CompressedTrie::CompressedTrie(shared_ptr<storage::Storage> storage)
     root.save();
 }
 
-CompressedTrie::CompressedTrie() : epoch_(0), storage_(nullptr), root_({})
+CompressedTrie::CompressedTrie() : epoch_(0), storage_(nullptr)
 {}
 
 void CompressedTrie::insert(
@@ -127,7 +127,6 @@ void CompressedTrie::get_commitment(commitment_type &commitment) const
 void CompressedTrie::clear()
 {
     epoch_ = 0;
-    root_ = {};
     init_random_id();
 
     CTNode root(this);
@@ -141,19 +140,12 @@ size_t CompressedTrie::save(SerializationWriter &writer) const
 {
     flatbuffers::FlatBufferBuilder fbs_builder;
 
-    auto label_bytes = utils::bools_to_bytes(root_);
-    auto label_data = fbs_builder.CreateVector(
-        reinterpret_cast<const uint8_t *>(label_bytes.data()), label_bytes.size());
-    auto partial_label =
-        fbs::CreatePartialLabel(fbs_builder, label_data, static_cast<uint32_t>(root_.size()));
-
     auto id_data =
         fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(id_.data()), id_.size());
 
     fbs::CompressedTrieBuilder ct_builder(fbs_builder);
     ct_builder.add_epoch(epoch());
     ct_builder.add_version(ozks_serialization_version);
-    ct_builder.add_root(partial_label);
     ct_builder.add_id(id_data);
 
     auto fbs_ct = ct_builder.Finish();
@@ -192,9 +184,6 @@ size_t CompressedTrie::Load(CompressedTrie &ct, SerializationReader &reader)
     auto fbs_ct = fbs::GetSizePrefixedCompressedTrie(in_data.data());
     ct.epoch_ = fbs_ct->epoch();
 
-    ct.root_ = utils::bytes_to_bools(
-        reinterpret_cast<const byte *>(fbs_ct->root()->data()->data()), fbs_ct->root()->size());
-
     ct.id_.resize(fbs_ct->id()->size());
     utils::copy_bytes(fbs_ct->id()->data(), fbs_ct->id()->size(), ct.id_.data());
 
@@ -232,7 +221,7 @@ bool CompressedTrie::Load(
 
     bool loaded = storage->load_compressed_trie(trie_id, trie);
     if (loaded) {
-        trie.init(storage);
+        trie.init(move(storage));
     }
 
     return loaded;
@@ -250,7 +239,7 @@ CTNode CompressedTrie::load_root() const
 
 void CompressedTrie::init(shared_ptr<storage::Storage> storage)
 {
-    storage_ = storage;
+    storage_ = move(storage);
 }
 
 void CompressedTrie::init_random_id()

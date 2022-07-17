@@ -149,7 +149,7 @@ namespace ozks {
         /**
         Load a node from storage
         */
-        bool load(const partial_label_type label, CTNode &node) const;
+        bool load(const partial_label_type &label, CTNode &node) const;
 
         /**
         Save a node to storage

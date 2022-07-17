@@ -140,7 +140,6 @@ namespace ozks {
     private:
         static constexpr std::size_t id_size_ = 16;
 
-        partial_label_type root_;
         std::size_t epoch_;
         std::vector<std::byte> id_;
         std::shared_ptr<ozks::storage::Storage> storage_;

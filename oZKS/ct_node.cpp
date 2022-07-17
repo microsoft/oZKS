@@ -502,7 +502,7 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     return Load(reader);
 }
 
-bool CTNode::load(const partial_label_type label, CTNode &node) const
+bool CTNode::load(const partial_label_type &label, CTNode &node) const
 {
     if (nullptr == trie_)
         throw runtime_error("trie_ is null");
