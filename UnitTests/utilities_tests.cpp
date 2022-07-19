@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
+#include "oZKS/utilities.h"
 #include <algorithm>
 #include <cstddef>
 #include <vector>
-
-#include "oZKS/utilities.h"
-
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -87,7 +85,7 @@ TEST(Utilities, BoolConversionTest)
 TEST(Utilities, BytesToBoolsTest)
 {
     vector<bool> bools;
-    
+
     bools.push_back(true);
     bools.push_back(false);
     bools.push_back(true);

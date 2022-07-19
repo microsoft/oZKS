@@ -655,7 +655,7 @@ TEST(CompressedTrie, SaveLoadTest)
     size_t save_size = trie.save(ss);
 
     CompressedTrie trie2(storage);
-    size_t load_size = CompressedTrie::load(trie2, ss);
+    size_t load_size = CompressedTrie::Load(trie2, ss);
     EXPECT_EQ(load_size, save_size);
 
     string status2 = trie2.to_string(/* include_payload */ true);
@@ -698,7 +698,7 @@ TEST(CompressedTrie, SaveLoadTest2)
     size_t save_size = trie.save(ss);
 
     CompressedTrie trie2(storage);
-    size_t load_size = CompressedTrie::load(trie2, ss);
+    size_t load_size = CompressedTrie::Load(trie2, ss);
     EXPECT_EQ(load_size, save_size);
 
     string status2 = trie2.to_string(/* include_payload */ true);
@@ -729,7 +729,7 @@ TEST(CompressedTrie, SaveLoadTest3)
     trie1.save(ss);
 
     CompressedTrie trie2(storage);
-    CompressedTrie::load(trie2, ss);
+    CompressedTrie::Load(trie2, ss);
 
     for (size_t i = 0; i < labels.size(); i++) {
         lookup_path_type path1;
@@ -766,7 +766,7 @@ TEST(CompressedTrie, SaveLoadToVectorTest)
     trie1.save(vec);
 
     CompressedTrie trie2(storage);
-    CompressedTrie::load(trie2, vec);
+    CompressedTrie::Load(trie2, vec);
 
     for (size_t i = 0; i < labels.size(); i++) {
         lookup_path_type path1;

@@ -7,9 +7,9 @@
 #include <sstream>
 
 // OZKS
+#include "oZKS/compressed_trie.h"
 #include "oZKS/ct_node.h"
 #include "oZKS/ct_node_generated.h"
-#include "oZKS/compressed_trie.h"
 #include "oZKS/storage/storage.h"
 #include "oZKS/utilities.h"
 
@@ -72,7 +72,7 @@ CTNode &CTNode::operator=(const CTNode &node)
 }
 
 void CTNode::init(
-    const partial_label_type &init_label, const payload_type &init_payload, const size_t epoch)
+    const partial_label_type &init_label, const payload_type &init_payload, size_t epoch)
 {
     if (!is_leaf())
         throw runtime_error("Should only be used for leaf nodes");
@@ -103,7 +103,7 @@ void CTNode::init(const partial_label_type &init_label)
     is_dirty_ = true;
 }
 
-void CTNode::init(const CompressedTrie* trie)
+void CTNode::init(const CompressedTrie *trie)
 {
     trie_ = trie;
 }
@@ -153,7 +153,7 @@ bool CTNode::update_hash()
 }
 
 partial_label_type CTNode::insert(
-    const partial_label_type &insert_label, const payload_type &insert_payload, const size_t epoch)
+    const partial_label_type &insert_label, const payload_type &insert_payload, size_t epoch)
 {
     if (insert_label == label) {
         throw runtime_error("Attempting to insert the same label");
@@ -271,18 +271,16 @@ partial_label_type CTNode::insert(
 }
 
 bool CTNode::lookup(
-    const partial_label_type &lookup_label,
-    lookup_path_type &path,
-    bool include_searched)
+    const partial_label_type &lookup_label, lookup_path_type &path, bool include_searched)
 {
     return lookup(lookup_label, path, include_searched, /* update_hashes */ false);
 }
 
-void CTNode::update_hashes(const partial_label_type& label)
+void CTNode::update_hashes(const partial_label_type &label)
 {
     lookup_path_type path;
     if (!lookup(label, path, /* include_searched */ false, /* update_hashes */ true)) {
-        throw runtime_error("Should have found the path of the lable to update hashes");
+        throw runtime_error("Should have found the path of the label to update hashes");
     }
 }
 
@@ -378,10 +376,6 @@ bool CTNode::lookup(
 
 size_t CTNode::save(SerializationWriter &writer) const
 {
-    //if (is_dirty_) {
-    //    throw runtime_error("Attempted to save node with out of date hash");
-    //}
-
     flatbuffers::FlatBufferBuilder fbs_builder;
 
     auto label_bytes = utils::bools_to_bytes(label);
@@ -403,8 +397,8 @@ size_t CTNode::save(SerializationWriter &writer) const
         auto left_bytes = utils::bools_to_bytes(left);
         auto left_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(left_bytes.data()), left_bytes.size());
-        left_label = fbs::CreatePartialLabel(
-            fbs_builder, left_data, static_cast<uint32_t>(left.size()));
+        left_label =
+            fbs::CreatePartialLabel(fbs_builder, left_data, static_cast<uint32_t>(left.size()));
     } else {
         auto left_data = fbs_builder.CreateVector(empty_label);
         left_label = fbs::CreatePartialLabel(fbs_builder, left_data, 0);
@@ -414,8 +408,8 @@ size_t CTNode::save(SerializationWriter &writer) const
         auto right_bytes = utils::bools_to_bytes(right);
         auto right_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(right_bytes.data()), right_bytes.size());
-        right_label = fbs::CreatePartialLabel(
-            fbs_builder, right_data, static_cast<uint32_t>(right.size()));
+        right_label =
+            fbs::CreatePartialLabel(fbs_builder, right_data, static_cast<uint32_t>(right.size()));
     } else {
         auto right_data = fbs_builder.CreateVector(empty_label);
         right_label = fbs::CreatePartialLabel(fbs_builder, right_data, 0);
@@ -450,7 +444,7 @@ size_t CTNode::save(vector<T> &vec) const
     return save(writer);
 }
 
-tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     SerializationReader &reader)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
@@ -494,23 +488,21 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
     return result;
 }
 
-tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(istream &stream)
+tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(reader);
+    return Load(reader);
 }
 
 template <class T>
-tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(reader);
+    return Load(reader);
 }
 
-bool CTNode::load(
-    const partial_label_type label,
-    CTNode& node) const
+bool CTNode::load(const partial_label_type &label, CTNode &node) const
 {
     if (nullptr == trie_)
         throw runtime_error("trie_ is null");
@@ -533,7 +525,7 @@ bool CTNode::load_left(CTNode &node) const
     return load(left, node);
 }
 
-bool CTNode::load_right(CTNode& node) const
+bool CTNode::load_right(CTNode &node) const
 {
     if (right.empty())
         throw runtime_error("Tried to load empty right node");
@@ -554,7 +546,7 @@ void CTNode::save() const
 // Explicit instantiations
 template size_t CTNode::save(vector<uint8_t> &vec) const;
 template size_t CTNode::save(vector<byte> &vec) const;
-template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     const vector<uint8_t> &vec, size_t position);
-template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::load(
+template tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     const vector<byte> &vec, size_t position);

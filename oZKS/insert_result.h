@@ -4,8 +4,9 @@
 #pragma once
 
 // STL
-#include <memory>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 
 // oZKS
 #include "oZKS/defines.h"
@@ -57,7 +58,7 @@ namespace ozks {
         /**
         Initialize this InsertResult
         */
-        void init_result(const commitment_type& commitment, const append_proof_type& append_proof)
+        void init_result(const commitment_type &commitment, const append_proof_type &append_proof)
         {
             commitment_ = std::make_unique<commitment_type>(commitment);
             append_proof_ = std::make_unique<append_proof_type>(append_proof);
@@ -87,18 +88,18 @@ namespace ozks {
         /**
         Load an insert result from a serialization reader
         */
-        static std::size_t load(InsertResult &insert_result, SerializationReader &reader);
+        static std::size_t Load(InsertResult &insert_result, SerializationReader &reader);
 
         /**
         Load an insert result from a stream
         */
-        static std::size_t load(InsertResult &insert_result, std::istream &stream);
+        static std::size_t Load(InsertResult &insert_result, std::istream &stream);
 
         /**
         Load an insert result from a vector
         */
         template <class T>
-        static std::size_t load(
+        static std::size_t Load(
             InsertResult &insert_result, const std::vector<T> &vector, std::size_t position = 0);
 
     private:

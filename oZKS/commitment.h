@@ -61,13 +61,13 @@ namespace ozks {
         /**
         Load commitment from a stream
         */
-        static std::pair<Commitment, std::size_t> load(std::istream &stream);
+        static std::pair<Commitment, std::size_t> Load(std::istream &stream);
 
         /**
         Load commitment from a byte vector
         */
         template <class T>
-        static std::pair<Commitment, std::size_t> load(
+        static std::pair<Commitment, std::size_t> Load(
             const std::vector<T> &vec, std::size_t position = 0);
 
     private:
@@ -75,6 +75,6 @@ namespace ozks {
         commitment_type root_commitment_;
 
         std::size_t save(SerializationWriter &writer) const;
-        static std::pair<Commitment, std::size_t> load(SerializationReader &reader);
+        static std::pair<Commitment, std::size_t> Load(SerializationReader &reader);
     };
 } // namespace ozks

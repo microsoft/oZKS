@@ -6,11 +6,11 @@
 // OZKS
 #include "oZKS/fourq/random.h"
 #include "oZKS/ozks.h"
-#include "oZKS/utilities.h"
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/storage/memory_storage_batch_inserter.h"
 #include "oZKS/storage/memory_storage_cache.h"
+#include "oZKS/utilities.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -40,51 +40,51 @@ namespace {
         {}
 
         bool load_ctnode(
-            const std::vector<std::byte>& trie_id,
-            const partial_label_type& node_id,
-            CTNode& node) override
+            const std::vector<std::byte> &trie_id,
+            const partial_label_type &node_id,
+            CTNode &node) override
         {
             return storage_.load_ctnode(trie_id, node_id, node);
         }
 
-        void save_ctnode(const std::vector<std::byte>& trie_id, const CTNode& node) override
+        void save_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override
         {
             storage_.save_ctnode(trie_id, node);
         }
 
         bool load_compressed_trie(
-            const std::vector<std::byte>& trie_id, CompressedTrie& trie) override
+            const std::vector<std::byte> &trie_id, CompressedTrie &trie) override
         {
             return storage_.load_compressed_trie(trie_id, trie);
         }
 
-        void save_compressed_trie(const CompressedTrie& trie) override
+        void save_compressed_trie(const CompressedTrie &trie) override
         {
             storage_.save_compressed_trie(trie);
         }
 
-        bool load_ozks(const std::vector<std::byte>& trie_id, OZKS& ozks) override
+        bool load_ozks(const std::vector<std::byte> &trie_id, OZKS &ozks) override
         {
             return storage_.load_ozks(trie_id, ozks);
         }
 
-        void save_ozks(const OZKS& ozks) override
+        void save_ozks(const OZKS &ozks) override
         {
             storage_.save_ozks(ozks);
         }
 
         bool load_store_element(
-            const std::vector<std::byte>& trie_id,
-            const std::vector<std::byte>& key,
-            store_value_type& value) override
+            const std::vector<std::byte> &trie_id,
+            const std::vector<std::byte> &key,
+            store_value_type &value) override
         {
             return storage_.load_store_element(trie_id, key, value);
         }
 
         void save_store_element(
-            const std::vector<std::byte>& trie_id,
-            const std::vector<std::byte>& key,
-            const store_value_type& value) override
+            const std::vector<std::byte> &trie_id,
+            const std::vector<std::byte> &key,
+            const store_value_type &value) override
         {
             storage_.save_store_element(trie_id, key, value);
         }
@@ -96,10 +96,10 @@ namespace {
 
         void flush(
             const vector<byte> &trie_id,
-            const vector<CTNode>& nodes,
-            const vector<CompressedTrie>& tries,
-            const vector<OZKS>& ozks,
-            const vector<pair<vector<byte>, store_value_type>>& store_elements) override
+            const vector<CTNode> &nodes,
+            const vector<CompressedTrie> &tries,
+            const vector<OZKS> &ozks,
+            const vector<pair<vector<byte>, store_value_type>> &store_elements) override
         {
             for (auto node : nodes) {
                 storage_.save_ctnode(trie_id, node);
@@ -203,7 +203,7 @@ TEST(OZKSTests, InsertTest)
     ozks.flush();
 
     EXPECT_EQ(1, ozks.get_epoch());
-    EXPECT_NE(0, result->commitment().size()); // Should have commitment
+    EXPECT_NE(0, result->commitment().size());   // Should have commitment
     EXPECT_EQ(1, result->append_proof().size()); // First inserted
 
     commitment_type commitment1 = result->commitment();
@@ -223,7 +223,7 @@ TEST(OZKSTests, InsertTest)
 TEST(OZKSTests, NoRandomInsertTest)
 {
     OZKSConfig config{ false, false };
-    OZKS ozks({} , config);
+    OZKS ozks({}, config);
 
     auto key = make_bytes(0x01, 0x02, 0x03);
     auto payload = make_bytes(0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA);
@@ -231,7 +231,7 @@ TEST(OZKSTests, NoRandomInsertTest)
     auto result = ozks.insert(key, payload);
     ozks.flush();
 
-    EXPECT_NE(0, result->commitment().size()); // Should have commitment
+    EXPECT_NE(0, result->commitment().size());   // Should have commitment
     EXPECT_EQ(1, result->append_proof().size()); // First inserted
 
     commitment_type commitment1 = result->commitment();
@@ -457,8 +457,8 @@ TEST(OZKSTests, RandomInsertVerificationCacheTest)
 {
     shared_ptr<ozks::storage::Storage> backing_storage =
         make_shared<ozks::storage::MemoryStorage>();
-    shared_ptr<ozks::storage::Storage> storage =
-        make_shared<ozks::storage::MemoryStorageCache>(backing_storage, /* cache_size */ random_iterations);
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorageCache>(
+        backing_storage, /* cache_size */ random_iterations);
 
     RandomInsertTestCore(storage, random_iterations);
 }
@@ -467,8 +467,8 @@ TEST(OZKSTests, RandomInsertVerificationSmallerCacheTest)
 {
     shared_ptr<ozks::storage::Storage> backing_storage =
         make_shared<ozks::storage::MemoryStorage>();
-    shared_ptr<ozks::storage::Storage> storage =
-        make_shared<ozks::storage::MemoryStorageCache>(backing_storage, /* cache_size */ random_iterations / 4);
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorageCache>(
+        backing_storage, /* cache_size */ random_iterations / 4);
 
     RandomInsertTestCore(storage, random_iterations);
 }
@@ -476,10 +476,10 @@ TEST(OZKSTests, RandomInsertVerificationSmallerCacheTest)
 TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
 {
     shared_ptr<ozks::storage::BatchStorage> backing_storage = make_shared<TestBackingStorage>();
-    shared_ptr<ozks::storage::Storage> batching_storage = make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+    shared_ptr<ozks::storage::Storage> batching_storage =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
 
-    TestBackingStorage *tbs =
-        dynamic_cast<TestBackingStorage *>(backing_storage.get());
+    TestBackingStorage *tbs = dynamic_cast<TestBackingStorage *>(backing_storage.get());
     EXPECT_NE(nullptr, tbs);
 
     OZKS ozks(batching_storage);
@@ -576,7 +576,6 @@ TEST(OZKSTests, RandomMultiInsertVerificationTest)
         EXPECT_TRUE(single_result->verify());
     }
 
-
     // Check the valid keys are found and that their path is verified correctly
     for (size_t i = 0; i < valid_keys.size(); i++) {
         auto result = ozks.query(valid_keys[i]);
@@ -652,8 +651,7 @@ TEST(OZKSTests, SaveLoadTest)
     vector<key_type> some_keys(100);
 
     for (size_t i = 0; i < 10000; i++) {
-        get_random_bytes(
-            reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
         ozks.insert(key, payload);
@@ -669,7 +667,7 @@ TEST(OZKSTests, SaveLoadTest)
     size_t save_size = ozks.save(ss);
 
     OZKS ozks2(storage);
-    size_t load_size = OZKS::load(ozks2, ss);
+    size_t load_size = OZKS::Load(ozks2, ss);
 
     EXPECT_EQ(load_size, save_size);
 
@@ -702,8 +700,7 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
     vector<key_type> some_keys(100);
 
     for (size_t i = 0; i < 10000; i++) {
-        get_random_bytes(
-            reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
         ozks.insert(key, payload);
@@ -722,7 +719,7 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
     EXPECT_EQ(true, ozks2.get_configuration().payload_randomness());
     EXPECT_EQ(true, ozks2.get_configuration().include_vrf());
 
-    size_t load_size = OZKS::load(ozks2, ss);
+    size_t load_size = OZKS::Load(ozks2, ss);
     EXPECT_EQ(false, ozks2.get_configuration().payload_randomness());
     EXPECT_EQ(false, ozks2.get_configuration().include_vrf());
 
@@ -753,8 +750,7 @@ TEST(OZKSTests, SaveLoadToVectorTest)
     vector<key_type> some_keys(100);
 
     for (size_t i = 0; i < 10000; i++) {
-        get_random_bytes(
-            reinterpret_cast<unsigned char *>(key.data()), key.size());
+        get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
         ozks.insert(key, payload);
@@ -770,7 +766,7 @@ TEST(OZKSTests, SaveLoadToVectorTest)
     size_t save_size = ozks.save(vec);
 
     OZKS ozks2(storage);
-    size_t load_size = OZKS::load(ozks2, vec);
+    size_t load_size = OZKS::Load(ozks2, vec);
 
     EXPECT_EQ(load_size, save_size);
 
@@ -813,7 +809,7 @@ TEST(OZKSTests, LoadSaveToStorageTest)
     ozks.save();
 
     OZKS ozks2(storage);
-    EXPECT_TRUE(OZKS::load(ozks.id(), storage, ozks2));
+    EXPECT_TRUE(OZKS::Load(ozks.id(), storage, ozks2));
 
     for (size_t i = 0; i < some_keys.size(); i++) {
         QueryResult qr1 = ozks.query(some_keys[i]);

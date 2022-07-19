@@ -1,4 +1,5 @@
-
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT license.
 
 # Source files in this directory
 set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}

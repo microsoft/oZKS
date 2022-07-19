@@ -1,4 +1,5 @@
-
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT license.
 
 # Set the C++ language version; we require C++17
 macro(ozks_set_language target)

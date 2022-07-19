@@ -5,15 +5,14 @@
 #include <sstream>
 
 // OZKS
-#include "gtest/gtest.h"
 #include "oZKS/commitment.h"
-#include "oZKS/vrf.h"
 #include "oZKS/utilities.h"
+#include "oZKS/vrf.h"
+#include "gtest/gtest.h"
 
 using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
-
 
 TEST(CommitmentTests, SerializeTest)
 {
@@ -28,7 +27,7 @@ TEST(CommitmentTests, SerializeTest)
     stringstream ss;
     size_t size = commitment.save(ss);
 
-    auto load_result = Commitment::load(ss);
+    auto load_result = Commitment::Load(ss);
 
     byte pk_arr2[VRFPublicKey::save_size];
     load_result.first.public_key().save(pk_arr2);
@@ -54,7 +53,7 @@ TEST(CommitmentTests, SerializeToVectorTest)
     vector<byte> vec;
     size_t size = commitment.save(vec);
 
-    auto load_result = Commitment::load(vec);
+    auto load_result = Commitment::Load(vec);
 
     byte pk_arr2[VRFPublicKey::save_size];
     load_result.first.public_key().save(pk_arr2);

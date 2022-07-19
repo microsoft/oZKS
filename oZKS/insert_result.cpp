@@ -6,9 +6,9 @@
 
 // oZKS
 #include "oZKS/insert_result.h"
-#include "oZKS/utilities.h"
 #include "oZKS/insert_result_generated.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/utilities.h"
 
 using namespace std;
 
@@ -47,7 +47,7 @@ namespace ozks {
         }
 
         // At the end, the resulting hash is either:
-        // - The commitment
+        // - the commitment
         // - the last child node hash we need to get the commitment
         commitment_type hash_commitment(hash.begin(), hash.end());
         if (hash_commitment == *commitment_) {
@@ -68,20 +68,20 @@ namespace ozks {
         return (hash_commitment == *commitment_);
     }
 
-    size_t InsertResult::save(ostream& stream) const
+    size_t InsertResult::save(ostream &stream) const
     {
         StreamSerializationWriter writer(&stream);
         return save(writer);
     }
 
     template <class T>
-    size_t InsertResult::save(vector<T>& vector) const
+    size_t InsertResult::save(vector<T> &vector) const
     {
         VectorSerializationWriter writer(&vector);
         return save(writer);
     }
 
-    size_t InsertResult::save(SerializationWriter& writer) const
+    size_t InsertResult::save(SerializationWriter &writer) const
     {
         if (!initialized()) {
             throw logic_error("Cannot save an uninitialized insert result");
@@ -124,7 +124,7 @@ namespace ozks {
         return fbs_builder.GetSize();
     }
 
-    size_t InsertResult::load(InsertResult& insert_result, SerializationReader& reader)
+    size_t InsertResult::Load(InsertResult &insert_result, SerializationReader &reader)
     {
         vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -172,26 +172,25 @@ namespace ozks {
         return in_data.size();
     }
 
-    size_t InsertResult::load(InsertResult& insert_result, istream& stream)
+    size_t InsertResult::Load(InsertResult &insert_result, istream &stream)
     {
         StreamSerializationReader reader(&stream);
-        return load(insert_result, reader);
+        return Load(insert_result, reader);
     }
 
     template <class T>
-    size_t InsertResult::load(
-        InsertResult& insert_result, const vector<T>& vector, size_t position)
+    size_t InsertResult::Load(InsertResult &insert_result, const vector<T> &vector, size_t position)
     {
         VectorSerializationReader reader(&vector, position);
-        return load(insert_result, reader);
+        return Load(insert_result, reader);
     }
 
     // Explicit instantiations
     template size_t InsertResult::save(vector<uint8_t> &vector) const;
     template size_t InsertResult::save(vector<byte> &vector) const;
-    template size_t InsertResult::load(
+    template size_t InsertResult::Load(
         InsertResult &query_result, const vector<uint8_t> &vector, size_t position);
-    template size_t InsertResult::load(
+    template size_t InsertResult::Load(
         InsertResult &query_result, const vector<byte> &vector, size_t position);
 
 } // namespace ozks

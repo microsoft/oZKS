@@ -71,6 +71,7 @@ set(OZKS_CONFIG_H_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/oZKS/config.h)
 set(OZKS_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/OZKS-${OZKS_VERSION_MAJOR}.${OZKS_VERSION_MINOR})
 set(OZKS_INCLUDES_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR}/OZKS-${OZKS_VERSION_MAJOR}.${OZKS_VERSION_MINOR})
 
+# Use this if you want to compile with OpenEnclave SDK
 if(OZKS_OPENENCLAVE)
     list(APPEND COMPILE_LIBCXX -stdlib=libc++)
     list(APPEND LINK_LIBCXX -lc++ -lc++abi -stdlib=libc++)
@@ -309,7 +310,7 @@ export(
     FILE ${OZKS_TARGETS_FILENAME})
 
 ###################
-# OZKS unit tests #
+# oZKS unit tests #
 ###################
 
 if(OZKS_BUILD_TESTS)

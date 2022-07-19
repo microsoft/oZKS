@@ -15,14 +15,9 @@
 #include "oZKS/ozks_config.h"
 #include "oZKS/query_result.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/storage/storage.h"
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
-#include "oZKS/storage/storage.h"
-
-namespace {
-    using pending_insertion = std::pair<ozks::key_type, ozks::payload_type>;
-    using pending_result = std::pair<ozks::key_type, std::shared_ptr<ozks::InsertResult>>;
-}
 
 namespace ozks {
     namespace storage {
@@ -108,13 +103,13 @@ namespace ozks {
         /**
         Load an oZKS instance from a stream
         */
-        static std::size_t load(OZKS &ozks, std::istream &stream);
+        static std::size_t Load(OZKS &ozks, std::istream &stream);
 
         /**
         Load an oZKS instance from a byte vector
         */
         template <class T>
-        static std::size_t load(OZKS &ozks, const std::vector<T> &vec, std::size_t position = 0);
+        static std::size_t Load(OZKS &ozks, const std::vector<T> &vec, std::size_t position = 0);
 
         /**
         Save the current oZKS instance to storage
@@ -124,7 +119,7 @@ namespace ozks {
         /**
         Load the current oZKS instance from storage
         */
-        static bool load(
+        static bool Load(
             const std::vector<std::byte> &trie_id,
             std::shared_ptr<ozks::storage::Storage> storage,
             OZKS &ozks);
@@ -135,6 +130,9 @@ namespace ozks {
         void clear();
 
     private:
+        using pending_insertion = std::pair<key_type, payload_type>;
+        using pending_result = std::shared_ptr<InsertResult>;
+
         VRFSecretKey vrf_sk_;
         VRFPublicKey vrf_pk_;
 
@@ -150,7 +148,7 @@ namespace ozks {
 
         std::size_t save(SerializationWriter &writer) const;
 
-        static std::size_t load(SerializationReader &reader, OZKS &ozks);
+        static std::size_t Load(SerializationReader &reader, OZKS &ozks);
 
         void load_trie(CompressedTrie &trie) const;
 
@@ -159,6 +157,5 @@ namespace ozks {
         hash_type get_key_hash(const key_type &key) const;
 
         void do_pending_insertions();
-
     };
 } // namespace ozks

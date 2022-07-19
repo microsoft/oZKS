@@ -22,7 +22,7 @@ size_t OZKSConfig::save(vector<T> &vec) const
     return save(writer);
 }
 
-size_t OZKSConfig::load(OZKSConfig &config, SerializationReader &reader)
+size_t OZKSConfig::Load(OZKSConfig &config, SerializationReader &reader)
 {
     reader.read(reinterpret_cast<uint8_t *>(&config.payload_randomness_), sizeof(bool));
     reader.read(reinterpret_cast<uint8_t *>(&config.include_vrf_), sizeof(bool));
@@ -31,14 +31,14 @@ size_t OZKSConfig::load(OZKSConfig &config, SerializationReader &reader)
 }
 
 template <class T>
-size_t OZKSConfig::load(OZKSConfig &config, const vector<T> &vec, size_t position)
+size_t OZKSConfig::Load(OZKSConfig &config, const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(config, reader);
+    return Load(config, reader);
 }
 
 // Explicit instantiations
 template size_t OZKSConfig::save(vector<uint8_t> &vec) const;
 template size_t OZKSConfig::save(vector<byte> &vec) const;
-template size_t OZKSConfig::load(OZKSConfig &config, const vector<uint8_t> &vec, size_t position);
-template size_t OZKSConfig::load(OZKSConfig &config, const vector<byte> &vec, size_t position);
+template size_t OZKSConfig::Load(OZKSConfig &config, const vector<uint8_t> &vec, size_t position);
+template size_t OZKSConfig::Load(OZKSConfig &config, const vector<byte> &vec, size_t position);

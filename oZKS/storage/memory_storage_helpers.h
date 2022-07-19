@@ -63,7 +63,7 @@ namespace ozks {
                 return trie_id_ == other.trie_id_;
             }
 
-            bool operator<(const StorageTrieKey& other) const
+            bool operator<(const StorageTrieKey &other) const
             {
                 return trie_id_ < other.trie_id_;
             }
@@ -87,7 +87,7 @@ namespace ozks {
                 return trie_id_ == other.trie_id_;
             }
 
-            bool operator<(const StorageOZKSKey& other)const
+            bool operator<(const StorageOZKSKey &other) const
             {
                 return trie_id_ < other.trie_id_;
             }
@@ -118,7 +118,7 @@ namespace ozks {
                 return (trie_id_ == other.trie_id_ && key_ == other.key_);
             }
 
-            bool operator<(const StorageStoreElementKey& other) const
+            bool operator<(const StorageStoreElementKey &other) const
             {
                 if (trie_id_ == other.trie_id_)
                     return key_ < other.key_;

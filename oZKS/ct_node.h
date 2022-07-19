@@ -44,7 +44,7 @@ namespace ozks {
         partial_label_type insert(
             const partial_label_type &insert_label,
             const payload_type &insert_payload,
-            const std::size_t epoch);
+            std::size_t epoch);
 
         /**
         Lookup a given label and return the path to it (including its sibling) if found.
@@ -120,21 +120,21 @@ namespace ozks {
         /**
         Load a node from a serialization reader
         */
-        static std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t> load(
-            SerializationReader &reader);
+        static auto Load(SerializationReader &reader)
+            -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
 
         /**
         Load a node from a stream
         */
-        static std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t> load(
-            std::istream &stream);
+        static auto Load(std::istream &stream)
+            -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
 
         /**
         Load a node from a vector
         */
         template <class T>
-        static std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t> load(
-            const std::vector<T> &vec, std::size_t position = 0);
+        static auto Load(const std::vector<T> &vec, std::size_t position = 0)
+            -> std::tuple<CTNode, partial_label_type, partial_label_type, std::size_t>;
 
         /**
         Load left node from storage
@@ -149,7 +149,7 @@ namespace ozks {
         /**
         Load a node from storage
         */
-        bool load(const partial_label_type label, CTNode &node) const;
+        bool load(const partial_label_type &label, CTNode &node) const;
 
         /**
         Save a node to storage
@@ -177,7 +177,7 @@ namespace ozks {
         void init(
             const partial_label_type &init_label,
             const payload_type &init_payload,
-            const std::size_t epoch);
+            std::size_t epoch);
 
         /**
         Initialize node with given label, payload and hash.

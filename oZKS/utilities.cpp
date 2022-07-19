@@ -176,7 +176,7 @@ void utils::compute_node_hash(
 void utils::compute_randomness_hash(
     gsl::span<const byte> buffer, hash_type &hash, randomness_type &randomness)
 {
-    randomness.resize(64); // 64 bytes
+    randomness.resize(randomness_size); // 64 bytes
     if (!random_bytes(
             reinterpret_cast<unsigned char *>(randomness.data()),
             static_cast<unsigned int>(randomness.size()))) {

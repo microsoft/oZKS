@@ -2,20 +2,19 @@
 // Licensed under the MIT license.
 
 // oZKS
-#include "oZKS/ozks.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/ozks.h"
 #include "oZKS/ozks_generated.h"
 #include "oZKS/ozks_store_generated.h"
+#include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
 #include "oZKS/version.h"
-#include "oZKS/storage/memory_storage.h"
 
 using namespace std;
 using namespace ozks;
 
 OZKS::OZKS() : OZKS(nullptr)
-{
-}
+{}
 
 OZKS::OZKS(shared_ptr<storage::Storage> storage) : storage_(storage)
 {
@@ -47,24 +46,22 @@ OZKS::OZKS(shared_ptr<storage::Storage> storage, const OZKSConfig &config) : sto
     trie.save();
 }
 
-shared_ptr<InsertResult> OZKS::insert(const key_type& key, const payload_type& payload)
+shared_ptr<InsertResult> OZKS::insert(const key_type &key, const payload_type &payload)
 {
-    pending_insertion pending{ key, payload };
-    pending_insertions_.emplace_back(pending);
-    pending_result pending_res{ key, make_shared<InsertResult>() };
-    pending_results_.emplace_back(pending_res);
-    return pending_res.second;
+    pending_insertions_.emplace_back(pending_insertion{ key, payload });
+    auto insert_result = make_shared<InsertResult>();
+    pending_results_.push_back(insert_result);
+    return insert_result;
 }
 
 InsertResultBatch OZKS::insert(const key_payload_batch_type &input)
 {
     InsertResultBatch result;
     for (const auto &i : input) {
-        pending_insertion pending{ i.first, i.second };
-        pending_insertions_.emplace_back(pending);
-        pending_result pending_res{ i.first, make_shared<InsertResult>() };
-        pending_results_.emplace_back(pending_res);
-        result.emplace_back(pending_res.second);
+        pending_insertions_.emplace_back(pending_insertion{ i.first, i.second });
+        auto insert_result = make_shared<InsertResult>();
+        pending_results_.push_back(insert_result);
+        result.emplace_back(move(insert_result));
     }
 
     return result;
@@ -97,7 +94,7 @@ void OZKS::do_pending_insertions()
     }
 
     append_proof_batch_type append_proofs;
-    
+
     CompressedTrie trie;
     load_trie(trie);
     trie.insert(label_payload_batch, append_proofs);
@@ -107,7 +104,10 @@ void OZKS::do_pending_insertions()
 
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
         auto &pending_result = pending_results_[idx];
-        pending_result.second->init_result(commitment, append_proofs[idx]);
+        if (!pending_result) {
+            throw runtime_error("Pending result is null");
+        }
+        pending_result->init_result(commitment, move(append_proofs[idx]));
     }
 
     pending_insertions_.clear();
@@ -174,7 +174,7 @@ pair<payload_type, randomness_type> OZKS::commit(const payload_type &payload)
 
     // Returns hash and the randomness used to compute it
     vector<byte> pld(hash.begin(), hash.end());
-    return { pld, randomness };
+    return { move(pld), move(randomness) };
 }
 
 VRFPublicKey OZKS::get_public_key() const
@@ -195,7 +195,7 @@ Commitment OZKS::get_commitment() const
     CompressedTrie trie;
     load_trie(trie);
     trie.get_commitment(commitment);
-    return { get_public_key(), commitment };
+    return { get_public_key(), move(commitment) };
 }
 
 const OZKSConfig &OZKS::get_configuration() const
@@ -227,8 +227,8 @@ size_t OZKS::save(SerializationWriter &writer) const
     config_.save(config_saved);
     auto config_data = fbs_builder.CreateVector(
         reinterpret_cast<uint8_t *>(config_saved.data()), config_saved.size());
-    auto trie_id_data =
-        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(trie_id_.data()), trie_id_.size());
+    auto trie_id_data = fbs_builder.CreateVector(
+        reinterpret_cast<const uint8_t *>(trie_id_.data()), trie_id_.size());
 
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> pk_data;
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> sk_data;
@@ -274,7 +274,7 @@ size_t OZKS::save(vector<T> &vec) const
     return save(writer);
 }
 
-size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
+size_t OZKS::Load(SerializationReader &reader, OZKS &ozks)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -296,7 +296,7 @@ size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
     vector<byte> config_vec(fbs_ozks->configuration()->size());
     utils::copy_bytes(
         fbs_ozks->configuration()->data(), fbs_ozks->configuration()->size(), config_vec.data());
-    OZKSConfig::load(ozks.config_, config_vec);
+    OZKSConfig::Load(ozks.config_, config_vec);
 
     ozks.trie_id_.resize(fbs_ozks->trie_id()->size());
     utils::copy_bytes(
@@ -322,19 +322,18 @@ size_t OZKS::load(SerializationReader &reader, OZKS &ozks)
     return in_data.size();
 }
 
-size_t OZKS::load(OZKS &ozks, istream &stream)
+size_t OZKS::Load(OZKS &ozks, istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return load(reader, ozks);
+    return Load(reader, ozks);
 }
 
 template <class T>
-size_t OZKS::load(OZKS &ozks, const vector<T> &vec, size_t position)
+size_t OZKS::Load(OZKS &ozks, const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);
-    return load(reader, ozks);
+    return Load(reader, ozks);
 }
-
 
 void OZKS::load_trie(CompressedTrie &trie) const
 {
@@ -343,7 +342,7 @@ void OZKS::load_trie(CompressedTrie &trie) const
     if (trie_id_.empty())
         throw runtime_error("trie_id_ is empty");
 
-    if (!CompressedTrie::load(trie_id_, storage_, trie))
+    if (!CompressedTrie::Load(trie_id_, storage_, trie))
         throw runtime_error("Could not load trie");
 }
 
@@ -357,10 +356,7 @@ void OZKS::save() const
     storage_->save_ozks(*this);
 }
 
-bool OZKS::load(
-    const vector<byte>& trie_id,
-    shared_ptr<ozks::storage::Storage> storage,
-    OZKS& ozks)
+bool OZKS::Load(const vector<byte> &trie_id, shared_ptr<ozks::storage::Storage> storage, OZKS &ozks)
 {
     if (nullptr == storage)
         throw invalid_argument("storage is null");
@@ -389,5 +385,5 @@ hash_type OZKS::get_key_hash(const key_type &key) const
 // Explicit instantiations
 template size_t OZKS::save(vector<uint8_t> &vec) const;
 template size_t OZKS::save(vector<byte> &vec) const;
-template size_t OZKS::load(OZKS &ozks, const vector<uint8_t> &vec, size_t position);
-template size_t OZKS::load(OZKS &ozks, const vector<byte> &vec, size_t position);
+template size_t OZKS::Load(OZKS &ozks, const vector<uint8_t> &vec, size_t position);
+template size_t OZKS::Load(OZKS &ozks, const vector<byte> &vec, size_t position);

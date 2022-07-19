@@ -6,15 +6,14 @@
 
 // OZKS
 #include "oZKS/query_result.h"
-#include "oZKS/utilities.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/utilities.h"
 
 // GTest
 #include "gtest/gtest.h"
 
 using namespace ozks;
 using namespace std;
-
 
 void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKSConfig &config)
 {
@@ -59,7 +58,7 @@ void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKS
     QueryResult qr2(config);
     EXPECT_FALSE(qr2.is_member());
 
-    size_t load_size = QueryResult::load(qr2, reader);
+    size_t load_size = QueryResult::Load(qr2, reader);
 
     EXPECT_EQ(load_size, save_size);
 

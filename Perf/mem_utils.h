@@ -8,4 +8,3 @@
 #include <utility>
 
 std::pair<std::size_t, std::size_t> get_current_mem();
-

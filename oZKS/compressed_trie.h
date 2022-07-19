@@ -13,7 +13,6 @@
 #include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
 
-
 namespace ozks {
     namespace storage {
         class Storage;
@@ -105,18 +104,18 @@ namespace ozks {
         /**
         Load a Compressed Trie object from the given serialization reader
         */
-        static std::size_t load(CompressedTrie &ct, SerializationReader &reader);
+        static std::size_t Load(CompressedTrie &ct, SerializationReader &reader);
 
         /**
         Load a Compressed Trie object from the given stream
         */
-        static std::size_t load(CompressedTrie &ct, std::istream &stream);
+        static std::size_t Load(CompressedTrie &ct, std::istream &stream);
 
         /**
         Load a Compressed Trie object from the given vector
         */
         template <class T>
-        static std::size_t load(
+        static std::size_t Load(
             CompressedTrie &ct, const std::vector<T> &vec, std::size_t position = 0);
 
         /**
@@ -127,7 +126,7 @@ namespace ozks {
         /**
         Load a compressed trie from Storage
         */
-        static bool load(
+        static bool Load(
             const std::vector<std::byte> &trie_id,
             std::shared_ptr<ozks::storage::Storage> storage,
             CompressedTrie &trie);
@@ -139,7 +138,8 @@ namespace ozks {
         void clear();
 
     private:
-        partial_label_type root_;
+        static constexpr std::size_t id_size_ = 16;
+
         std::size_t epoch_;
         std::vector<std::byte> id_;
         std::shared_ptr<ozks::storage::Storage> storage_;

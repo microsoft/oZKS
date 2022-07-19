@@ -4,6 +4,7 @@
 #pragma once
 
 // STD
+#include <cstddef>
 #include <iostream>
 #include <vector>
 
@@ -55,13 +56,13 @@ namespace ozks {
         /**
         Load an OZKSConfig object from the given serialization reader
         */
-        static std::size_t load(OZKSConfig &config, SerializationReader &reader);
+        static std::size_t Load(OZKSConfig &config, SerializationReader &reader);
 
         /**
         Load an oZKS instance from a byte vector
         */
         template <class T>
-        static std::size_t load(
+        static std::size_t Load(
             OZKSConfig &config, const std::vector<T> &vec, std::size_t position = 0);
 
     private:

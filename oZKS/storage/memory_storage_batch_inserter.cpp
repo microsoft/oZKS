@@ -11,7 +11,6 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
 
-
 bool MemoryStorageBatchInserter::load_ctnode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
 {
@@ -39,7 +38,8 @@ void MemoryStorageBatchInserter::save_ctnode(const vector<byte> &trie_id, const 
     unsaved_nodes_[key] = node;
 }
 
-bool MemoryStorageBatchInserter::load_compressed_trie(const vector<byte>& trie_id, CompressedTrie& trie)
+bool MemoryStorageBatchInserter::load_compressed_trie(
+    const vector<byte> &trie_id, CompressedTrie &trie)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -56,7 +56,7 @@ bool MemoryStorageBatchInserter::load_compressed_trie(const vector<byte>& trie_i
     return storage_->load_compressed_trie(trie_id, trie);
 }
 
-void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie& trie)
+void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie &trie)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -65,7 +65,7 @@ void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie& trie
     unsaved_tries_[key] = trie;
 }
 
-bool MemoryStorageBatchInserter::load_ozks(const vector<byte>& trie_id, OZKS& ozks)
+bool MemoryStorageBatchInserter::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -82,7 +82,7 @@ bool MemoryStorageBatchInserter::load_ozks(const vector<byte>& trie_id, OZKS& oz
     return storage_->load_ozks(trie_id, ozks);
 }
 
-void MemoryStorageBatchInserter::save_ozks(const OZKS& ozks)
+void MemoryStorageBatchInserter::save_ozks(const OZKS &ozks)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -134,25 +134,25 @@ void MemoryStorageBatchInserter::flush(const vector<byte> &trie_id)
     ozkss.reserve(unsaved_ozks_.size());
     store_elements.reserve(unsaved_store_elements_.size());
 
-    for (auto node_pair : unsaved_nodes_) {
-        nodes.emplace_back(node_pair.second);
+    for (auto &node_pair : unsaved_nodes_) {
+        nodes.emplace_back(move(node_pair.second));
     }
     unsaved_nodes_.clear();
 
-    for (auto trie_pair : unsaved_tries_) {
-        tries.emplace_back(trie_pair.second);
+    for (auto &trie_pair : unsaved_tries_) {
+        tries.emplace_back(move(trie_pair.second));
     }
     unsaved_tries_.clear();
 
-    for (auto ozks_pair : unsaved_ozks_) {
-        ozkss.emplace_back(ozks_pair.second);
+    for (auto &ozks_pair : unsaved_ozks_) {
+        ozkss.emplace_back(move(ozks_pair.second));
     }
     unsaved_ozks_.clear();
 
     for (auto store_element_pair : unsaved_store_elements_) {
         pair<vector<byte>, store_value_type> se(
             store_element_pair.first.key(), store_element_pair.second);
-        store_elements.emplace_back(se);
+        store_elements.emplace_back(move(se));
     }
     unsaved_store_elements_.clear();
 
