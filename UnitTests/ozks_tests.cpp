@@ -94,6 +94,11 @@ namespace {
             // Nothing really.
         }
 
+        void add_ctnode(const vector<byte> &trie_id, const CTNode &node) override
+        {
+            throw runtime_error("Should we be called?");
+        }
+
         void flush(
             const vector<byte> &trie_id,
             const vector<CTNode> &nodes,
@@ -116,6 +121,15 @@ namespace {
             for (auto se : store_elements) {
                 storage_.save_store_element(trie_id, se.first, se.second);
             }
+        }
+
+        bool load_ctnode(
+            const vector<byte> &trie_id,
+            const partial_label_type &node_id,
+            Storage *storage,
+            CTNode &node) override
+        {
+            return load_ctnode(trie_id, node_id, node);
         }
 
         size_t node_count() const

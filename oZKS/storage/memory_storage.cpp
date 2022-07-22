@@ -102,6 +102,11 @@ void MemoryStorage::flush(const vector<byte> &trie_id)
     // Nothing to do because there is nowhere to flush to
 }
 
+void MemoryStorage::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
+{
+    throw runtime_error("Does not make sense for this Storage implementation");
+}
+
 void StorageStoreElement::load_store_element(payload_type &payload, randomness_type &randomness)
 {
     size_t position = 0;

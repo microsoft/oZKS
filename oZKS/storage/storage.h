@@ -71,6 +71,11 @@ namespace ozks {
             Flush changes if appropriate
             */
             virtual void flush(const std::vector<std::byte> &trie_id) = 0;
+
+            /**
+            Add an existing node to the current storage.
+            */
+            virtual void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
         };
     } // namespace storage
 } // namespace ozks

@@ -108,3 +108,10 @@ void MemoryStorageCache::flush(const vector<byte> &trie_id)
 {
     storage_->flush(trie_id);
 }
+
+
+void MemoryStorageCache::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
+{
+    StorageNodeKey key(trie_id, node.label);
+    node_cache_.update(key, node);
+}

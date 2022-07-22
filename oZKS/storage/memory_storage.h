@@ -76,6 +76,11 @@ namespace ozks {
             */
             void flush(const std::vector<std::byte> &trie_id) override;
 
+            /**
+            Add an existing node to the current storage.
+            */
+            void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
+
             std::size_t node_count() const
             {
                 return nodes_.size();

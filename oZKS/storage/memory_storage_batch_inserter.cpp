@@ -26,7 +26,7 @@ bool MemoryStorageBatchInserter::load_ctnode(
     }
 
     // Second, check backing storage
-    return storage_->load_ctnode(trie_id, node_id, node);
+    return storage_->load_ctnode(trie_id, node_id, this, node);
 }
 
 void MemoryStorageBatchInserter::save_ctnode(const vector<byte> &trie_id, const CTNode &node)
@@ -157,4 +157,9 @@ void MemoryStorageBatchInserter::flush(const vector<byte> &trie_id)
     unsaved_store_elements_.clear();
 
     storage_->flush(trie_id, nodes, tries, ozkss, store_elements);
+}
+
+void MemoryStorageBatchInserter::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
+{
+    throw runtime_error("Does not make sense for this Storage implementation");
 }

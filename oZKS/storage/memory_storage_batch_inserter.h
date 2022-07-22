@@ -74,6 +74,11 @@ namespace ozks {
             */
             void flush(const std::vector<std::byte> &trie_id) override;
 
+            /**
+            Add an existing node to the current storage.
+            */
+            void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
+
         private:
             std::shared_ptr<BatchStorage> storage_;
 
