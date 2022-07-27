@@ -163,3 +163,9 @@ void MemoryStorageBatchInserter::add_ctnode(const vector<byte> &trie_id, const C
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
+
+void MemoryStorageBatchInserter::add_store_element(
+    const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
+{
+    throw runtime_error("Does not make sense for this Storage implementation");
+}

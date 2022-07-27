@@ -99,6 +99,14 @@ namespace {
             throw runtime_error("Should we be called?");
         }
 
+        void add_store_element(
+            const vector<byte> &trie_id,
+            const vector<byte> &key,
+            const store_value_type &value) override
+        {
+            throw runtime_error("Should we be called?");
+        }
+
         void flush(
             const vector<byte> &trie_id,
             const vector<CTNode> &nodes,

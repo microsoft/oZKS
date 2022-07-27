@@ -76,6 +76,14 @@ namespace ozks {
             Add an existing node to the current storage.
             */
             virtual void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
+
+            /**
+            Add an existing store element to the current storage
+            */
+            virtual void add_store_element(
+                const std::vector<std::byte> &trie_id,
+                const std::vector<std::byte> &key,
+                const store_value_type &value) = 0;
         };
     } // namespace storage
 } // namespace ozks

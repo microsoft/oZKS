@@ -115,3 +115,10 @@ void MemoryStorageCache::add_ctnode(const vector<byte> &trie_id, const CTNode &n
     StorageNodeKey key(trie_id, node.label);
     node_cache_.update(key, node);
 }
+
+void MemoryStorageCache::add_store_element(
+    const vector<byte> &trie_id, const vector<byte> &se_key, const store_value_type &value)
+{
+    StorageStoreElementKey key(trie_id, se_key);
+    store_element_cache_.update(key, value);
+}

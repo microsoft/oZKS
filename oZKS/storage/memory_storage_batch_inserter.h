@@ -79,6 +79,14 @@ namespace ozks {
             */
             void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
 
+            /**
+            Add an existing store element to the current storage
+            */
+            void add_store_element(
+                const std::vector<std::byte> &trie_id,
+                const std::vector<std::byte> &key,
+                const store_value_type &value) override;
+
         private:
             std::shared_ptr<BatchStorage> storage_;
 
