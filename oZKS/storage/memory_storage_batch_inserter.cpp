@@ -169,3 +169,20 @@ void MemoryStorageBatchInserter::add_store_element(
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
+
+size_t MemoryStorageBatchInserter::get_compressed_trie_epoch(const vector<byte> &trie_id)
+{
+    CompressedTrie trie;
+
+    // Look first in backing storage
+    if (!storage_->load_compressed_trie(trie_id, trie)) {
+        // Not in backing storage, try in unsaved tries
+        StorageTrieKey key(trie_id);
+        auto unsaved_trie = unsaved_tries_.find(key);
+        if (unsaved_trie != unsaved_tries_.end()) {
+            trie = unsaved_trie->second;
+        }
+    }
+
+    return trie.epoch();
+}

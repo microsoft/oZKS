@@ -107,6 +107,11 @@ namespace {
             throw runtime_error("Should we be called?");
         }
 
+        size_t get_compressed_trie_epoch(const vector<byte> &trie_id) override
+        {
+            return storage_.get_compressed_trie_epoch(trie_id);
+        }
+
         void flush(
             const vector<byte> &trie_id,
             const vector<CTNode> &nodes,

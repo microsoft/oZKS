@@ -87,6 +87,11 @@ namespace ozks {
                 const std::vector<std::byte> &key,
                 const store_value_type &value) override;
 
+            /**
+            Get the latest epoch for the given compressed trie
+            */
+            std::size_t get_compressed_trie_epoch(const std::vector<std::byte> &trie_id) override;
+
         private:
             std::shared_ptr<BatchStorage> storage_;
 

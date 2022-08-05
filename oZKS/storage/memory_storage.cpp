@@ -113,6 +113,18 @@ void MemoryStorage::add_store_element(
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
+size_t MemoryStorage::get_compressed_trie_epoch(const vector<byte> &trie_id)
+{
+    size_t result = 0;
+    CompressedTrie trie;
+
+    if (load_compressed_trie(trie_id, trie)) {
+        result = trie.epoch();
+    }
+
+    return result;
+}
+
 void StorageStoreElement::load_store_element(payload_type &payload, randomness_type &randomness)
 {
     size_t position = 0;

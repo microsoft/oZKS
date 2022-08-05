@@ -84,6 +84,12 @@ namespace ozks {
                 const std::vector<std::byte> &trie_id,
                 const std::vector<std::byte> &key,
                 const store_value_type &value) = 0;
+
+            /**
+            Get the latest epoch for the given compressed trie
+            */
+            virtual std::size_t get_compressed_trie_epoch(
+                const std::vector<std::byte> &trie_id) = 0;
         };
     } // namespace storage
 } // namespace ozks

@@ -89,21 +89,38 @@ namespace ozks {
                 const std::vector<std::byte> &key,
                 const store_value_type &value) override;
 
+            /**
+            Get the latest epoch for the given compressed trie
+            */
+            std::size_t get_compressed_trie_epoch(const std::vector<std::byte> &trie_id) override;
+
+            /**
+            Get the count of nodes contained in storage
+            */
             std::size_t node_count() const
             {
                 return nodes_.size();
             }
 
+            /**
+            Get the count of store elements contained in storage
+            */
             std::size_t store_element_count() const
             {
                 return store_.size();
             }
 
+            /**
+            Get the count of compressed tries contained in storage
+            */
             std::size_t trie_count() const
             {
                 return tries_.size();
             }
 
+            /**
+            Get the count of OZKS instances contained in storage
+            */
             std::size_t ozks_count() const
             {
                 return ozks_.size();

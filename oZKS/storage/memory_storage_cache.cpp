@@ -109,7 +109,6 @@ void MemoryStorageCache::flush(const vector<byte> &trie_id)
     storage_->flush(trie_id);
 }
 
-
 void MemoryStorageCache::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
 {
     StorageNodeKey key(trie_id, node.label);
@@ -121,4 +120,21 @@ void MemoryStorageCache::add_store_element(
 {
     StorageStoreElementKey key(trie_id, se_key);
     store_element_cache_.update(key, value);
+}
+
+size_t MemoryStorageCache::get_compressed_trie_epoch(const vector<byte> &trie_id)
+{
+    CompressedTrie trie;
+
+    // Look first in backing storage
+    if (!storage_->load_compressed_trie(trie_id, trie)) {
+        // Not in backing storage, try the cache
+        StorageTrieKey key(trie_id);
+        auto cached_trie = trie_cache_.get(key);
+        if (!cached_trie.isNull()) {
+            trie = *cached_trie;
+        }
+    }
+
+    return trie.epoch();
 }
