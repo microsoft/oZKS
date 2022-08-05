@@ -63,7 +63,7 @@ namespace ozks {
         Initialize a vector of bytes using a list of byte-convertible integers.
         */
         template <typename... Ts>
-        std::vector<std::byte> make_bytes(Ts &&... args) noexcept
+        std::vector<std::byte> make_bytes(Ts &&...args) noexcept
         {
             return { static_cast<std::byte>(std::forward<Ts>(args))... };
         }

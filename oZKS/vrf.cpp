@@ -25,7 +25,7 @@ namespace {
     }
 
     template <typename First, typename... Rest>
-    vector<byte> append_ecpt_to_buffer(First &&pt, Rest &&... rest)
+    vector<byte> append_ecpt_to_buffer(First &&pt, Rest &&...rest)
     {
         vector<byte> result = append_ecpt_to_buffer(forward<Rest>(rest)...);
         array<byte, utils::ECPoint::save_size> pt_buf;
@@ -35,7 +35,7 @@ namespace {
     }
 
     template <typename... Points>
-    decltype(VRFProof::c) hash_points(Points &&... points)
+    decltype(VRFProof::c) hash_points(Points &&...points)
     {
         // This function computes the c in the VRF proof by hashing together curve points
 
