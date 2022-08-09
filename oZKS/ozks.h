@@ -70,6 +70,11 @@ namespace ozks {
         void flush();
 
         /**
+        Check for an updated trie
+        */
+        void check_for_update();
+
+        /**
         Get the VRF public key that can be used to verify VRF proofs
         */
         VRFPublicKey get_public_key() const;

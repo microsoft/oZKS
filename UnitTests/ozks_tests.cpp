@@ -99,6 +99,11 @@ namespace {
             throw runtime_error("Should we be called?");
         }
 
+        void add_compressed_trie(const CompressedTrie& trie) override
+        {
+            throw runtime_error("Should we be called?");
+        }
+
         void add_store_element(
             const vector<byte> &trie_id,
             const vector<byte> &key,
@@ -112,6 +117,28 @@ namespace {
             return storage_.get_compressed_trie_epoch(trie_id);
         }
 
+        void load_updated_elements(
+            size_t epoch, const vector<byte>& trie_id, Storage* storage) override
+        {
+            auto it = updated_nodes_.find(epoch);
+            if (it != updated_nodes_.end()) {
+                for (auto &node : it->second) {
+                    if (nullptr != storage) {
+                        storage->add_ctnode(trie_id, node);
+                    }
+                }
+
+                updated_nodes_.erase(epoch);
+            }
+
+            auto itt = updated_tries_.find(epoch);
+            if (itt != updated_tries_.end()) {
+                for (auto &trie : itt->second) {
+                    storage->add_compressed_trie(trie);
+                }
+            }
+        }
+
         void flush(
             const vector<byte> &trie_id,
             const vector<CTNode> &nodes,
@@ -119,19 +146,41 @@ namespace {
             const vector<OZKS> &ozks,
             const vector<pair<vector<byte>, store_value_type>> &store_elements) override
         {
-            for (auto node : nodes) {
-                storage_.save_ctnode(trie_id, node);
+            CompressedTrie trie;
+            storage_.load_compressed_trie(trie_id, trie);
+            size_t updated_epoch = trie.epoch() + 1;
+
+            vector<CompressedTrie> existing_updated_tries;
+            auto itt = updated_tries_.find(updated_epoch);
+            if (itt != updated_tries_.end()) {
+                existing_updated_tries = itt->second;
             }
 
-            for (auto trie : tries) {
+            for (auto &trie : tries) {
                 storage_.save_compressed_trie(trie);
+                existing_updated_tries.push_back(trie);
             }
 
-            for (auto ozksi : ozks) {
+            updated_tries_[updated_epoch] = existing_updated_tries;
+
+            vector<CTNode> existing_updated_nodes;
+            auto it = updated_nodes_.find(updated_epoch);
+            if (it != updated_nodes_.end()) {
+                existing_updated_nodes = it->second;
+            }
+
+            for (auto &node : nodes) {
+                storage_.save_ctnode(trie_id, node);
+                existing_updated_nodes.push_back(node);
+            }
+
+            updated_nodes_[updated_epoch] = existing_updated_nodes;
+
+            for (auto &ozksi : ozks) {
                 storage_.save_ozks(ozksi);
             }
 
-            for (auto se : store_elements) {
+            for (auto &se : store_elements) {
                 storage_.save_store_element(trie_id, se.first, se.second);
             }
         }
@@ -165,28 +214,142 @@ namespace {
             return storage_.ozks_count();
         }
 
+        size_t updated_nodes_count()
+        {
+            return updated_nodes_.size();
+        }
+
+        size_t updated_nodes_count(size_t epoch)
+        {
+            auto it = updated_nodes_.find(epoch);
+            if (it == updated_nodes_.end()) {
+                return 0;
+            }
+
+            return it->second.size();
+        }
+
     private:
         storage::MemoryStorage storage_;
+        unordered_map<size_t, vector<CTNode>> updated_nodes_;
+        unordered_map<size_t, vector<CompressedTrie>> updated_tries_;
+    };
+
+    class TestCachedStorage : public storage::Storage {
+    public:
+        TestCachedStorage(shared_ptr<storage::Storage> backing_storage, size_t cache_size)
+            : storage_(backing_storage, cache_size)
+        {}
+
+        bool load_ctnode(
+            const std::vector<std::byte> &trie_id,
+            const partial_label_type &node_id,
+            CTNode &node) override
+        {
+            return storage_.load_ctnode(trie_id, node_id, node);
+        }
+
+        void save_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override
+        {
+            storage_.save_ctnode(trie_id, node);
+        }
+
+        bool load_compressed_trie(
+            const std::vector<std::byte> &trie_id, CompressedTrie &trie) override
+        {
+            return storage_.load_compressed_trie(trie_id, trie);
+        }
+
+        void save_compressed_trie(const CompressedTrie &trie) override
+        {
+            storage_.save_compressed_trie(trie);
+        }
+
+        bool load_ozks(const std::vector<std::byte> &trie_id, OZKS &ozks) override
+        {
+            return storage_.load_ozks(trie_id, ozks);
+        }
+
+        void save_ozks(const OZKS &ozks) override
+        {
+            storage_.save_ozks(ozks);
+        }
+
+        bool load_store_element(
+            const std::vector<std::byte> &trie_id,
+            const std::vector<std::byte> &key,
+            store_value_type &value) override
+        {
+            return storage_.load_store_element(trie_id, key, value);
+        }
+
+        void save_store_element(
+            const std::vector<std::byte> &trie_id,
+            const std::vector<std::byte> &key,
+            const store_value_type &value) override
+        {
+            storage_.save_store_element(trie_id, key, value);
+        }
+
+        void flush(const vector<byte> &trie_id) override
+        {
+            // Nothing really.
+        }
+
+        void add_ctnode(const vector<byte> &trie_id, const CTNode &node) override
+        {
+            storage_.add_ctnode(trie_id, node);
+        }
+
+        void add_compressed_trie(const CompressedTrie& trie) override
+        {
+            storage_.add_compressed_trie(trie);
+        }
+
+        void add_store_element(
+            const vector<byte> &trie_id,
+            const vector<byte> &key,
+            const store_value_type &value) override
+        {
+            storage_.add_store_element(trie_id, key, value);
+        }
+
+        size_t get_compressed_trie_epoch(const vector<byte> &trie_id) override
+        {
+            return storage_.get_compressed_trie_epoch(trie_id);
+        }
+
+        void load_updated_elements(
+            size_t epoch, const vector<byte> &trie_id, Storage *storage) override
+        {
+            storage_.load_updated_elements(epoch, trie_id, this);
+        }
+
+    private:
+        storage::MemoryStorageCache storage_;
     };
 
 } // namespace
 
-void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t iterations)
+void RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = false)
 {
-    OZKS ozks(storage);
-
     key_type key(16);
     payload_type payload(40);
     vector<key_type> valid_keys;
     vector<payload_type> valid_payloads;
+    vector<shared_ptr<InsertResult>> insert_results;
 
     for (size_t i = 0; i < iterations; i++) {
         get_random_bytes(reinterpret_cast<unsigned char *>(key.data()), key.size());
         get_random_bytes(reinterpret_cast<unsigned char *>(payload.data()), payload.size());
 
         auto insert_result = ozks.insert(key, payload);
-        ozks.flush();
-        EXPECT_EQ(true, insert_result->verify());
+        if (!flush_at_end) {
+            ozks.flush();
+            EXPECT_EQ(true, insert_result->verify());
+        } else {
+            insert_results.push_back(insert_result);
+        }
 
         // Add some keys at random to check later (up to 100)
         unsigned char c;
@@ -194,6 +357,13 @@ void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t ite
         if (valid_keys.size() < 100 && c > 128) {
             valid_keys.push_back(key);
             valid_payloads.push_back(payload);
+        }
+    }
+
+    if (flush_at_end) {
+        ozks.flush();
+        for (auto insert_result : insert_results) {
+            EXPECT_EQ(true, insert_result->verify());
         }
     }
 
@@ -215,6 +385,12 @@ void RandomInsertTestCore(shared_ptr<ozks::storage::Storage> storage, size_t ite
         EXPECT_EQ(0, result.payload().size());
         EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
     }
+}
+
+void RandomInsertTestCore(shared_ptr<storage::Storage> storage, size_t iterations, bool flush_at_end = false)
+{
+    OZKS ozks(storage);
+    RandomInsertTestCore(ozks, iterations, flush_at_end);
 }
 
 TEST(OZKSTests, InsertTest)
@@ -940,4 +1116,46 @@ TEST(OZKSTests, ConstructorTest)
 
     EXPECT_EQ(false, ozks4.get_configuration().payload_randomness());
     EXPECT_EQ(true, ozks4.get_configuration().include_vrf());
+}
+
+TEST(OZKSTests, UpdatedNodesTest)
+{
+    shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+
+    OZKS ozks(batch_inserter);
+
+    vector<byte> saved_ozks;
+    ozks.save(saved_ozks);
+
+    // Insert one element to ensure trie is saved in backing storage
+    RandomInsertTestCore(ozks, 1, /* flush_at_end */ true);
+
+    shared_ptr<TestCachedStorage> cached_storage =
+        make_shared<TestCachedStorage>(backing_storage, 5000);
+    OZKS ozks2(cached_storage);
+    // This ensures we have the same trie ID
+    ozks2.Load(ozks2, saved_ozks);
+    // This ensures the trie is in the cache
+    size_t epoch = ozks2.get_epoch();
+
+    // Generate 3 epochs
+    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(3, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(4, backing_storage->updated_nodes_count());
+
+    epoch = ozks2.get_epoch();
+    EXPECT_EQ(1, epoch);
+
+    ozks2.check_for_update();
+    epoch = ozks2.get_epoch();
+    EXPECT_EQ(4, epoch);
+    EXPECT_EQ(0, backing_storage->updated_nodes_count());
 }

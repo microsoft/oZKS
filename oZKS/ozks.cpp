@@ -161,6 +161,18 @@ void OZKS::flush()
     do_pending_insertions();
 }
 
+void OZKS::check_for_update()
+{
+    size_t new_epoch = storage_->get_compressed_trie_epoch(id());
+    size_t epoch = get_epoch();
+
+    if (new_epoch > epoch) {
+        for (; epoch <= new_epoch; epoch++) {
+            storage_->load_updated_elements(epoch, id(), storage_.get());
+        }
+    }
+}
+
 pair<payload_type, randomness_type> OZKS::commit(const payload_type &payload)
 {
     randomness_type randomness;

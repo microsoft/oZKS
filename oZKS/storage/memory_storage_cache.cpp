@@ -43,6 +43,7 @@ bool MemoryStorageCache::load_compressed_trie(const vector<byte> &trie_id, Compr
             return false;
 
         trie_cache_.add(key, trie);
+        return true;
     }
 
     trie = *(cached_trie.get());
@@ -115,6 +116,12 @@ void MemoryStorageCache::add_ctnode(const vector<byte> &trie_id, const CTNode &n
     node_cache_.update(key, node);
 }
 
+void MemoryStorageCache::add_compressed_trie(const CompressedTrie& trie)
+{
+    StorageTrieKey key(trie.id());
+    trie_cache_.update(key, trie);
+}
+
 void MemoryStorageCache::add_store_element(
     const vector<byte> &trie_id, const vector<byte> &se_key, const store_value_type &value)
 {
@@ -137,4 +144,11 @@ size_t MemoryStorageCache::get_compressed_trie_epoch(const vector<byte> &trie_id
     }
 
     return trie.epoch();
+}
+
+void MemoryStorageCache::load_updated_elements(
+    size_t epoch, const vector<byte> &trie_id, Storage *storage)
+{
+    // Update this cache
+    storage_->load_updated_elements(epoch, trie_id, this);
 }

@@ -107,6 +107,11 @@ void MemoryStorage::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
+void MemoryStorage::add_compressed_trie(const CompressedTrie& trie)
+{
+    throw runtime_error("Does not make sense for this Storage implementation");
+}
+
 void MemoryStorage::add_store_element(
     const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
 {
@@ -123,6 +128,11 @@ size_t MemoryStorage::get_compressed_trie_epoch(const vector<byte> &trie_id)
     }
 
     return result;
+}
+
+void MemoryStorage::load_updated_elements(std::size_t epoch, const vector<byte> &trie_id, Storage *storage)
+{
+    // Nothing to do for this implementation
 }
 
 void StorageStoreElement::load_store_element(payload_type &payload, randomness_type &randomness)

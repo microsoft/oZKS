@@ -78,6 +78,11 @@ namespace ozks {
             virtual void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) = 0;
 
             /**
+            Add an existing compresssed trie to the current storage.
+            */
+            virtual void add_compressed_trie(const CompressedTrie &trie) = 0;
+
+            /**
             Add an existing store element to the current storage
             */
             virtual void add_store_element(
@@ -90,6 +95,12 @@ namespace ozks {
             */
             virtual std::size_t get_compressed_trie_epoch(
                 const std::vector<std::byte> &trie_id) = 0;
+
+            /**
+            Load updated elements for the given epoch
+            */
+            virtual void load_updated_elements(
+                std::size_t epoch, const std::vector<std::byte> &trie_id, Storage *storage) = 0;
         };
     } // namespace storage
 } // namespace ozks

@@ -164,6 +164,11 @@ void MemoryStorageBatchInserter::add_ctnode(const vector<byte> &trie_id, const C
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
+void MemoryStorageBatchInserter::add_compressed_trie(const CompressedTrie& trie)
+{
+    throw runtime_error("Does not make sense for this Storage implementation");
+}
+
 void MemoryStorageBatchInserter::add_store_element(
     const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
 {
@@ -185,4 +190,10 @@ size_t MemoryStorageBatchInserter::get_compressed_trie_epoch(const vector<byte> 
     }
 
     return trie.epoch();
+}
+
+void MemoryStorageBatchInserter::load_updated_elements(
+    size_t epoch, const vector<byte> &trie_id, Storage *storage)
+{
+    storage_->load_updated_elements(epoch, trie_id, storage);
 }

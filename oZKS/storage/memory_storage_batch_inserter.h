@@ -80,6 +80,11 @@ namespace ozks {
             void add_ctnode(const std::vector<std::byte> &trie_id, const CTNode &node) override;
 
             /**
+            Add an existing compresssed trie to the current storage.
+            */
+            void add_compressed_trie(const CompressedTrie &trie) override;
+
+            /**
             Add an existing store element to the current storage
             */
             void add_store_element(
@@ -91,6 +96,14 @@ namespace ozks {
             Get the latest epoch for the given compressed trie
             */
             std::size_t get_compressed_trie_epoch(const std::vector<std::byte> &trie_id) override;
+
+            /**
+            Load updated elements for the given epoch
+            */
+            void load_updated_elements(
+                std::size_t epoch,
+                const std::vector<std::byte> &trie_id,
+                Storage *storage) override;
 
         private:
             std::shared_ptr<BatchStorage> storage_;
