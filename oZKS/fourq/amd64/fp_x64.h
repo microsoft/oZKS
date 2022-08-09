@@ -330,9 +330,8 @@ void Montgomery_multiply_mod_order(const digit_t *ma, const digit_t *mb, digit_t
 
     // Final, constant-time subtraction
     bout = subtract(mc, (digit_t *)&curve_order, mc, NWORDS_ORDER); // (cout, mc) = (cout, mc) - r
-    mask = (digit_t)(
-        cout -
-        bout); // if (cout, mc) >= 0 then mask = 0x00..0, else if (cout, mc) < 0 then mask = 0xFF..F
+    mask = (digit_t)(cout - bout); // if (cout, mc) >= 0 then mask = 0x00..0, else if (cout, mc) < 0
+                                   // then mask = 0xFF..F
 
     for (i = 0; i < NWORDS_ORDER; i++) { // temp = mask & r
         temp[i] = (order[i] & mask);

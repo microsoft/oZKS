@@ -116,7 +116,7 @@ void MemoryStorageCache::add_ctnode(const vector<byte> &trie_id, const CTNode &n
     node_cache_.update(key, node);
 }
 
-void MemoryStorageCache::add_compressed_trie(const CompressedTrie& trie)
+void MemoryStorageCache::add_compressed_trie(const CompressedTrie &trie)
 {
     StorageTrieKey key(trie.id());
     trie_cache_.update(key, trie);
