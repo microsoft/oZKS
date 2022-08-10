@@ -195,5 +195,12 @@ size_t MemoryStorageBatchInserter::get_compressed_trie_epoch(const vector<byte> 
 void MemoryStorageBatchInserter::load_updated_elements(
     size_t epoch, const vector<byte> &trie_id, Storage *storage)
 {
+    // Important: The Batch inserter usually sits between a cache and real storage. As such, it
+    // makes sense for the callback to be directed to the caller of this method, instead to this
+    // storage itself.
+    if (storage == this) {
+        // If this is the top storage, however, we don't want the callback.
+        storage = nullptr;
+    }
     storage_->load_updated_elements(epoch, trie_id, storage);
 }

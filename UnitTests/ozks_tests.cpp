@@ -299,11 +299,13 @@ namespace {
         void add_ctnode(const vector<byte> &trie_id, const CTNode &node) override
         {
             storage_.add_ctnode(trie_id, node);
+            added_nodes_.push_back(node);
         }
 
         void add_compressed_trie(const CompressedTrie& trie) override
         {
             storage_.add_compressed_trie(trie);
+            added_tries_.push_back(trie);
         }
 
         void add_store_element(
@@ -325,8 +327,30 @@ namespace {
             storage_.load_updated_elements(epoch, trie_id, this);
         }
 
+        void clear_added_nodes()
+        {
+            added_nodes_.clear();
+        }
+
+        void clear_added_tries()
+        {
+            added_tries_.clear();
+        }
+
+        size_t added_nodes_count()
+        {
+            return added_nodes_.size();
+        }
+
+        size_t added_tries_count()
+        {
+            return added_tries_.size();
+        }
+
     private:
         storage::MemoryStorageCache storage_;
+        vector<CTNode> added_nodes_;
+        vector<CompressedTrie> added_tries_;
     };
 
 } // namespace
@@ -1158,4 +1182,96 @@ TEST(OZKSTests, UpdatedNodesTest)
     epoch = ozks2.get_epoch();
     EXPECT_EQ(4, epoch);
     EXPECT_EQ(0, backing_storage->updated_nodes_count());
+}
+
+TEST(OZKSTests, BatchInserterCallbackTest)
+{
+    shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+
+    OZKS ozks(batch_inserter);
+
+    vector<byte> saved_ozks;
+    ozks.save(saved_ozks);
+
+    // Insert one element to ensure trie is saved in backing storage
+    RandomInsertTestCore(ozks, 1, /* flush_at_end */ true);
+
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter2 =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+
+    OZKS ozks2(batch_inserter2);
+    // This ensures we have the same trie ID
+    ozks2.Load(ozks2, saved_ozks);
+
+    // Generate 3 epochs
+    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(3, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(4, backing_storage->updated_nodes_count());
+
+    size_t epoch = ozks2.get_epoch();
+    EXPECT_EQ(4, epoch); // Since we get it from backing store
+
+    // This should not throw
+    ozks2.check_for_update();
+    epoch = ozks2.get_epoch();
+    EXPECT_EQ(4, epoch);
+    EXPECT_EQ(4, backing_storage->updated_nodes_count()); // Since no updated nodes were retrieved
+}
+
+TEST(OZKSTests, BatchInserterCallback2Test)
+{
+    shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+
+    OZKS ozks(batch_inserter);
+
+    vector<byte> saved_ozks;
+    ozks.save(saved_ozks);
+
+    // Insert one element to ensure trie is saved in backing storage
+    RandomInsertTestCore(ozks, 1, /* flush_at_end */ true);
+
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter2 =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+    shared_ptr<TestCachedStorage> cached_storage =
+        make_shared<TestCachedStorage>(batch_inserter2, 10000);
+
+    OZKS ozks2(cached_storage);
+    // This ensures we have the same trie ID
+    ozks2.Load(ozks2, saved_ozks);
+    // This ensures the trie is in the cache
+    size_t epoch = ozks2.get_epoch();
+
+    // Generate 3 epochs
+    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(3, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_EQ(4, backing_storage->updated_nodes_count());
+
+    epoch = ozks2.get_epoch();
+    EXPECT_EQ(1, epoch); // Since we get it from the cache
+
+    // This should not throw
+    EXPECT_EQ(0, cached_storage->added_nodes_count());
+    EXPECT_EQ(0, cached_storage->added_tries_count());
+    ozks2.check_for_update();
+    epoch = ozks2.get_epoch();
+    EXPECT_EQ(4, epoch);
+    EXPECT_EQ(0, backing_storage->updated_nodes_count()); // Updated nodes should have been retrieved
+    EXPECT_GT(cached_storage->added_nodes_count(), 0);
+    EXPECT_GT(cached_storage->added_tries_count(), 0);
 }

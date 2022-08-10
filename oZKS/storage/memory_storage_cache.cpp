@@ -149,6 +149,5 @@ size_t MemoryStorageCache::get_compressed_trie_epoch(const vector<byte> &trie_id
 void MemoryStorageCache::load_updated_elements(
     size_t epoch, const vector<byte> &trie_id, Storage *storage)
 {
-    // Update this cache
-    storage_->load_updated_elements(epoch, trie_id, this);
+    storage_->load_updated_elements(epoch, trie_id, storage);
 }
