@@ -194,9 +194,6 @@ else()
     target_compile_options(ozks PUBLIC -D_GENERIC_)
     message(STATUS "FourQlib optimization: arch=GENERIC")
 endif()
-if(NOT MSVC)
-    target_compile_options(ozks PUBLIC -march=native)
-endif()
 
 # Set AVX or AVX2 if not generic
 if(OZKS_FOURQ_AMD64 OR OZKS_FOURQ_ARM64)
