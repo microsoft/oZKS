@@ -51,6 +51,7 @@ set(OUTLIB_PATH "lib")
 # Required files and directories
 include(GNUInstallDirs)
 include(OZKSMacros)
+include(EnableCXXCompilerFlags)
 
 # Source Tree
 set(OZKS_INCLUDES_DIR ${CMAKE_CURRENT_LIST_DIR})
