@@ -73,9 +73,7 @@ void CompressedTrie::insert(
     }
 
     for (size_t idx = 0; idx < label_payload_batch.size(); idx++) {
-        const auto &label = label_payload_batch[idx].first;
         const auto &lab = labs[idx];
-
         root.update_hashes(lab);
     }
 

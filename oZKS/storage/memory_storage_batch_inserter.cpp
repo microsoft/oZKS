@@ -159,18 +159,18 @@ void MemoryStorageBatchInserter::flush(const vector<byte> &trie_id)
     storage_->flush(trie_id, nodes, tries, ozkss, store_elements);
 }
 
-void MemoryStorageBatchInserter::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
+void MemoryStorageBatchInserter::add_ctnode(const vector<byte> &, const CTNode &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
-void MemoryStorageBatchInserter::add_compressed_trie(const CompressedTrie &trie)
+void MemoryStorageBatchInserter::add_compressed_trie(const CompressedTrie &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
 void MemoryStorageBatchInserter::add_store_element(
-    const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
+    const vector<byte> &, const vector<byte> &, const store_value_type &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }

@@ -97,23 +97,23 @@ void MemoryStorage::save_store_element(
     store_[se_key] = selem;
 }
 
-void MemoryStorage::flush(const vector<byte> &trie_id)
+void MemoryStorage::flush(const vector<byte> &)
 {
     // Nothing to do because there is nowhere to flush to
 }
 
-void MemoryStorage::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
+void MemoryStorage::add_ctnode(const vector<byte> &, const CTNode &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
-void MemoryStorage::add_compressed_trie(const CompressedTrie &trie)
+void MemoryStorage::add_compressed_trie(const CompressedTrie &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
 void MemoryStorage::add_store_element(
-    const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
+    const vector<byte> &, const vector<byte> &, const store_value_type &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
@@ -130,8 +130,7 @@ size_t MemoryStorage::get_compressed_trie_epoch(const vector<byte> &trie_id)
     return result;
 }
 
-void MemoryStorage::load_updated_elements(
-    std::size_t epoch, const vector<byte> &trie_id, Storage *storage)
+void MemoryStorage::load_updated_elements(std::size_t, const vector<byte> &, Storage *)
 {
     // Nothing to do for this implementation
 }

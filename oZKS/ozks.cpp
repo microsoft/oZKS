@@ -103,11 +103,11 @@ void OZKS::do_pending_insertions()
     trie.get_commitment(commitment);
 
     for (size_t idx = 0; idx < append_proofs.size(); idx++) {
-        auto &pending_result = pending_results_[idx];
-        if (!pending_result) {
+        auto &pr = pending_results_[idx];
+        if (!pr) {
             throw runtime_error("Pending result is null");
         }
-        pending_result->init_result(commitment, move(append_proofs[idx]));
+        pr->init_result(commitment, move(append_proofs[idx]));
     }
 
     pending_insertions_.clear();

@@ -89,25 +89,25 @@ namespace {
             storage_.save_store_element(trie_id, key, value);
         }
 
-        void flush(const vector<byte> &trie_id) override
+        void flush(const vector<byte>&) override
         {
             // Nothing really.
         }
 
-        void add_ctnode(const vector<byte> &trie_id, const CTNode &node) override
+        void add_ctnode(const vector<byte>&, const CTNode&) override
         {
             throw runtime_error("Should we be called?");
         }
 
-        void add_compressed_trie(const CompressedTrie& trie) override
+        void add_compressed_trie(const CompressedTrie&) override
         {
             throw runtime_error("Should we be called?");
         }
 
         void add_store_element(
-            const vector<byte> &trie_id,
-            const vector<byte> &key,
-            const store_value_type &value) override
+            const vector<byte>&,
+            const vector<byte>&,
+            const store_value_type&) override
         {
             throw runtime_error("Should we be called?");
         }
@@ -146,9 +146,9 @@ namespace {
             const vector<OZKS> &ozks,
             const vector<pair<vector<byte>, store_value_type>> &store_elements) override
         {
-            CompressedTrie trie;
-            storage_.load_compressed_trie(trie_id, trie);
-            size_t updated_epoch = trie.epoch() + 1;
+            CompressedTrie t;
+            storage_.load_compressed_trie(trie_id, t);
+            size_t updated_epoch = t.epoch() + 1;
 
             vector<CompressedTrie> existing_updated_tries;
             auto itt = updated_tries_.find(updated_epoch);
@@ -188,7 +188,7 @@ namespace {
         bool load_ctnode(
             const vector<byte> &trie_id,
             const partial_label_type &node_id,
-            Storage *storage,
+            Storage*,
             CTNode &node) override
         {
             return load_ctnode(trie_id, node_id, node);
@@ -291,7 +291,7 @@ namespace {
             storage_.save_store_element(trie_id, key, value);
         }
 
-        void flush(const vector<byte> &trie_id) override
+        void flush(const vector<byte>&) override
         {
             // Nothing really.
         }
@@ -322,7 +322,7 @@ namespace {
         }
 
         void load_updated_elements(
-            size_t epoch, const vector<byte> &trie_id, Storage *storage) override
+            size_t epoch, const vector<byte> &trie_id, Storage*) override
         {
             storage_.load_updated_elements(epoch, trie_id, this);
         }

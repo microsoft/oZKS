@@ -276,10 +276,10 @@ bool CTNode::lookup(
     return lookup(lookup_label, path, include_searched, /* update_hashes */ false);
 }
 
-void CTNode::update_hashes(const partial_label_type &label)
+void CTNode::update_hashes(const partial_label_type &lbl)
 {
     lookup_path_type path;
-    if (!lookup(label, path, /* include_searched */ false, /* update_hashes */ true)) {
+    if (!lookup(lbl, path, /* include_searched */ false, /* update_hashes */ true)) {
         throw runtime_error("Should have found the path of the label to update hashes");
     }
 }
@@ -502,14 +502,14 @@ tuple<CTNode, partial_label_type, partial_label_type, size_t> CTNode::Load(
     return Load(reader);
 }
 
-bool CTNode::load(const partial_label_type &label, CTNode &node) const
+bool CTNode::load(const partial_label_type &lbl, CTNode &node) const
 {
     if (nullptr == trie_)
         throw runtime_error("trie_ is null");
     if (nullptr == trie_->storage())
         throw runtime_error("trie_->storage is null");
 
-    bool loaded = trie_->storage()->load_ctnode(trie_->id(), label, node);
+    bool loaded = trie_->storage()->load_ctnode(trie_->id(), lbl, node);
     if (loaded) {
         node.init(trie_);
     }
