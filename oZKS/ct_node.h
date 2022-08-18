@@ -37,6 +37,14 @@ namespace ozks {
         {
             return left.empty() && right.empty();
         }
+        
+        /**
+        Whether this is a root node
+        */
+        bool is_root() const
+        {
+            return is_empty();
+        }
 
         /**
         Insert the given label and payload under this node.
