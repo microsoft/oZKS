@@ -32,11 +32,11 @@ TEST(InsertResultTests, VerifyBatchInsertTest)
     labels.emplace_back(partial_label_type{ true, false, false, true });
     labels.emplace_back(partial_label_type{ true, false, true, true });
 
-    for (const auto label : labels) {
+    for (const auto &label : labels) {
         root.insert(label, payload, /* epoch */ 1);
     }
 
-    for (const auto label : labels) {
+    for (const auto &label : labels) {
         root.update_hashes(label);
     }
 
@@ -57,7 +57,7 @@ TEST(InsertResultTests, VerifyBatchInsertTest)
     commitment_type commitment(root.hash().size());
     copy_bytes(root.hash().data(), root.hash().size(), commitment.data());
 
-    for (const auto label : labels) {
+    for (const auto &label : labels) {
         lookup_path_type path;
         InsertResult res;
 
@@ -88,7 +88,7 @@ TEST(InsertResultTests, VerifySingleInsertTest)
     labels.emplace_back(bytes_to_bools(make_bytes(0xF0, 0xF0, 0xF0, 0xF0, 0xF0)));
 
     size_t epoch = 1;
-    for (const auto label : labels) {
+    for (const auto &label : labels) {
         append_proof_type append_proof;
         InsertResult res;
 
