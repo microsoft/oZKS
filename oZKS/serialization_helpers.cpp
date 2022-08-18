@@ -18,7 +18,7 @@ void StreamSerializationWriter::write(const void *bytes, size_t size)
 
     try {
         stream_->exceptions(ios_base::badbit | ios_base::failbit);
-        stream_->write(reinterpret_cast<const char *>(bytes), size);
+        stream_->write(reinterpret_cast<const char *>(bytes), static_cast<streamsize>(size));
     } catch (ios_base::failure &ex) {
         stream_->exceptions(old_except_mask);
 
@@ -47,7 +47,7 @@ void StreamSerializationReader::read(void *destination, size_t size)
 
     try {
         stream_->exceptions(ios_base::badbit | ios_base::failbit);
-        stream_->read(reinterpret_cast<char *>(destination), size);
+        stream_->read(reinterpret_cast<char *>(destination), static_cast<streamsize>(size));
     } catch (ios_base::failure &ex) {
         stream_->exceptions(old_except_mask);
 

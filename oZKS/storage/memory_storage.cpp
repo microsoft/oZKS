@@ -13,6 +13,9 @@ using namespace ozks::storage;
 MemoryStorage::MemoryStorage()
 {}
 
+MemoryStorage::~MemoryStorage()
+{}
+
 bool MemoryStorage::load_ctnode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
 {

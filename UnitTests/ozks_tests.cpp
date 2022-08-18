@@ -39,6 +39,9 @@ namespace {
         TestBackingStorage()
         {}
 
+        virtual ~TestBackingStorage()
+        {}
+
         bool load_ctnode(
             const std::vector<std::byte> &trie_id,
             const partial_label_type &node_id,
@@ -89,25 +92,23 @@ namespace {
             storage_.save_store_element(trie_id, key, value);
         }
 
-        void flush(const vector<byte>&) override
+        void flush(const vector<byte> &) override
         {
             // Nothing really.
         }
 
-        void add_ctnode(const vector<byte>&, const CTNode&) override
+        void add_ctnode(const vector<byte> &, const CTNode &) override
         {
             throw runtime_error("Should we be called?");
         }
 
-        void add_compressed_trie(const CompressedTrie&) override
+        void add_compressed_trie(const CompressedTrie &) override
         {
             throw runtime_error("Should we be called?");
         }
 
         void add_store_element(
-            const vector<byte>&,
-            const vector<byte>&,
-            const store_value_type&) override
+            const vector<byte> &, const vector<byte> &, const store_value_type &) override
         {
             throw runtime_error("Should we be called?");
         }
@@ -118,7 +119,7 @@ namespace {
         }
 
         void load_updated_elements(
-            size_t epoch, const vector<byte>& trie_id, Storage* storage) override
+            size_t epoch, const vector<byte> &trie_id, Storage *storage) override
         {
             auto it = updated_nodes_.find(epoch);
             if (it != updated_nodes_.end()) {
@@ -188,7 +189,7 @@ namespace {
         bool load_ctnode(
             const vector<byte> &trie_id,
             const partial_label_type &node_id,
-            Storage*,
+            Storage *,
             CTNode &node) override
         {
             return load_ctnode(trie_id, node_id, node);
@@ -241,6 +242,9 @@ namespace {
             : storage_(backing_storage, cache_size)
         {}
 
+        virtual ~TestCachedStorage()
+        {}
+
         bool load_ctnode(
             const std::vector<std::byte> &trie_id,
             const partial_label_type &node_id,
@@ -291,7 +295,7 @@ namespace {
             storage_.save_store_element(trie_id, key, value);
         }
 
-        void flush(const vector<byte>&) override
+        void flush(const vector<byte> &) override
         {
             // Nothing really.
         }
@@ -302,7 +306,7 @@ namespace {
             added_nodes_.push_back(node);
         }
 
-        void add_compressed_trie(const CompressedTrie& trie) override
+        void add_compressed_trie(const CompressedTrie &trie) override
         {
             storage_.add_compressed_trie(trie);
             added_tries_.push_back(trie);
@@ -321,8 +325,7 @@ namespace {
             return storage_.get_compressed_trie_epoch(trie_id);
         }
 
-        void load_updated_elements(
-            size_t epoch, const vector<byte> &trie_id, Storage*) override
+        void load_updated_elements(size_t epoch, const vector<byte> &trie_id, Storage *) override
         {
             storage_.load_updated_elements(epoch, trie_id, this);
         }
@@ -411,7 +414,8 @@ void RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = fal
     }
 }
 
-void RandomInsertTestCore(shared_ptr<storage::Storage> storage, size_t iterations, bool flush_at_end = false)
+void RandomInsertTestCore(
+    shared_ptr<storage::Storage> storage, size_t iterations, bool flush_at_end = false)
 {
     OZKS ozks(storage);
     RandomInsertTestCore(ozks, iterations, flush_at_end);
@@ -1271,7 +1275,8 @@ TEST(OZKSTests, BatchInserterCallback2Test)
     ozks2.check_for_update();
     epoch = ozks2.get_epoch();
     EXPECT_EQ(4, epoch);
-    EXPECT_EQ(0, backing_storage->updated_nodes_count()); // Updated nodes should have been retrieved
+    EXPECT_EQ(
+        0, backing_storage->updated_nodes_count()); // Updated nodes should have been retrieved
     EXPECT_GT(cached_storage->added_nodes_count(), 0);
     EXPECT_GT(cached_storage->added_tries_count(), 0);
 }

@@ -28,6 +28,8 @@ namespace ozks {
                   ozks_cache_(cache_size), store_element_cache_(cache_size)
             {}
 
+            virtual ~MemoryStorageCache();
+
             /**
             Get a node from storage
             */

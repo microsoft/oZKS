@@ -20,6 +20,7 @@ namespace ozks {
         class MemoryStorage : public Storage {
         public:
             MemoryStorage();
+            virtual ~MemoryStorage();
 
             /**
             Get a node from storage

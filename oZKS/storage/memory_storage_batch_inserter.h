@@ -19,6 +19,8 @@ namespace ozks {
                 : storage_(backing_storage)
             {}
 
+            virtual ~MemoryStorageBatchInserter();
+
             /**
             Get a node from storage
             */

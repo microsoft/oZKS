@@ -10,6 +10,9 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
 
+MemoryStorageCache::~MemoryStorageCache()
+{}
+
 bool MemoryStorageCache::load_ctnode(
     const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
 {

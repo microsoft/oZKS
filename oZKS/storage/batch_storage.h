@@ -13,6 +13,9 @@
 namespace ozks {
     namespace storage {
         class BatchStorage : public Storage {
+            using Storage::flush;
+            using Storage::load_ctnode;
+
         public:
             /**
             Flush given sets of nodes, tries, ozks instances and store elements
