@@ -160,11 +160,6 @@ partial_label_type CTNode::insert(
     }
 
     vector<bool> common = get_common_prefix(insert_label, label);
-
-    if (common.size() >= insert_label.size()) {
-        throw runtime_error("Common part should be smaller");
-    }
-
     bool next_bit = insert_label[common.size()];
 
     if (is_leaf() && !is_root()) {
@@ -312,11 +307,6 @@ bool CTNode::lookup(
     }
 
     vector<bool> common = get_common_prefix(lookup_label, label);
-
-    if (common.size() >= lookup_label.size()) {
-        throw runtime_error("Common part should be less than either labels");
-    }
-
     bool next_bit = lookup_label[common.size()];
 
     // If there is a route to follow, follow it

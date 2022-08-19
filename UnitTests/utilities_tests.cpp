@@ -303,3 +303,53 @@ TEST(Utilities, ByteVectorHashTest)
     EXPECT_NE(hash5, hash6);
     EXPECT_NE(hash6, hash7);
 }
+
+TEST(Utilities, CommonPrefixTest)
+{
+    partial_label_type label1 = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
+    partial_label_type label2 = { 1, 0, 1, 0, 0, 0, 0 };
+    partial_label_type label3 = { 0, 1, 0, 1, 0 };
+    partial_label_type label4 = {};
+    partial_label_type label5 = { 1 };
+    partial_label_type label6 = { 0 };
+
+    auto result = get_common_prefix(label1, label2);
+    EXPECT_EQ(4, result.size());
+    EXPECT_EQ(1, result[0]);
+    EXPECT_EQ(0, result[1]);
+    EXPECT_EQ(1, result[2]);
+    EXPECT_EQ(0, result[3]);
+
+    result = get_common_prefix(label2, label1);
+    EXPECT_EQ(4, result.size());
+    EXPECT_EQ(1, result[0]);
+    EXPECT_EQ(0, result[1]);
+    EXPECT_EQ(1, result[2]);
+    EXPECT_EQ(0, result[3]);
+
+    result = get_common_prefix(label1, label3);
+    EXPECT_EQ(0, result.size());
+
+    result = get_common_prefix(label3, label1);
+    EXPECT_EQ(0, result.size());
+
+    result = get_common_prefix(label1, label4);
+    EXPECT_EQ(0, result.size());
+
+    result = get_common_prefix(label4, label1);
+    EXPECT_EQ(0, result.size());
+
+    result = get_common_prefix(label1, label5);
+    EXPECT_EQ(1, result.size());
+    EXPECT_EQ(1, result[0]);
+
+    result = get_common_prefix(label5, label1);
+    EXPECT_EQ(1, result.size());
+    EXPECT_EQ(1, result[0]);
+
+    result = get_common_prefix(label1, label6);
+    EXPECT_EQ(0, result.size());
+
+    result = get_common_prefix(label6, label1);
+    EXPECT_EQ(0, result.size());
+}
