@@ -1,10 +1,10 @@
 {
-  "name": "ozks",
+  "name": "ozks-perf",
   "version-string": "0.3.0",
   "dependencies": [
     "ms-gsl",
     "flatbuffers",
     "poco",
-    "gtest"
+    "benchmark"
   ]
 }

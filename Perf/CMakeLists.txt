@@ -15,7 +15,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
-project(ozks_perf VERSION 0.3.0 LANGUAGES CXX)
+project(ozks-perf VERSION 0.3.0 LANGUAGES CXX)
 
 # If not called from root CMakeLists.txt
 if(NOT DEFINED OZKS_BUILD_BENCH)
@@ -38,22 +38,22 @@ if(OZKS_BUILD_BENCH)
         message(STATUS "GoogleBenchmark: found")
     endif()
 
-    find_package(Microsoft.GSL 4 CONFIG QUIET REQUIRED)
-    if(NOT Microsoft.GSL_FOUND)
-        message(FATAL_ERROR "Microsoft GSL: not found")
-    else()
-        message(STATUS "Microsoft GSL: found")
-    endif()
+    # find_package(Microsoft.GSL 4 CONFIG QUIET REQUIRED)
+    # if(NOT Microsoft.GSL_FOUND)
+    #     message(FATAL_ERROR "Microsoft GSL: not found")
+    # else()
+    #     message(STATUS "Microsoft GSL: found")
+    # endif()
 
-    find_package(Flatbuffers REQUIRED)
-    if(NOT Flatbuffers_FOUND)
-        message(FATAL_ERROR "Flatbuffers: not found")
-    else()
-        message(STATUS "Flatbuffers: found")
-    endif()
+    # find_package(Flatbuffers REQUIRED)
+    # if(NOT Flatbuffers_FOUND)
+    #     message(FATAL_ERROR "Flatbuffers: not found")
+    # else()
+    #     message(STATUS "Flatbuffers: found")
+    # endif()
 
-    add_executable(ozks_perf)
-    target_sources(ozks_perf
+    add_executable(ozks-perf)
+    target_sources(ozks-perf
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/mem_utils.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ozks_perf_tests.cpp
@@ -61,11 +61,11 @@ if(OZKS_BUILD_BENCH)
 
     # Ensure PDB is generated even in Release mode
     if(MSVC)
-        target_compile_options(ozks_perf PUBLIC "/Zi")
+        target_compile_options(ozks-perf PUBLIC "/Zi")
     endif()
 
     if(TARGET OZKS::ozks)
-        target_link_libraries(ozks_perf PUBLIC OZKS::ozks benchmark::benchmark)
+        target_link_libraries(ozks-perf PUBLIC OZKS::ozks benchmark::benchmark)
     else()
         message(FATAL_ERROR "Cannot find target OZKS::ozks")
     endif()

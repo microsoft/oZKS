@@ -20,7 +20,7 @@ using namespace ozks;
 
 namespace {
     OZKSConfig ozks_config_ = { false, false };
-    OZKS ozks_(ozks_config_); // The OZKS instance
+    OZKS ozks_({}, ozks_config_); // The OZKS instance
     vector<key_type> keys_;
 
     string file_name_;
@@ -79,7 +79,7 @@ static void OZKSInsertFlush(benchmark::State &state)
 {
     key_type key(40);
     payload_type payload(40);
-    OZKS ozks(ozks_config_);
+    OZKS ozks({}, ozks_config_);
 
     // Measure total duration
     auto start = chrono::high_resolution_clock::now();
@@ -176,7 +176,8 @@ static void OZKSVerifySuccessfulQuery(benchmark::State &state)
             state.SkipWithError("query should have been found");
         }
 
-        bool verification_result = query_result.verify(keys_[idx++], ozks_.get_commitment());
+        bool verification_result = query_result.verify(ozks_.get_commitment());
+        idx++;
 
         if (!verification_result) {
             state.SkipWithError("Verification should have succeeded");
@@ -199,7 +200,7 @@ static void OZKSVerifyFailedQuery(benchmark::State &state)
             state.SkipWithError("query should not have been found");
         }
 
-        bool verification_result = query_result.verify(key, ozks_.get_commitment());
+        bool verification_result = query_result.verify(ozks_.get_commitment());
 
         if (!verification_result) {
             state.SkipWithError("Verification should have succeeded");
@@ -225,7 +226,7 @@ static void OZKSLoad(benchmark::State &state)
         OZKS ozks;
         ifstream input_file;
         input_file.open(file_name_, ios::in | ios::binary);
-        OZKS::load(ozks, input_file);
+        OZKS::Load(ozks, input_file);
         input_file.close();
     }
 }
