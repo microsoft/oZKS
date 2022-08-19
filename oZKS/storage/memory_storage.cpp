@@ -25,17 +25,14 @@ bool MemoryStorage::load_ctnode(
         return false;
     }
 
-    auto load_result = CTNode::Load(node_it->second.data());
-    node = get<0>(load_result);
+    node = node_it->second;
     return true;
 }
 
 void MemoryStorage::save_ctnode(const vector<byte> &trie_id, const CTNode &node)
 {
-    StorageNode stnode(node);
     StorageNodeKey key(trie_id, node.label);
-
-    nodes_[key] = stnode;
+    nodes_[key] = node;
 }
 
 bool MemoryStorage::load_compressed_trie(const vector<byte> &trie_id, CompressedTrie &trie)
@@ -46,16 +43,14 @@ bool MemoryStorage::load_compressed_trie(const vector<byte> &trie_id, Compressed
         return false;
     }
 
-    CompressedTrie::Load(trie, trie_it->second.data());
+    trie = trie_it->second;
     return true;
 }
 
 void MemoryStorage::save_compressed_trie(const CompressedTrie &trie)
 {
-    StorageTrie sttrie(trie);
     StorageTrieKey key(trie.id());
-
-    tries_[key] = sttrie;
+    tries_[key] = trie;
 }
 
 bool MemoryStorage::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
@@ -66,16 +61,14 @@ bool MemoryStorage::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
         return false;
     }
 
-    OZKS::Load(ozks, ozks_it->second.data());
+    ozks = ozks_it->second;
     return true;
 }
 
 void MemoryStorage::save_ozks(const OZKS &ozks)
 {
     StorageOZKSKey key(ozks.id());
-    StorageOZKS stozks(ozks);
-
-    ozks_[key] = stozks;
+    ozks_[key] = ozks;
 }
 
 bool MemoryStorage::load_store_element(
@@ -87,7 +80,7 @@ bool MemoryStorage::load_store_element(
         return false;
     }
 
-    se_it->second.load_store_element(value.payload, value.randomness);
+    value = se_it->second;
     return true;
 }
 
@@ -95,9 +88,7 @@ void MemoryStorage::save_store_element(
     const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
 {
     StorageStoreElementKey se_key(trie_id, key);
-    StorageStoreElement selem(value.payload, value.randomness);
-
-    store_[se_key] = selem;
+    store_[se_key] = value;
 }
 
 void MemoryStorage::flush(const vector<byte> &)
@@ -136,51 +127,4 @@ size_t MemoryStorage::get_compressed_trie_epoch(const vector<byte> &trie_id)
 void MemoryStorage::load_updated_elements(std::size_t, const vector<byte> &, Storage *)
 {
     // Nothing to do for this implementation
-}
-
-void StorageStoreElement::load_store_element(payload_type &payload, randomness_type &randomness)
-{
-    size_t position = 0;
-    load_bvector(payload, position);
-    load_bvector(randomness, position);
-}
-
-void StorageStoreElement::save_store_element(
-    const payload_type &payload, const randomness_type &randomness)
-{
-    data_.clear();
-    save_bvector(payload);
-    save_bvector(randomness);
-}
-
-void StorageStoreElement::save_bvector(const vector<byte> &value)
-{
-    size_t write_pos = data_.size();
-    size_t new_size = data_.size() + sizeof(size_t) + value.size();
-
-    data_.resize(new_size);
-
-    size_t value_size = value.size();
-    utils::copy_bytes(&value_size, sizeof(size_t), data_.data() + write_pos);
-    write_pos += sizeof(size_t);
-
-    utils::copy_bytes(value.data(), value.size(), data_.data() + write_pos);
-}
-
-void StorageStoreElement::load_bvector(vector<byte> &value, size_t &position)
-{
-    size_t vec_size = 0;
-
-    if (position + sizeof(size_t) > data_.size())
-        throw runtime_error("Ran out of bytes while reading size");
-
-    utils::copy_bytes(data_.data() + position, sizeof(size_t), &vec_size);
-    position += sizeof(size_t);
-
-    if (position + vec_size > data_.size())
-        throw runtime_error("Ran out of bytes while reading vector");
-
-    value.resize(vec_size);
-    utils::copy_bytes(data_.data() + position, vec_size, value.data());
-    position += vec_size;
 }

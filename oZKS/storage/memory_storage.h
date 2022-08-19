@@ -141,12 +141,12 @@ namespace ozks {
             }
 
         private:
-            std::unordered_map<StorageNodeKey, StorageNode, StorageNodeKeyHasher> nodes_;
-            std::unordered_map<StorageTrieKey, StorageTrie, StorageTrieKeyHasher> tries_;
-            std::unordered_map<StorageOZKSKey, StorageOZKS, StorageOZKSKeyHasher> ozks_;
+            std::unordered_map<StorageNodeKey, ozks::CTNode, StorageNodeKeyHasher> nodes_;
+            std::unordered_map<StorageTrieKey, ozks::CompressedTrie, StorageTrieKeyHasher> tries_;
+            std::unordered_map<StorageOZKSKey, ozks::OZKS, StorageOZKSKeyHasher> ozks_;
             std::unordered_map<
                 StorageStoreElementKey,
-                StorageStoreElement,
+                ozks::store_value_type,
                 StorageStoreElementKeyHasher>
                 store_;
         };
