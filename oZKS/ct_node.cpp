@@ -291,7 +291,11 @@ bool CTNode::lookup(
     bool update_hashes)
 {
     if (label == lookup_label) {
-        if (include_searched && !update_hashes) {
+        if (include_searched) {
+            if (update_hashes) {
+                throw logic_error("Should not use both update_hashes and include_searched");
+            }
+
             // This node is the result
             path.push_back({ label, hash() });
         }
