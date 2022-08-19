@@ -95,7 +95,7 @@ void CTNode::init(
 
 void CTNode::init(const partial_label_type &init_label)
 {
-    if (!is_empty() && is_leaf())
+    if (!is_root() && is_leaf())
         throw runtime_error("Should not be used for leaf nodes");
 
     label = init_label;
@@ -167,7 +167,7 @@ partial_label_type CTNode::insert(
 
     bool next_bit = insert_label[common.size()];
 
-    if (is_leaf() && !is_empty()) {
+    if (is_leaf() && !is_root()) {
         // Convert current leaf to non-leaf
         CTNode new_parent(trie_);
         new_parent.init(common);
