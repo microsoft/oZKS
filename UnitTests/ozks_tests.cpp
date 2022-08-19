@@ -399,7 +399,7 @@ void RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = fal
         auto result = ozks.query(valid_keys[i]);
         EXPECT_TRUE(result.is_member());
         EXPECT_NE(0, result.payload().size());
-        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(result.verify(ozks.get_commitment()));
         EXPECT_EQ(valid_payloads[i], result.payload());
     }
 
@@ -410,7 +410,7 @@ void RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = fal
         auto result = ozks.query(key);
         EXPECT_FALSE(result.is_member());
         EXPECT_EQ(0, result.payload().size());
-        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
+        EXPECT_TRUE(result.verify(ozks.get_commitment()));
     }
 }
 
@@ -761,7 +761,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
         auto result = ozks.query(valid_keys[i]);
         EXPECT_TRUE(result.is_member());
         EXPECT_NE(0, result.payload().size());
-        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(result.verify(ozks.get_commitment()));
         EXPECT_EQ(valid_payloads[i], result.payload());
     }
 
@@ -772,7 +772,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
         auto result = ozks.query(key);
         EXPECT_FALSE(result.is_member());
         EXPECT_EQ(0, result.payload().size());
-        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
+        EXPECT_TRUE(result.verify(ozks.get_commitment()));
     }
 }
 
@@ -812,7 +812,7 @@ TEST(OZKSTests, RandomMultiInsertVerificationTest)
         auto result = ozks.query(valid_keys[i]);
         EXPECT_TRUE(result.is_member());
         EXPECT_NE(0, result.payload().size());
-        EXPECT_TRUE(result.verify(valid_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(result.verify(ozks.get_commitment()));
     }
 
     // Check that invalid keys are not found and that their path is verified correctly
@@ -822,7 +822,7 @@ TEST(OZKSTests, RandomMultiInsertVerificationTest)
         auto result = ozks.query(key);
         EXPECT_FALSE(result.is_member());
         EXPECT_EQ(0, result.payload().size());
-        EXPECT_TRUE(result.verify(key, ozks.get_commitment()));
+        EXPECT_TRUE(result.verify(ozks.get_commitment()));
     }
 }
 
@@ -855,21 +855,21 @@ TEST(OZKSTests, QueryResultVerificationTest)
     Commitment commitment = ozks.get_commitment();
     EXPECT_EQ(true, query_result.is_member());
     EXPECT_EQ(payload, query_result.payload());
-    EXPECT_EQ(true, query_result.verify(key, commitment));
+    EXPECT_EQ(true, query_result.verify(commitment));
 
     key = make_bytes(0x04, 0x05, 0x06);
     payload = make_bytes(0xFC, 0xFB, 0xFA, 0xF9, 0xF8, 0xF7);
     query_result = ozks.query(key);
     EXPECT_EQ(true, query_result.is_member());
     EXPECT_EQ(payload, query_result.payload());
-    EXPECT_EQ(true, query_result.verify(key, commitment));
+    EXPECT_EQ(true, query_result.verify(commitment));
 
     key = make_bytes(0x02, 0x03, 0x05);
     query_result = ozks.query(key);
     EXPECT_EQ(false, query_result.is_member());
     EXPECT_EQ(0, query_result.payload().size());
     EXPECT_EQ(0, query_result.randomness().size());
-    EXPECT_EQ(true, query_result.verify(key, commitment));
+    EXPECT_EQ(true, query_result.verify(commitment));
 }
 
 TEST(OZKSTests, SaveLoadTest)
@@ -912,8 +912,8 @@ TEST(OZKSTests, SaveLoadTest)
         EXPECT_EQ(qr1.randomness(), qr2.randomness());
         EXPECT_EQ(qr1.lookup_proof().size(), qr2.lookup_proof().size());
 
-        EXPECT_TRUE(qr1.verify(some_keys[i], ozks2.get_commitment()));
-        EXPECT_TRUE(qr2.verify(some_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(qr1.verify(ozks2.get_commitment()));
+        EXPECT_TRUE(qr2.verify(ozks.get_commitment()));
     }
 }
 
@@ -966,8 +966,8 @@ TEST(OZKSTests, NonRandomSaveLoadTest)
         EXPECT_EQ(qr1.randomness(), qr2.randomness());
         EXPECT_EQ(qr1.lookup_proof().size(), qr2.lookup_proof().size());
 
-        EXPECT_TRUE(qr1.verify(some_keys[i], ozks2.get_commitment()));
-        EXPECT_TRUE(qr2.verify(some_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(qr1.verify(ozks2.get_commitment()));
+        EXPECT_TRUE(qr2.verify(ozks.get_commitment()));
     }
 }
 
@@ -1011,8 +1011,8 @@ TEST(OZKSTests, SaveLoadToVectorTest)
         EXPECT_EQ(qr1.randomness(), qr2.randomness());
         EXPECT_EQ(qr1.lookup_proof().size(), qr2.lookup_proof().size());
 
-        EXPECT_TRUE(qr1.verify(some_keys[i], ozks2.get_commitment()));
-        EXPECT_TRUE(qr2.verify(some_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(qr1.verify(ozks2.get_commitment()));
+        EXPECT_TRUE(qr2.verify(ozks.get_commitment()));
     }
 }
 
@@ -1052,8 +1052,8 @@ TEST(OZKSTests, LoadSaveToStorageTest)
         EXPECT_EQ(qr1.randomness(), qr2.randomness());
         EXPECT_EQ(qr1.lookup_proof().size(), qr2.lookup_proof().size());
 
-        EXPECT_TRUE(qr1.verify(some_keys[i], ozks2.get_commitment()));
-        EXPECT_TRUE(qr2.verify(some_keys[i], ozks.get_commitment()));
+        EXPECT_TRUE(qr1.verify(ozks2.get_commitment()));
+        EXPECT_TRUE(qr2.verify(ozks.get_commitment()));
     }
 }
 

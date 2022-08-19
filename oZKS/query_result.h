@@ -34,11 +34,12 @@ namespace ozks {
         QueryResult(
             const OZKSConfig config,
             bool is_member,
+            const key_type &key,
             const payload_type &payload,
             const lookup_path_type &lookup_proof,
             const VRFProof &vrf_proof,
             const randomness_type &randomness)
-            : is_member_(is_member), payload_(payload), lookup_proof_(lookup_proof),
+            : is_member_(is_member), key_(key), payload_(payload), lookup_proof_(lookup_proof),
               vrf_proof_(vrf_proof), randomness_(randomness), include_vrf_(config.include_vrf())
         {}
 
@@ -48,6 +49,14 @@ namespace ozks {
         bool is_member() const
         {
             return is_member_;
+        }
+
+        /**
+        The key that was looked up
+        */
+        const key_type &key() const
+        {
+            return key_;
         }
 
         /**
@@ -88,16 +97,16 @@ namespace ozks {
         bool verify_lookup_path(const commitment_type &commitment) const;
 
         /**
-        Verify whether the given key is valid for the VRF proof in this query result
+        Verify that the queried key is valid for the VRF proof in this query result
         */
-        bool verify_vrf_proof(const key_type &key, const VRFPublicKey &public_key) const;
+        bool verify_vrf_proof(const VRFPublicKey &public_key) const;
 
         /**
         Verify that:
         - the lookup proof is correct
-        - the given key is valid for the VRF proof in this query result
+        - the queried key is valid for the VRF proof in this query result
         */
-        bool verify(const key_type &key, const Commitment &commitment) const;
+        bool verify(const Commitment &commitment) const;
 
         /**
         Save this query result to a stream
@@ -134,6 +143,7 @@ namespace ozks {
 
     private:
         bool is_member_;
+        key_type key_;
         payload_type payload_;
         lookup_path_type lookup_proof_;
         VRFProof vrf_proof_;

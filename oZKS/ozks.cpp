@@ -135,7 +135,7 @@ QueryResult OZKS::query(const key_type &key) const
         randomness_type randomness; // Empty randomness
 
         QueryResult result(
-            config_, /*is_member */ false, payload, lookup_path, vrf_proof, randomness);
+            config_, /*is_member */ false, key, payload, lookup_path, vrf_proof, randomness);
         return result;
     }
 
@@ -148,6 +148,7 @@ QueryResult OZKS::query(const key_type &key) const
     QueryResult result(
         config_,
         /* is_member */ true,
+        key,
         store_element.payload,
         lookup_path,
         vrf_proof,

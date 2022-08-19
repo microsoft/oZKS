@@ -72,17 +72,17 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
     return (hash_commitment == commitment);
 }
 
-bool QueryResult::verify_vrf_proof(const key_type &key, const VRFPublicKey &public_key) const
+bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
 {
     hash_type hash;
-    return public_key.verify_proof(key, vrf_proof(), hash);
+    return public_key.verify_proof(key_, vrf_proof(), hash);
 }
 
-bool QueryResult::verify(const key_type &key, const Commitment &commitment) const
+bool QueryResult::verify(const Commitment &commitment) const
 {
     bool verified = verify_lookup_path(commitment.root_commitment());
     if (include_vrf_) {
-        verified = verified && verify_vrf_proof(key, commitment.public_key());
+        verified = verified && verify_vrf_proof(commitment.public_key());
     }
     return verified;
 }
@@ -104,8 +104,12 @@ size_t QueryResult::save(SerializationWriter &writer) const
 {
     flatbuffers::FlatBufferBuilder fbs_builder;
 
+    auto key_data =
+        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(key().data()), key().size());
     auto payload_data = fbs_builder.CreateVector(
         reinterpret_cast<const uint8_t *>(payload().data()), payload().size());
+    auto randomness_data = fbs_builder.CreateVector(
+        reinterpret_cast<const uint8_t *>(randomness().data()), randomness().size());
 
     fbs::LookupProof *lookup_proofs;
     auto lookup_proof_data = fbs_builder.CreateUninitializedVectorOfStructs<fbs::LookupProof>(
@@ -126,9 +130,6 @@ size_t QueryResult::save(SerializationWriter &writer) const
             hash_array,
             static_cast<uint32_t>(hash_size));
     }
-
-    auto randomness_data = fbs_builder.CreateVector(
-        reinterpret_cast<const uint8_t *>(randomness().data()), randomness().size());
 
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> vrf_proof_data = 0;
 
@@ -153,6 +154,7 @@ size_t QueryResult::save(SerializationWriter &writer) const
 
     fbs::QueryResultBuilder qr_builder(fbs_builder);
     qr_builder.add_is_member(is_member());
+    qr_builder.add_key(key_data);
     qr_builder.add_payload(payload_data);
     qr_builder.add_lookup_proof(lookup_proof_data);
     qr_builder.add_vrf_proof(vrf_proof_data);
@@ -184,6 +186,9 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
     query_result.is_member_ = fbs_query_result->is_member();
     query_result.include_vrf_ = fbs_query_result->include_vrf();
 
+    query_result.key_.resize(fbs_query_result->key()->size());
+    utils::copy_bytes(
+        fbs_query_result->key()->data(), fbs_query_result->key()->size(), query_result.key_.data());
     query_result.payload_.resize(fbs_query_result->payload()->size());
     utils::copy_bytes(
         fbs_query_result->payload()->data(),

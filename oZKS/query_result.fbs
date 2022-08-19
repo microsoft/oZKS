@@ -12,6 +12,7 @@ struct LookupProof {
 
 table QueryResult {
     is_member:bool;
+    key:[ubyte];
     payload:[ubyte];
     lookup_proof:[LookupProof];
     vrf_proof:[ubyte];

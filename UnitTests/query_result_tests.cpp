@@ -21,11 +21,13 @@ void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKS
 
     EXPECT_FALSE(qr.is_member());
 
+    key_type key;
     lookup_path_type lookup_proof;
     payload_type payload;
     randomness_type randomness;
     VRFProof vrf_proof;
 
+    key = utils::make_bytes(0xFE, 0xEF, 0xCD, 0xDC, 0xAB, 0xBA);
     lookup_proof.resize(3);
     lookup_proof[0].first = utils::bytes_to_bools(utils::make_bytes(0x01, 0x02, 0x03));
     lookup_proof[0].second[0] = static_cast<byte>(0xFE);
@@ -51,7 +53,8 @@ void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKS
     vrf_proof.s[1] = static_cast<byte>(0x32);
     vrf_proof.s[2] = static_cast<byte>(0x33);
 
-    qr = QueryResult(config, /* is_member */ true, payload, lookup_proof, vrf_proof, randomness);
+    qr = QueryResult(
+        config, /* is_member */ true, key, payload, lookup_proof, vrf_proof, randomness);
 
     size_t save_size = qr.save(writer);
 
@@ -63,6 +66,12 @@ void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKS
     EXPECT_EQ(load_size, save_size);
 
     EXPECT_TRUE(qr2.is_member());
+    EXPECT_EQ(static_cast<byte>(0xFE), qr2.key()[0]);
+    EXPECT_EQ(static_cast<byte>(0xEF), qr2.key()[1]);
+    EXPECT_EQ(static_cast<byte>(0xCD), qr2.key()[2]);
+    EXPECT_EQ(static_cast<byte>(0xDC), qr2.key()[3]);
+    EXPECT_EQ(static_cast<byte>(0xAB), qr2.key()[4]);
+    EXPECT_EQ(static_cast<byte>(0xBA), qr2.key()[5]);
     EXPECT_EQ(3, qr2.lookup_proof().size());
     EXPECT_EQ(false, qr2.lookup_proof()[0].first[0]);
     EXPECT_EQ(false, qr2.lookup_proof()[0].first[1]);
