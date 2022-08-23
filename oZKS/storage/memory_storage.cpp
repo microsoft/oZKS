@@ -128,3 +128,44 @@ void MemoryStorage::load_updated_elements(std::size_t, const vector<byte> &, Sto
 {
     // Nothing to do for this implementation
 }
+
+void MemoryStorage::delete_ozks(const vector<byte>& trie_id)
+{
+    {
+        // Find nodes to delete
+        vector<StorageNodeKey> nodes_to_delete;
+        for (const auto &node : nodes_) {
+            if (node.first.trie_id() == trie_id) {
+                nodes_to_delete.push_back(node.first);
+            }
+        }
+
+        // Do the deletion
+        for (const auto &node : nodes_to_delete) {
+            nodes_.erase(node);
+        }
+    }
+
+    // There should be a single compressed trie with the id
+    StorageTrieKey trie_key(trie_id);
+    tries_.erase(trie_key);
+
+    // There should be a single OZKS instance with the id
+    StorageOZKSKey ozks_key(trie_id);
+    ozks_.erase(ozks_key);
+
+    {
+        // Find store elements to delete
+        vector<StorageStoreElementKey> store_elems_to_delete;
+        for (const auto &se : store_) {
+            if (se.first.trie_id() == trie_id) {
+                store_elems_to_delete.push_back(se.first);
+            }
+        }
+
+        // Do the deletion
+        for (const auto &se : store_elems_to_delete) {
+            store_.erase(se);
+        }
+    }
+}

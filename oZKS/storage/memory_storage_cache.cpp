@@ -154,3 +154,48 @@ void MemoryStorageCache::load_updated_elements(
 {
     storage_->load_updated_elements(epoch, trie_id, storage);
 }
+
+void MemoryStorageCache::delete_ozks(const vector<byte> &trie_id)
+{
+    {
+        // Look for nodes to delete
+        vector<StorageNodeKey> nodes_to_delete;
+        node_cache_.forEach([&](const StorageNodeKey &key, const CTNode &value) {
+            if (key.trie_id() == trie_id) {
+                nodes_to_delete.push_back(key);
+            }
+        });
+
+        // Do the deletion
+        for (const auto &node : nodes_to_delete) {
+            node_cache_.remove(node);
+        }
+    }
+
+    // There should be a single compressed trie with the id
+    StorageTrieKey trie_key(trie_id);
+    trie_cache_.remove(trie_key);
+
+    // There should be a single OZKS instance with the id
+    StorageOZKSKey ozks_key(trie_id);
+    ozks_cache_.remove(ozks_key);
+
+    {
+        // Look for store elements to delete
+        vector<StorageStoreElementKey> store_elems_to_delete;
+        store_element_cache_.forEach(
+            [&](const StorageStoreElementKey &key, const store_value_type &value) {
+                if (key.trie_id() == trie_id) {
+                    store_elems_to_delete.push_back(key);
+                }
+            });
+
+        // Do the deletion
+        for (const auto &se : store_elems_to_delete) {
+            store_element_cache_.remove(se);
+        }
+    }
+
+    // Do the same in backing storage
+    storage_->delete_ozks(trie_id);
+}

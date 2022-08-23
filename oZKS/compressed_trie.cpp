@@ -122,18 +122,6 @@ void CompressedTrie::get_commitment(commitment_type &commitment) const
     utils::copy_bytes(root_hash.data(), root_hash.size(), commitment.data());
 }
 
-void CompressedTrie::clear()
-{
-    epoch_ = 0;
-    init_random_id();
-
-    CTNode root(this);
-    // This will overwrite any existing root
-    // TODO: Delete existing nodes in storage?
-    root.save();
-    save();
-}
-
 size_t CompressedTrie::save(SerializationWriter &writer) const
 {
     flatbuffers::FlatBufferBuilder fbs_builder;

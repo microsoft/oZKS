@@ -207,3 +207,47 @@ void MemoryStorageBatchInserter::load_updated_elements(
     }
     storage_->load_updated_elements(epoch, trie_id, storage);
 }
+
+void MemoryStorageBatchInserter::delete_ozks(const vector<byte>& trie_id)
+{
+    {
+        // Find nodes to delete
+        vector<StorageNodeKey> nodes_to_delete;
+        for (const auto &node : unsaved_nodes_) {
+            if (node.first.trie_id() == trie_id) {
+                nodes_to_delete.push_back(node.first);
+            }
+        }
+
+        // Do the deletion
+        for (const auto &node : nodes_to_delete) {
+            unsaved_nodes_.erase(node);
+        }
+    }
+
+    // There should be a single trie with the trie_id
+    StorageTrieKey trie_key(trie_id);
+    unsaved_tries_.erase(trie_key);
+
+    // There should be a single OZKS instance with the trie_id
+    StorageOZKSKey ozks_key(trie_id);
+    unsaved_ozks_.erase(ozks_key);
+
+    {
+        // Find storage elements to delete
+        vector<StorageStoreElementKey> store_elems_to_delete;
+        for (const auto &se : unsaved_store_elements_) {
+            if (se.first.trie_id() == trie_id) {
+                store_elems_to_delete.push_back(se.first);
+            }
+        }
+
+        // Do the deletion
+        for (const auto &se : store_elems_to_delete) {
+            unsaved_store_elements_.erase(se);
+        }
+    }
+
+    // Perform same operation on backing storage
+    storage_->delete_ozks(trie_id);
+}

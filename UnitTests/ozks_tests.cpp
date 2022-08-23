@@ -140,6 +140,11 @@ namespace {
             }
         }
 
+        void delete_ozks(const vector<byte> &trie_id) override
+        {
+            storage_.delete_ozks(trie_id);
+        }
+
         void flush(
             const vector<byte> &trie_id,
             const vector<CTNode> &nodes,
@@ -330,6 +335,11 @@ namespace {
             storage_.load_updated_elements(epoch, trie_id, this);
         }
 
+        void delete_ozks(const vector<byte> &trie_id) override
+        {
+            storage_.delete_ozks(trie_id);
+        }
+
         void clear_added_nodes()
         {
             added_nodes_.clear();
@@ -358,7 +368,7 @@ namespace {
 
 } // namespace
 
-void RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = false)
+vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = false)
 {
     key_type key(16);
     payload_type payload(40);
@@ -412,13 +422,15 @@ void RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = fal
         EXPECT_EQ(0, result.payload().size());
         EXPECT_TRUE(result.verify(ozks.get_commitment()));
     }
+
+    return valid_keys;
 }
 
-void RandomInsertTestCore(
+vector<key_type> RandomInsertTestCore(
     shared_ptr<storage::Storage> storage, size_t iterations, bool flush_at_end = false)
 {
     OZKS ozks(storage);
-    RandomInsertTestCore(ozks, iterations, flush_at_end);
+    return RandomInsertTestCore(ozks, iterations, flush_at_end);
 }
 
 TEST(OZKSTests, InsertTest)
@@ -1279,4 +1291,40 @@ TEST(OZKSTests, BatchInserterCallback2Test)
         0, backing_storage->updated_nodes_count()); // Updated nodes should have been retrieved
     EXPECT_GT(cached_storage->added_nodes_count(), 0);
     EXPECT_GT(cached_storage->added_tries_count(), 0);
+}
+
+TEST(OZKSTests, NodeDeletionTest)
+{
+    shared_ptr<TestBackingStorage> storage = make_shared<TestBackingStorage>();
+
+    OZKS ozks(storage);
+
+    vector<byte> saved_ozks;
+    ozks.save(saved_ozks);
+
+    // Insert some nodes
+    vector<key_type> valid_keys = RandomInsertTestCore(ozks, 1000, /* flush_at_end */ true);
+    EXPECT_NE(valid_keys.size(), 0);
+
+    auto commitment = ozks.get_commitment();
+
+    for (const auto &valid_key : valid_keys) {
+        auto result = ozks.query(valid_key);
+        EXPECT_TRUE(result.is_member());
+        EXPECT_TRUE(result.verify(commitment));
+    }
+
+    // Clear the tree
+    ozks.clear();
+
+    // We should have the root of the new trie
+    EXPECT_EQ(1, storage->node_count());
+    // As well as the new trie itself
+    EXPECT_EQ(1, storage->trie_count());
+
+    // Now valid keys should not be found
+    for (const auto &valid_key : valid_keys) {
+        auto result = ozks.query(valid_key);
+        EXPECT_FALSE(result.is_member());
+    }
 }

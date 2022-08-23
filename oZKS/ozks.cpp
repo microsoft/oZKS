@@ -18,32 +18,13 @@ OZKS::OZKS() : OZKS(nullptr)
 
 OZKS::OZKS(shared_ptr<storage::Storage> storage) : storage_(storage)
 {
-    initialize_vrf();
-
-    if (nullptr == storage) {
-        storage_ = make_shared<storage::MemoryStorage>();
-    }
-
-    CompressedTrie trie(storage_);
-    trie_id_ = trie.id();
-    trie.save();
+    initialize();
 }
 
 OZKS::OZKS(shared_ptr<storage::Storage> storage, const OZKSConfig &config) : storage_(storage)
 {
     config_ = config;
-
-    if (config_.include_vrf()) {
-        initialize_vrf();
-    }
-
-    if (nullptr == storage) {
-        storage_ = make_shared<storage::MemoryStorage>();
-    }
-
-    CompressedTrie trie(storage_);
-    trie_id_ = trie.id();
-    trie.save();
+    initialize();
 }
 
 shared_ptr<InsertResult> OZKS::insert(const key_type &key, const payload_type &payload)
@@ -218,18 +199,10 @@ const OZKSConfig &OZKS::get_configuration() const
 
 void OZKS::clear()
 {
-    CompressedTrie trie;
-    load_trie(trie);
-    trie.clear();
+    // Delete ozks and trie contents from storage (if supported)
+    storage_->delete_ozks(trie_id_);
 
-    pending_insertions_.clear();
-    pending_results_.clear();
-    vrf_pk_ = {};
-    vrf_sk_ = {};
-    config_ = {};
-
-    // TODO: delete contents of previous Trie?
-    // TODO: delete contents of previous Store?
+    initialize();
 }
 
 size_t OZKS::save(SerializationWriter &writer) const
@@ -384,6 +357,26 @@ void OZKS::initialize_vrf()
     // Set up a new VRF secret key and public key
     vrf_sk_.initialize();
     vrf_pk_ = vrf_sk_.get_public_key();
+}
+
+void OZKS::initialize()
+{
+    // config_ is not initialized. It is only initialized by default values or by the
+    // specific constructor that receives it as parameter.
+    if (config_.include_vrf()) {
+        initialize_vrf();
+    }
+
+    if (nullptr == storage_) {
+        storage_ = make_shared<storage::MemoryStorage>();
+    }
+
+    CompressedTrie trie(storage_);
+    trie_id_ = trie.id();
+    trie.save();
+
+    pending_insertions_.clear();
+    pending_results_.clear();
 }
 
 hash_type OZKS::get_key_hash(const key_type &key) const

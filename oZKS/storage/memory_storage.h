@@ -109,6 +109,12 @@ namespace ozks {
                 Storage *storage) override;
 
             /**
+            Delete nodes for the given trie from storage, as well as the trie itself and related
+            ozks instance.
+            */
+            void delete_ozks(const std::vector<std::byte> &trie_id) override;
+
+            /**
             Get the count of nodes contained in storage
             */
             std::size_t node_count() const

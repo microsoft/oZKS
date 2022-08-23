@@ -101,6 +101,12 @@ namespace ozks {
             */
             virtual void load_updated_elements(
                 std::size_t epoch, const std::vector<std::byte> &trie_id, Storage *storage) = 0;
+
+            /**
+            Delete nodes for the given trie from storage, as well as the trie itself and related
+            ozks instance. Some storage implementation might not support this operation.
+            */
+            virtual void delete_ozks(const std::vector<std::byte> &trie_id) = 0;
         };
     } // namespace storage
 } // namespace ozks

@@ -162,5 +162,7 @@ namespace ozks {
         hash_type get_key_hash(const key_type &key) const;
 
         void do_pending_insertions();
+
+        void initialize();
     };
 } // namespace ozks

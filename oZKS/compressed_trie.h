@@ -131,12 +131,6 @@ namespace ozks {
             std::shared_ptr<ozks::storage::Storage> storage,
             CompressedTrie &trie);
 
-        /**
-        Clear the contents of this instance.
-        Sets epoch back to zero.
-        */
-        void clear();
-
     private:
         static constexpr std::size_t id_size_ = 16;
 
