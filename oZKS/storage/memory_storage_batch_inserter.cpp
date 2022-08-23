@@ -208,7 +208,7 @@ void MemoryStorageBatchInserter::load_updated_elements(
     storage_->load_updated_elements(epoch, trie_id, storage);
 }
 
-void MemoryStorageBatchInserter::delete_ozks(const vector<byte>& trie_id)
+void MemoryStorageBatchInserter::delete_ozks(const vector<byte> &trie_id)
 {
     {
         // Find nodes to delete

@@ -129,7 +129,7 @@ void MemoryStorage::load_updated_elements(std::size_t, const vector<byte> &, Sto
     // Nothing to do for this implementation
 }
 
-void MemoryStorage::delete_ozks(const vector<byte>& trie_id)
+void MemoryStorage::delete_ozks(const vector<byte> &trie_id)
 {
     {
         // Find nodes to delete
