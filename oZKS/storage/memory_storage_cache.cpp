@@ -160,7 +160,7 @@ void MemoryStorageCache::delete_ozks(const vector<byte> &trie_id)
     {
         // Look for nodes to delete
         vector<StorageNodeKey> nodes_to_delete;
-        node_cache_.forEach([&](const StorageNodeKey &key, const CTNode &value) {
+        node_cache_.forEach([&](const StorageNodeKey &key, const CTNode &) {
             if (key.trie_id() == trie_id) {
                 nodes_to_delete.push_back(key);
             }
@@ -184,7 +184,7 @@ void MemoryStorageCache::delete_ozks(const vector<byte> &trie_id)
         // Look for store elements to delete
         vector<StorageStoreElementKey> store_elems_to_delete;
         store_element_cache_.forEach(
-            [&](const StorageStoreElementKey &key, const store_value_type &value) {
+            [&](const StorageStoreElementKey &key, const store_value_type &) {
                 if (key.trie_id() == trie_id) {
                     store_elems_to_delete.push_back(key);
                 }
