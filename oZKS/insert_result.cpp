@@ -50,7 +50,9 @@ namespace ozks {
         // At the end, the resulting hash is either:
         // - the commitment
         // - the last child node hash we need to get the commitment
-        commitment_type hash_commitment(hash.begin(), hash.end());
+        static_assert(sizeof(commitment_type) == sizeof(hash_type));
+        commitment_type hash_commitment;
+        utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
         if (hash_commitment == *commitment_) {
             return true;
         }
@@ -65,7 +67,7 @@ namespace ozks {
             utils::compute_node_hash({}, {}, partial_label, hash, temp_hash);
         }
 
-        hash_commitment = commitment_type(temp_hash.begin(), temp_hash.end());
+        utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
         return (hash_commitment == *commitment_);
     }
 
@@ -145,7 +147,10 @@ namespace ozks {
 
         auto fbs_insert_result = fbs::GetSizePrefixedInsertResult(in_data.data());
 
-        commitment_type commitment(fbs_insert_result->commitment()->size());
+        commitment_type commitment;
+        if (fbs_insert_result->commitment()->size() != commitment.size()) {
+            throw runtime_error("Serialized commitment size does not match");
+        }
 
         utils::copy_bytes(
             fbs_insert_result->commitment()->data(),

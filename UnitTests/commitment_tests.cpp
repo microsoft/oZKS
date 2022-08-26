@@ -22,7 +22,11 @@ TEST(CommitmentTests, SerializeTest)
     byte pk_arr[VRFPublicKey::save_size];
     sk.get_public_key().save(pk_arr);
 
-    Commitment commitment{ sk.get_public_key(), make_bytes(0x01, 0x02, 0x03) };
+    commitment_type root_c;
+    root_c[0] = static_cast<byte>(0x01);
+    root_c[1] = static_cast<byte>(0x02);
+    root_c[2] = static_cast<byte>(0x03);
+    Commitment commitment{ sk.get_public_key(), root_c };
 
     stringstream ss;
     size_t size = commitment.save(ss);
@@ -48,7 +52,11 @@ TEST(CommitmentTests, SerializeToVectorTest)
     byte pk_arr[VRFPublicKey::save_size];
     sk.get_public_key().save(pk_arr);
 
-    Commitment commitment{ sk.get_public_key(), make_bytes(0x01, 0x02, 0x03) };
+    commitment_type root_c;
+    root_c[0] = static_cast<byte>(0x01);
+    root_c[1] = static_cast<byte>(0x02);
+    root_c[2] = static_cast<byte>(0x03);
+    Commitment commitment{ sk.get_public_key(), root_c };
 
     vector<byte> vec;
     size_t size = commitment.save(vec);

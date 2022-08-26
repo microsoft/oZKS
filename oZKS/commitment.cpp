@@ -77,11 +77,14 @@ pair<Commitment, size_t> Commitment::Load(SerializationReader &reader)
         reinterpret_cast<const byte *>(fbs_commitment->public_key()->data()->data()),
         VRFPublicKey::save_size));
 
-    transform(
-        fbs_commitment->root_commitment()->data()->cbegin(),
-        fbs_commitment->root_commitment()->data()->cend(),
-        back_inserter(commitment.root_commitment_),
-        [](const uint8_t ui) { return static_cast<byte>(ui); });
+    if (fbs_commitment->root_commitment()->data()->size() != commitment.root_commitment_.size()) {
+        throw runtime_error("Serialized commitment size does not match");
+    }
+
+    utils::copy_bytes(
+        fbs_commitment->root_commitment()->data()->data(),
+        fbs_commitment->root_commitment()->data()->size(),
+        commitment.root_commitment_.data());
 
     return { commitment, in_data.size() };
 }

@@ -117,8 +117,10 @@ void CompressedTrie::get_commitment(commitment_type &commitment) const
     if (root_hash.size() == 0) {
         throw runtime_error("No commitment has been computed");
     }
+    if (root_hash.size() != commitment.size()) {
+        throw runtime_error("Root hash and commitment size do not match");
+    }
 
-    commitment.resize(root_hash.size());
     utils::copy_bytes(root_hash.data(), root_hash.size(), commitment.data());
 }
 

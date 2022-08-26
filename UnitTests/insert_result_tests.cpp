@@ -54,7 +54,8 @@ TEST(InsertResultTests, VerifyBatchInsertTest)
         "n:1111:l:(null):r:(null);",
         root_str);
 
-    commitment_type commitment(root.hash().size());
+    commitment_type commitment;
+    static_assert(sizeof(commitment_type) == sizeof(hash_type));
     copy_bytes(root.hash().data(), root.hash().size(), commitment.data());
 
     for (const auto &label : labels) {
@@ -77,7 +78,7 @@ TEST(InsertResultTests, VerifySingleInsertTest)
     shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
     CompressedTrie trie(storage);
     CTNode root(&trie);
-    commitment_type commitment(root.hash().size());
+    commitment_type commitment;
 
     labels.emplace_back(bytes_to_bools(make_bytes(0xAA, 0xBB, 0xCC, 0xDD, 0xEE)));
     labels.emplace_back(bytes_to_bools(make_bytes(0x01, 0x01, 0x01, 0x01, 0x01)));
@@ -109,7 +110,11 @@ TEST(InsertResultTests, SaveLoadVectorTest)
 {
     InsertResult ir;
 
-    commitment_type commitment = make_bytes(0x80, 0x23, 0x7f, 0x63);
+    commitment_type commitment;
+    commitment[0] = static_cast<byte>(0x80);
+    commitment[1] = static_cast<byte>(0x23);
+    commitment[2] = static_cast<byte>(0x7f);
+    commitment[3] = static_cast<byte>(0x63);
 
     hash_type hash1 = utils::compute_hash(make_bytes(0x01, 0x02, 0x03), "hash");
     hash_type hash2 = utils::compute_hash(make_bytes(0x02, 0x03, 0x04), "hash");
@@ -148,7 +153,11 @@ TEST(InsertResultTests, SaveLoadStreamTest)
 {
     InsertResult ir;
 
-    commitment_type commitment = make_bytes(0x80, 0x23, 0x7f, 0x63);
+    commitment_type commitment;
+    commitment[0] = static_cast<byte>(0x80);
+    commitment[1] = static_cast<byte>(0x23);
+    commitment[2] = static_cast<byte>(0x7f);
+    commitment[3] = static_cast<byte>(0x63);
 
     hash_type hash1 = utils::compute_hash(make_bytes(0x01, 0x02, 0x03), "hash");
     hash_type hash2 = utils::compute_hash(make_bytes(0x02, 0x03, 0x04), "hash");

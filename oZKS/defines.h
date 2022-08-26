@@ -25,10 +25,10 @@ namespace ozks {
     using partial_label_type = std::vector<bool>;
 
     constexpr std::size_t randomness_size = 64;
-    using randomness_type = std::vector<std::byte>;
+    using randomness_type = std::array<std::byte, randomness_size>;
 
     using lookup_path_type = std::vector<std::pair<partial_label_type, hash_type>>;
-    using commitment_type = std::vector<std::byte>;
+    using commitment_type = std::array<std::byte, hash_size>;
     using append_proof_type = std::vector<std::pair<partial_label_type, hash_type>>;
     using append_proof_batch_type = std::vector<append_proof_type>;
 

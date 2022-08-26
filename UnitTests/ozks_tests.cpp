@@ -567,7 +567,7 @@ TEST(OZKSTests, QueryTest)
     query_result = ozks.query(key);
     EXPECT_EQ(false, query_result.is_member());
     EXPECT_EQ(0, query_result.payload().size());
-    EXPECT_EQ(0, query_result.randomness().size());
+    EXPECT_EQ(randomness_size, query_result.randomness().size());
     EXPECT_NE(0, query_result.lookup_proof().size());
 }
 
@@ -618,7 +618,7 @@ TEST(OZKSTests, MultiInsertQueryTest)
     query_result = ozks.query(key);
     EXPECT_EQ(false, query_result.is_member());
     EXPECT_EQ(0, query_result.payload().size());
-    EXPECT_EQ(0, query_result.randomness().size());
+    EXPECT_EQ(randomness_size, query_result.randomness().size());
 }
 
 TEST(OZKSTests, InsertResultVerificationTest)
@@ -880,7 +880,7 @@ TEST(OZKSTests, QueryResultVerificationTest)
     query_result = ozks.query(key);
     EXPECT_EQ(false, query_result.is_member());
     EXPECT_EQ(0, query_result.payload().size());
-    EXPECT_EQ(0, query_result.randomness().size());
+    EXPECT_EQ(randomness_size, query_result.randomness().size());
     EXPECT_EQ(true, query_result.verify(commitment));
 }
 

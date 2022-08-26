@@ -42,7 +42,10 @@ void SaveLoadTest(SerializationWriter &writer, SerializationReader &reader, OZKS
     lookup_proof[2].second[1] = static_cast<byte>(0xEC);
     lookup_proof[2].second[2] = static_cast<byte>(0xEB);
     payload = utils::make_bytes(0x11, 0x22, 0x33, 0x44, 0x55);
-    randomness = utils::make_bytes(0xCC, 0xDD, 0xEE, 0xFF);
+    randomness[0] = static_cast<byte>(0xCC);
+    randomness[1] = static_cast<byte>(0xDD);
+    randomness[2] = static_cast<byte>(0xEE);
+    randomness[3] = static_cast<byte>(0xFF);
     vrf_proof.gamma[0] = static_cast<byte>(0x10);
     vrf_proof.gamma[1] = static_cast<byte>(0x11);
     vrf_proof.gamma[2] = static_cast<byte>(0x12);

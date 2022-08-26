@@ -53,7 +53,8 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
     // At the end, the resulting hash is either:
     // - The commitment
     // - the last child node hash we need to get the commitment
-    commitment_type hash_commitment(hash.begin(), hash.end());
+    commitment_type hash_commitment;
+    utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
     if (hash_commitment == commitment) {
         return true;
     }
@@ -69,7 +70,7 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
         utils::compute_node_hash({}, {}, partial_label, hash, temp_hash);
     }
 
-    hash_commitment = commitment_type(temp_hash.begin(), temp_hash.end());
+    utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
     return (hash_commitment == commitment);
 }
 
@@ -201,7 +202,11 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
         fbs_query_result->payload()->data(),
         fbs_query_result->payload()->size(),
         query_result.payload_.data());
-    query_result.randomness_.resize(fbs_query_result->randomness()->size());
+
+    if (fbs_query_result->randomness()->size() != query_result.randomness().size()) {
+        throw runtime_error("Serialized randomness size does not match");
+    }
+
     utils::copy_bytes(
         fbs_query_result->randomness()->data(),
         fbs_query_result->randomness()->size(),
