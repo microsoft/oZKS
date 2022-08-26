@@ -3,21 +3,14 @@
 
 namespace ozks.fbs;
 
-struct LookupProof {
-    partial_label:[ubyte:64];
-    partial_label_size:uint32;
-    hash:[ubyte:64];
-    hash_size:uint32;
-}
-
 table QueryResult {
     is_member:bool;
     key:[ubyte];
     payload:[ubyte];
-    lookup_proof:[LookupProof];
     vrf_proof:[ubyte];
     randomness:[ubyte];
     include_vrf:bool;
+    lookup_proof_count:uint32;
 }
 
 root_type QueryResult;

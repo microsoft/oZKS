@@ -7,6 +7,7 @@
 // oZKS
 #include "oZKS/insert_result.h"
 #include "oZKS/insert_result_generated.h"
+#include "oZKS/path_element_generated.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/utilities.h"
 
@@ -89,39 +90,45 @@ namespace ozks {
 
         flatbuffers::FlatBufferBuilder fbs_builder;
 
-        fbs::AppendProof *append_proofs;
-        auto append_proof_data = fbs_builder.CreateUninitializedVectorOfStructs<fbs::AppendProof>(
-            append_proof().size(), &append_proofs);
-
-        for (size_t idx = 0; idx < append_proof().size(); idx++) {
-            auto label_bytes = utils::bools_to_bytes(append_proof()[idx].first);
-            uint8_t label_array[64];
-            utils::copy_bytes(label_bytes.data(), label_bytes.size(), label_array);
-            uint8_t hash_array[64];
-
-            utils::copy_bytes(
-                append_proof()[idx].second.data(), append_proof()[idx].second.size(), hash_array);
-
-            append_proofs[idx] = fbs::AppendProof(
-                label_array,
-                static_cast<uint32_t>(append_proof()[idx].first.size()),
-                hash_array,
-                static_cast<uint32_t>(hash_size));
-        }
-
         auto commitment_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(commitment().data()), commitment().size());
 
         fbs::InsertResultBuilder ir_builder(fbs_builder);
         ir_builder.add_commitment(commitment_data);
-        ir_builder.add_append_proof(append_proof_data);
+        ir_builder.add_append_proof_count(static_cast<uint32_t>(append_proof().size()));
 
         auto fbs_insert_result = ir_builder.Finish();
         fbs_builder.FinishSizePrefixed(fbs_insert_result);
 
         writer.write(fbs_builder.GetBufferPointer(), fbs_builder.GetSize());
 
-        return fbs_builder.GetSize();
+        // Write all append proof elements after the main structure
+        size_t ap_size = 0;
+        for (size_t idx = 0; idx < append_proof().size(); idx++) {
+            flatbuffers::FlatBufferBuilder f_builder;
+            const auto &ap = append_proof()[idx];
+
+            auto hash_data = f_builder.CreateVector(
+                reinterpret_cast<const uint8_t *>(ap.second.data()), ap.second.size());
+
+            vector<byte> label_bytes = utils::bools_to_bytes(ap.first);
+            auto label_data = f_builder.CreateVector(
+                reinterpret_cast<const uint8_t *>(label_bytes.data()), label_bytes.size());
+
+            fbs::PathElementBuilder pe_builder(f_builder);
+
+            pe_builder.add_hash(hash_data);
+            pe_builder.add_partial_label(label_data);
+            pe_builder.add_partial_label_size(static_cast<uint32_t>(ap.first.size()));
+
+            auto fbs_append_proof = pe_builder.Finish();
+            f_builder.FinishSizePrefixed(fbs_append_proof);
+
+            writer.write(f_builder.GetBufferPointer(), f_builder.GetSize());
+            ap_size += f_builder.GetSize();
+        }
+
+        return fbs_builder.GetSize() + ap_size;
     }
 
     size_t InsertResult::Load(InsertResult &insert_result, SerializationReader &reader)
@@ -133,43 +140,53 @@ namespace ozks {
         bool safe = fbs::VerifySizePrefixedInsertResultBuffer(verifier);
 
         if (!safe) {
-            throw runtime_error("Failed to load InsertResult: invalid buffer");
+            throw runtime_error("Failed to load InsertResult: invalid InsertResult buffer");
         }
 
         auto fbs_insert_result = fbs::GetSizePrefixedInsertResult(in_data.data());
 
         commitment_type commitment(fbs_insert_result->commitment()->size());
-        append_proof_type append_proof(fbs_insert_result->append_proof()->size());
 
         utils::copy_bytes(
             fbs_insert_result->commitment()->data(),
             fbs_insert_result->commitment()->size(),
             commitment.data());
 
-        for (size_t idx = 0; idx < fbs_insert_result->append_proof()->size(); idx++) {
+        size_t ap_count = fbs_insert_result->append_proof_count();
+        size_t ap_size = 0;
+        append_proof_type append_proof(ap_count);
+
+        for (size_t idx = 0; idx < ap_count; idx++) {
+            vector<unsigned char> pe_data(utils::read_from_serialization_reader(reader));
+            auto pe_verifier =
+                flatbuffers::Verifier(reinterpret_cast<uint8_t *>(pe_data.data()), pe_data.size());
+            bool pe_safe = fbs::VerifySizePrefixedPathElementBuffer(pe_verifier);
+            if (!pe_safe) {
+                throw runtime_error("Failed to load PathElement: invalid PathElement buffer");
+            }
+
+            auto fbs_path_element = fbs::GetSizePrefixedPathElement(pe_data.data());
+
             append_proof[idx].first = utils::bytes_to_bools(
-                reinterpret_cast<const byte *>(fbs_insert_result->append_proof()
-                                                   ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                                                   ->partial_label()
-                                                   ->data()),
-                fbs_insert_result->append_proof()
-                    ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                    ->partial_label_size());
+                reinterpret_cast<const byte *>(fbs_path_element->partial_label()->data()),
+                fbs_path_element->partial_label_size());
+
+            // Hash size is fixed
+            if (append_proof[idx].second.size() != fbs_path_element->hash()->size()) {
+                throw runtime_error("Serialized hash size does not match");
+            }
 
             utils::copy_bytes(
-                fbs_insert_result->append_proof()
-                    ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                    ->hash()
-                    ->data(),
-                fbs_insert_result->append_proof()
-                    ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                    ->hash_size(),
+                fbs_path_element->hash()->data(),
+                fbs_path_element->hash()->size(),
                 append_proof[idx].second.data());
+
+            ap_size += pe_data.size();
         }
 
         insert_result.init_result(commitment, append_proof);
 
-        return in_data.size();
+        return in_data.size() + ap_size;
     }
 
     size_t InsertResult::Load(InsertResult &insert_result, istream &stream)

@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 // oZKS
+#include "oZKS/path_element_generated.h"
 #include "oZKS/query_result.h"
 #include "oZKS/query_result_generated.h"
 #include "oZKS/utilities.h"
@@ -111,26 +112,6 @@ size_t QueryResult::save(SerializationWriter &writer) const
     auto randomness_data = fbs_builder.CreateVector(
         reinterpret_cast<const uint8_t *>(randomness().data()), randomness().size());
 
-    fbs::LookupProof *lookup_proofs;
-    auto lookup_proof_data = fbs_builder.CreateUninitializedVectorOfStructs<fbs::LookupProof>(
-        lookup_proof().size(), &lookup_proofs);
-
-    for (size_t idx = 0; idx < lookup_proof().size(); idx++) {
-        auto label_bytes = utils::bools_to_bytes(lookup_proof()[idx].first);
-        uint8_t label_array[64];
-        utils::copy_bytes(label_bytes.data(), label_bytes.size(), label_array);
-        uint8_t hash_array[64];
-
-        utils::copy_bytes(
-            lookup_proof()[idx].second.data(), lookup_proof()[idx].second.size(), hash_array);
-
-        lookup_proofs[idx] = fbs::LookupProof(
-            label_array,
-            static_cast<uint32_t>(lookup_proof()[idx].first.size()),
-            hash_array,
-            static_cast<uint32_t>(hash_size));
-    }
-
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> vrf_proof_data = 0;
 
     if (include_vrf_) {
@@ -156,17 +137,43 @@ size_t QueryResult::save(SerializationWriter &writer) const
     qr_builder.add_is_member(is_member());
     qr_builder.add_key(key_data);
     qr_builder.add_payload(payload_data);
-    qr_builder.add_lookup_proof(lookup_proof_data);
     qr_builder.add_vrf_proof(vrf_proof_data);
     qr_builder.add_randomness(randomness_data);
     qr_builder.add_include_vrf(include_vrf_);
+    qr_builder.add_lookup_proof_count(static_cast<uint32_t>(lookup_proof().size()));
 
     auto fbs_query_result = qr_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_query_result);
 
     writer.write(fbs_builder.GetBufferPointer(), fbs_builder.GetSize());
 
-    return fbs_builder.GetSize();
+    // Write all lookup proof elements after the main structure
+    size_t lp_size = 0;
+    for (size_t idx = 0; idx < lookup_proof().size(); idx++) {
+        flatbuffers::FlatBufferBuilder f_builder;
+        const auto &lp = lookup_proof()[idx];
+
+        auto hash_data = f_builder.CreateVector(
+            reinterpret_cast<const uint8_t *>(lp.second.data()), lp.second.size());
+
+        vector<byte> label_bytes = utils::bools_to_bytes(lp.first);
+        auto label_data = f_builder.CreateVector(
+            reinterpret_cast<const uint8_t *>(label_bytes.data()), label_bytes.size());
+
+        fbs::PathElementBuilder pe_builder(f_builder);
+
+        pe_builder.add_hash(hash_data);
+        pe_builder.add_partial_label(label_data);
+        pe_builder.add_partial_label_size(static_cast<uint32_t>(lp.first.size()));
+
+        auto fbs_append_proof = pe_builder.Finish();
+        f_builder.FinishSizePrefixed(fbs_append_proof);
+
+        writer.write(f_builder.GetBufferPointer(), f_builder.GetSize());
+        lp_size += f_builder.GetSize();
+    }
+
+    return fbs_builder.GetSize() + lp_size;
 }
 
 size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
@@ -200,27 +207,7 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
         fbs_query_result->randomness()->size(),
         query_result.randomness_.data());
 
-    query_result.lookup_proof_.resize(fbs_query_result->lookup_proof()->size());
-    for (size_t idx = 0; idx < fbs_query_result->lookup_proof()->size(); idx++) {
-        query_result.lookup_proof_[idx].first = utils::bytes_to_bools(
-            reinterpret_cast<const byte *>(fbs_query_result->lookup_proof()
-                                               ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                                               ->partial_label()
-                                               ->data()),
-            fbs_query_result->lookup_proof()
-                ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                ->partial_label_size());
-
-        utils::copy_bytes(
-            fbs_query_result->lookup_proof()
-                ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                ->hash()
-                ->data(),
-            fbs_query_result->lookup_proof()
-                ->Get(static_cast<flatbuffers::uoffset_t>(idx))
-                ->hash_size(),
-            query_result.lookup_proof_[idx].second.data());
-    }
+    query_result.lookup_proof_.resize(fbs_query_result->lookup_proof_count());
 
     if (query_result.include_vrf_) {
         utils::copy_bytes(
@@ -242,7 +229,38 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
         memset(query_result.vrf_proof_.s.data(), 0, utils::ECPoint::order_size);
     }
 
-    return in_data.size();
+    size_t lp_count = fbs_query_result->lookup_proof_count();
+    size_t lp_size = 0;
+
+    for (size_t idx = 0; idx < lp_count; idx++) {
+        vector<unsigned char> pe_data(utils::read_from_serialization_reader(reader));
+        auto pe_verifier =
+            flatbuffers::Verifier(reinterpret_cast<uint8_t *>(pe_data.data()), pe_data.size());
+        bool pe_safe = fbs::VerifySizePrefixedPathElementBuffer(pe_verifier);
+        if (!pe_safe) {
+            throw runtime_error("Failed to load PathElement: invalid PathElement buffer");
+        }
+
+        auto fbs_path_element = fbs::GetSizePrefixedPathElement(pe_data.data());
+
+        query_result.lookup_proof_[idx].first = utils::bytes_to_bools(
+            reinterpret_cast<const byte *>(fbs_path_element->partial_label()->data()),
+            fbs_path_element->partial_label_size());
+
+        // Hash size is fixed
+        if (query_result.lookup_proof_[idx].second.size() != fbs_path_element->hash()->size()) {
+            throw runtime_error("Serialized hash size does not match");
+        }
+
+        utils::copy_bytes(
+            fbs_path_element->hash()->data(),
+            fbs_path_element->hash()->size(),
+            query_result.lookup_proof_[idx].second.data());
+
+        lp_size += pe_data.size();
+    }
+
+    return in_data.size() + lp_size;
 }
 
 size_t QueryResult::Load(QueryResult &query_result, istream &stream)

@@ -6,6 +6,14 @@ if(CUSTOM_FLATC_PATH)
 endif()
 
 execute_process(
+    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/path_element.fbs"
+    OUTPUT_QUIET
+    RESULT_VARIABLE result)
+if(result)
+    message(FATAL_ERROR "flatc failed to compile path_element.fbs (${result})")
+endif()
+
+execute_process(
     COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/commitment.fbs"
     OUTPUT_QUIET
     RESULT_VARIABLE result)

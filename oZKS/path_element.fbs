@@ -3,9 +3,10 @@
 
 namespace ozks.fbs;
 
-table InsertResult {
-    commitment:[ubyte];
-    append_proof_count:uint32;
+table PathElement {
+    partial_label:[ubyte];
+    partial_label_size:uint32;
+    hash:[ubyte];
 }
 
-root_type InsertResult;
+root_type PathElement;
