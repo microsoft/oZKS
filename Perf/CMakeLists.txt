@@ -15,14 +15,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
-project(ozks-perf VERSION 0.3.0 LANGUAGES CXX)
+project(ozks-perf VERSION 1.0.0 LANGUAGES CXX)
 
 # If not called from root CMakeLists.txt
 if(NOT DEFINED OZKS_BUILD_BENCH)
     set(OZKS_BUILD_BENCH ON)
 
     # Import OZKS
-    find_package(OZKS 0.3.0 EXACT REQUIRED)
+    find_package(OZKS 1.0.0 EXACT REQUIRED)
 
     # Must define these variables and include macros
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${OUTLIB_PATH})
@@ -37,20 +37,6 @@ if(OZKS_BUILD_BENCH)
     else()
         message(STATUS "GoogleBenchmark: found")
     endif()
-
-    # find_package(Microsoft.GSL 4 CONFIG QUIET REQUIRED)
-    # if(NOT Microsoft.GSL_FOUND)
-    #     message(FATAL_ERROR "Microsoft GSL: not found")
-    # else()
-    #     message(STATUS "Microsoft GSL: found")
-    # endif()
-
-    # find_package(Flatbuffers REQUIRED)
-    # if(NOT Flatbuffers_FOUND)
-    #     message(FATAL_ERROR "Flatbuffers: not found")
-    # else()
-    #     message(STATUS "Flatbuffers: found")
-    # endif()
 
     add_executable(ozks-perf)
     target_sources(ozks-perf

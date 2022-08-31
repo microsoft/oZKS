@@ -1,6 +1,6 @@
 {
   "name": "ozks-perf",
-  "version-string": "0.3.0",
+  "version-string": "1.0.0",
   "dependencies": [
     "ms-gsl",
     "flatbuffers",
