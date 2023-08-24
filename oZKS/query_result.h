@@ -10,6 +10,7 @@
 #include "oZKS/commitment.h"
 #include "oZKS/defines.h"
 #include "oZKS/ozks_config.h"
+#include "oZKS/partial_label.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/vrf.h"
 
@@ -20,7 +21,7 @@ namespace ozks {
         Construct an instance of QueryResult
         */
         QueryResult(const OZKSConfig &config)
-            : is_member_(false), vrf_proof_({}), include_vrf_(config.include_vrf())
+            : use_vrf_(config.label_type() == LabelType::VRFLabels)
         {}
 
         /**
@@ -40,13 +41,14 @@ namespace ozks {
             const VRFProof &vrf_proof,
             const randomness_type &randomness)
             : is_member_(is_member), key_(key), payload_(payload), lookup_proof_(lookup_proof),
-              vrf_proof_(vrf_proof), randomness_(randomness), include_vrf_(config.include_vrf())
+              vrf_proof_(vrf_proof), randomness_(randomness),
+              use_vrf_(config.label_type() == LabelType::VRFLabels)
         {}
 
         /**
         Whether the query found the key that was searched for
         */
-        bool is_member() const
+        bool is_member() const noexcept
         {
             return is_member_;
         }
@@ -54,7 +56,7 @@ namespace ozks {
         /**
         The key that was looked up
         */
-        const key_type &key() const
+        const key_type &key() const noexcept
         {
             return key_;
         }
@@ -62,7 +64,7 @@ namespace ozks {
         /**
         The payload associated with the key that was searched for
         */
-        const payload_type &payload() const
+        const payload_type &payload() const noexcept
         {
             return payload_;
         }
@@ -70,7 +72,7 @@ namespace ozks {
         /**
         Lookup path to the key
         */
-        const lookup_path_type &lookup_proof() const
+        const lookup_path_type &lookup_proof() const noexcept
         {
             return lookup_proof_;
         }
@@ -78,7 +80,7 @@ namespace ozks {
         /**
         VRF proof to validate that the searched key is valid
         */
-        const VRFProof &vrf_proof() const
+        const VRFProof &vrf_proof() const noexcept
         {
             return vrf_proof_;
         }
@@ -86,7 +88,7 @@ namespace ozks {
         /**
         Randomness used to compute the payload commitment
         */
-        const randomness_type &randomness() const
+        const randomness_type &randomness() const noexcept
         {
             return randomness_;
         }
@@ -116,38 +118,33 @@ namespace ozks {
         /**
         Save this query result to a byte vector
         */
-        template <class T>
+        template <typename T>
         std::size_t save(std::vector<T> &vector) const;
-
-        /**
-        Save this query result to a serialization writer
-        */
-        std::size_t save(SerializationWriter &writer) const;
-
-        /**
-        Load a query result from a serialization reader
-        */
-        static std::size_t Load(QueryResult &query_result, SerializationReader &reader);
 
         /**
         Load a query result from a stream
         */
-        static std::size_t Load(QueryResult &query_result, std::istream &stream);
+        static std::pair<QueryResult, std::size_t> Load(
+            const OZKSConfig &config, std::istream &stream);
 
         /**
         Load a query result from a vector
         */
-        template <class T>
-        static std::size_t Load(
-            QueryResult &query_result, const std::vector<T> &vector, std::size_t position = 0);
+        template <typename T>
+        static std::pair<QueryResult, std::size_t> Load(
+            const OZKSConfig &config, const std::vector<T> &vector, std::size_t position = 0);
 
     private:
-        bool is_member_;
-        key_type key_;
-        payload_type payload_;
-        lookup_path_type lookup_proof_;
-        VRFProof vrf_proof_;
-        randomness_type randomness_;
-        bool include_vrf_;
+        bool is_member_ = false;
+        key_type key_{};
+        payload_type payload_{};
+        lookup_path_type lookup_proof_{};
+        VRFProof vrf_proof_{};
+        randomness_type randomness_{};
+        bool use_vrf_ = false;
+
+        std::size_t save(SerializationWriter &writer) const;
+        static std::pair<QueryResult, std::size_t> Load(
+            const OZKSConfig &config, SerializationReader &reader);
     };
 } // namespace ozks

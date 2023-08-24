@@ -1,0 +1,18 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+include "core_types.fbs";
+namespace ozks.fbs;
+
+table OptionalPartialLabel {
+    label:PartialLabel;
+}
+
+table CTNodeStored {
+    label:PartialLabel;
+    hash:Hash;
+    left:OptionalPartialLabel;
+    right:OptionalPartialLabel;
+}
+
+root_type CTNodeStored;

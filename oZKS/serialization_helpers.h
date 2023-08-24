@@ -40,7 +40,7 @@ namespace ozks {
     /**
     Implementation of a serialization writer using a byte vector
     */
-    template <class T>
+    template <typename T>
     class VectorSerializationWriter : public SerializationWriter {
     public:
         VectorSerializationWriter(std::vector<T> *vec) : vec_(vec)
@@ -88,7 +88,7 @@ namespace ozks {
     /**
     Implementation of a serialization reader using a byte vector
     */
-    template <class T>
+    template <typename T>
     class VectorSerializationReader : public SerializationReader {
     public:
         VectorSerializationReader(const std::vector<T> *vec, std::size_t position)

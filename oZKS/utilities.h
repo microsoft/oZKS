@@ -5,23 +5,31 @@
 
 // STD
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
 
 // OZKS
+#include "oZKS/ct_node.h"
 #include "oZKS/defines.h"
+#include "oZKS/partial_label.h"
 #include "oZKS/serialization_helpers.h"
+#include "oZKS/vrf.h"
+#include "oZKS/vrf_cache.h"
 
 // GSL
 #include "gsl/span"
 
 namespace ozks {
     namespace utils {
+        // Generate random bytes and output the result to random_array
+        int random_bytes(std::byte *random_array, std::size_t nbytes);
+
         /**
         Convert the given partial label to a hexadecimal string
         */
-        std::string to_string(const partial_label_type &label);
+        std::string to_string(const PartialLabel &label);
 
         /**
         Convert the given byte vector to an hexadecimal string
@@ -29,41 +37,10 @@ namespace ozks {
         std::string to_string(gsl::span<const std::byte> bytes);
 
         /**
-        Convert the given byte vector to a bool vector
-        */
-        std::vector<bool> bytes_to_bools(gsl::span<const std::byte> bytes);
-
-        /**
-        Convert the given byte data to a bool vector.
-        The paremeter 'size' is the actual number of bits to convert.
-        */
-        std::vector<bool> bytes_to_bools(const std::byte *bytes, std::size_t size);
-
-        /**
-        Convert the given bool vector to a vector of bytes.
-        High-order bits will be padded with zeros if the length of the bool vector is not
-        byte-aligned.
-        */
-        void bools_to_bytes(const std::vector<bool> &bools, std::vector<std::byte> &bytes);
-
-        /**
-        Convert the given bool vector to a vector of bytes.
-        High-order bits will be padded with zeros if the length of the bool vector is not
-        byte-aligned.
-        */
-        std::vector<std::byte> bools_to_bytes(const std::vector<bool> &bools);
-
-        /**
-        Get the high-order bits that are common between the given partial labels.
-        */
-        partial_label_type get_common_prefix(
-            const partial_label_type &label1, const partial_label_type &label2);
-
-        /**
         Initialize a vector of bytes using a list of byte-convertible integers.
         */
-        template <typename... Ts>
-        std::vector<std::byte> make_bytes(Ts &&...args) noexcept
+        template <typename Out, typename... Ts>
+        Out make_bytes(Ts &&... args) noexcept
         {
             return { static_cast<std::byte>(std::forward<Ts>(args))... };
         }
@@ -75,17 +52,21 @@ namespace ozks {
         void copy_bytes(const void *src, std::size_t count, void *dst);
 
         /**
+        Compute an intermediate hash value for the label value in a Compressed Trie.
+        This intermediate hash is used directly as the label if no VRF is used. Otherwise,
+        it is given further as input to the VRF.
+        */
+        hash_type compute_key_hash(const key_type &key);
+
+        /**
         Compute the hash of a leaf node in a Compressed Trie.
         The hash is computed by using BLAKE2 on the concatenation of:
         - partial label
         - payload
         - epoch
         */
-        void compute_leaf_hash(
-            const partial_label_type &label,
-            const payload_type &payload,
-            std::size_t epoch,
-            hash_type &hash);
+        hash_type compute_leaf_hash(
+            const PartialLabel &label, const hash_type &hash, std::size_t epoch);
 
         /**
         Compute the hash of a non-leaf node in a Compressed Trie.
@@ -95,19 +76,18 @@ namespace ozks {
         - partial label of right node
         - hash of right node
         */
-        void compute_node_hash(
-            const partial_label_type &partial_left_label,
+        hash_type compute_node_hash(
+            const PartialLabel &left_label,
             const hash_type &left_hash,
-            const partial_label_type &partial_right_label,
-            const hash_type &right_hash,
-            hash_type &hash);
+            const PartialLabel &right_label,
+            const hash_type &right_hash);
 
         /**
         Compute the hash of a byte buffer and add some randomness to it.
         Returns the hash and the randomness used to compute it.
         */
-        void compute_randomness_hash(
-            gsl::span<const std::byte> buffer, hash_type &hash, randomness_type &randomness);
+        hash_type compute_randomness_hash(
+            gsl::span<const std::byte> buffer, randomness_type &randomness);
 
         /**
         Compute a domain-separated BLAKE2 hash of the given input. In other words, this function
@@ -115,6 +95,42 @@ namespace ozks {
         hash functions from BLAKE2: a separate one for each distinct use.
         */
         hash_type compute_hash(gsl::span<const std::byte> in, const std::string &domain_str);
+
+        /**
+        Compute a domain-separated BLAKE2 hash of the given input. In other words, this function
+        returns BLAKE2(domain_str || in). The benefit is that we can create multiple independent
+        hash functions from BLAKE2: a separate one for each distinct use.
+        The output of this function is of arbitrary length.
+        */
+        void compute_hash(
+            gsl::span<const std::byte> in, const std::string &domain_str, gsl::span<std::byte> out);
+
+        /**
+        Compute a BLAKE2 hash of the given input.
+        */
+        hash_type compute_hash(gsl::span<const std::byte> in);
+
+        /**
+        Compute a BLAKE2 hash of the given input. The output of this function is of arbitrary
+        length.
+        */
+        void compute_hash(gsl::span<const std::byte> in, gsl::span<std::byte> out);
+
+        /**
+        Compute the label for a given key.
+        */
+        hash_type get_node_label(
+            const key_type &key,
+            const VRFSecretKey &vrf_sk,
+            VRFCache &cache,
+            LabelType label_type,
+            std::optional<VRFProof> &proof);
+
+        /**
+        This function computes the label for a given key. In case the VRF proof is not needed,
+        this is faster than calling the overload that includes the VRF proof.
+        */
+        hash_type get_node_label(const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type);
 
         /**
         Hasher for a byte vector.
@@ -153,5 +169,39 @@ namespace ozks {
         a vector.
         */
         std::vector<uint8_t> read_from_serialization_reader(SerializationReader &reader);
+
+        /**
+        Write a path element
+        */
+        std::size_t write_path_element(
+            const PartialLabel &label, const hash_type &hash, SerializationWriter &writer);
+
+        /**
+        Read a path element
+        */
+        std::size_t read_path_element(
+            SerializationReader &reader, PartialLabel &label, hash_type &hash);
+
+        /**
+        Get a payload hash and the randomness used to compute it
+        */
+        std::pair<hash_type, randomness_type> commit_payload(
+            const payload_type &payload, PayloadCommitmentType payload_commitment);
+
+        /**
+        Get the maximum number of threads that can be used for parallelized insertion
+        */
+        std::size_t get_insertion_thread_limit(
+            std::shared_ptr<CTNode> node, std::size_t max_threads = 0);
+
+        /**
+        Get the insertion index for a given bit count
+        */
+        std::size_t get_insertion_index(std::size_t bit_count, const PartialLabel &label);
+
+        /**
+        Get logarithm base 2 of the given number
+        */
+        std::size_t get_log2(std::size_t n);
     } // namespace utils
 } // namespace ozks

@@ -8,6 +8,7 @@ jobs:
 - ${{ if eq(parameters.name, 'Windows') }}:
   - job: ${{ parameters.name }}
     displayName: ${{ parameters.name }}
+    timeoutInMinutes: 240
     pool:
       vmImage: 'windows-latest'
     steps:
@@ -24,6 +25,7 @@ jobs:
 - ${{ if eq(parameters.name, 'Linux') }}:
   - job: ${{ parameters.name }}
     displayName: ${{ parameters.name }}
+    timeoutInMinutes: 240
     pool:
       vmImage: 'ubuntu-latest'
     steps:
@@ -38,6 +40,7 @@ jobs:
 - ${{ if eq(parameters.name, 'macOS') }}:
   - job: ${{ parameters.name }}
     displayName: ${{ parameters.name }}
+    timeoutInMinutes: 240
     pool:
       vmImage: 'macos-latest'
     steps:

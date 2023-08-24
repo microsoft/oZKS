@@ -11,29 +11,37 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)'
     failOnStderr: false
 
-- task: CmdLine@2
-  displayName: 'Configure vcpkg dependencies'
-  inputs:
-    script: |
-      ./vcpkg install flatbuffers ms-gsl gtest
-    workingDirectory: '$(Build.SourcesDirectory)/vcpkg'
-    failOnStderr: false
-
 - task: CMake@1
-  displayName: 'CMake oZKS'
+  displayName: 'CMake oZKS for FourQlib'
   inputs:
     workingDirectory: '$(Build.SourcesDirectory)'
-    cmakeArgs: '-DCMAKE_BUILD_TYPE=${{ parameters.configuration }} -DOZKS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)/vcpkg/scripts/buildsystems/vcpkg.cmake .'
+    cmakeArgs: '-S . -B buildf -DCMAKE_BUILD_TYPE=${{ parameters.configuration }} -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)/vcpkg/scripts/buildsystems/vcpkg.cmake .'
+
+- task: CMake@1
+  displayName: 'CMake oZKS for OpenSSL'
+  inputs:
+    workingDirectory: '$(Build.SourcesDirectory)'
+    cmakeArgs: '-S . -B buildo -DCMAKE_BUILD_TYPE=${{ parameters.configuration }} -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DOZKS_USE_OPENSSL_P256=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)/vcpkg/scripts/buildsystems/vcpkg.cmake .'
 
 - script: |
-      cd $BUILD_SOURCESDIRECTORY
+      cd $BUILD_SOURCESDIRECTORY/buildf
       make
-  displayName: 'Build oZKS'
+  displayName: 'Build oZKS for FourQlib'
+
+- script: |
+      cd $BUILD_SOURCESDIRECTORY/buildo
+      make
+  displayName: 'Build oZKS for OpenSSL'
 
 - script: |
       cd $BUILD_SOURCESDIRECTORY
-      ./bin/unit_tests
-  displayName: 'Run unit tests'
+      ./buildf/bin/unit_tests
+  displayName: 'Run unit tests - FourQlib'
+
+- script: |
+      cd $BUILD_SOURCESDIRECTORY
+      ./buildo/bin/unit_tests
+  displayName: 'Run unit tests - OpenSSL'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'

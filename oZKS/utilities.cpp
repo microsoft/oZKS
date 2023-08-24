@@ -3,26 +3,42 @@
 
 // STD
 #include <algorithm>
-#include <cstring>
+#include <array>
 #include <iomanip>
 #include <sstream>
-#include <vector>
+#include <thread>
 
 // OZKS
+#include "oZKS/core_types_generated.h"
 #include "oZKS/fourq/random.h"
 #include "oZKS/hash/blake2.h"
+#include "oZKS/path_element_generated.h"
 #include "oZKS/utilities.h"
 
 using namespace std;
 using namespace ozks;
 
-string utils::to_string(const partial_label_type &label)
+namespace {
+    hash_type clear_lsb(hash_type hash)
+    {
+        hash[0] &= std::byte{ 0xFE };
+        return hash;
+    }
+} // namespace
+
+int utils::random_bytes(byte *random_array, size_t nbytes)
+{
+    return ::random_bytes(
+        reinterpret_cast<unsigned char *>(random_array), static_cast<unsigned int>(nbytes));
+}
+
+string utils::to_string(const PartialLabel &label)
 {
     stringstream ss;
-    size_t bit_idx = 0;
+    uint32_t bit_index = 0;
 
-    while (bit_idx < label.size()) {
-        ss << (label[bit_idx++] ? "1" : "0");
+    while (bit_index < label.bit_count()) {
+        ss << (label[bit_index++] ? "1" : "0");
     }
 
     return ss.str();
@@ -41,144 +57,45 @@ string utils::to_string(gsl::span<const byte> bytes)
     return ss.str();
 }
 
-vector<bool> utils::bytes_to_bools(gsl::span<const byte> bytes)
+hash_type utils::compute_key_hash(const key_type &key)
 {
-    size_t vec_size = bytes.size() * 8;
-    vector<bool> result(vec_size);
-
-    size_t bit_idx = 0;
-    for_each(bytes.begin(), bytes.end(), [&](const byte &bt) {
-        for (int bit = 7; bit >= 0; bit--) {
-            byte mask = byte{ 1 } << bit;
-            result[bit_idx++] = (bt & mask) != byte{ 0 };
-        }
-    });
-
-    return result;
+    return compute_hash(key, "key_hash");
 }
 
-vector<bool> utils::bytes_to_bools(const byte *bytes, size_t size)
+hash_type utils::compute_leaf_hash(const PartialLabel &label, const hash_type &hash, size_t epoch)
 {
-    vector<bool> result(size);
-    size_t bit_mod = size % 8;
-    size_t bit_idx = (bit_mod == 0) ? 7 : (size % 8) - 1;
-    size_t byte_idx = 0;
+    array<byte, PartialLabel::ByteCount + hash_size + sizeof(epoch)> buffer{};
+    utils::copy_bytes(label.data(), PartialLabel::ByteCount, buffer.data());
+    utils::copy_bytes(hash.data(), hash_size, buffer.data() + PartialLabel::ByteCount);
+    utils::copy_bytes(&epoch, sizeof(epoch), buffer.data() + PartialLabel::ByteCount + hash_size);
 
-    for (size_t idx = 0; idx < size; idx++) {
-        byte mask = byte{ 1 } << bit_idx;
-        result[idx] = (bytes[byte_idx] & mask) != byte{ 0 };
-
-        if (bit_idx == 0) {
-            bit_idx = 7;
-            byte_idx++;
-        } else {
-            bit_idx--;
-        }
-    }
-
-    return result;
+    return clear_lsb(compute_hash(buffer, "leaf_hash"));
 }
 
-void utils::bools_to_bytes(const vector<bool> &bools, vector<byte> &bytes)
-{
-    bytes.resize(0);
-    size_t bit_idx = (bools.size() % 8);
-    byte curr_byte = byte{ 0 };
-
-    if (bit_idx == 0) {
-        bit_idx = 7;
-    } else {
-        bit_idx--;
-    }
-
-    for_each(bools.begin(), bools.end(), [&](const bool &bl) {
-        byte mask = bl ? byte{ 1 } : byte{ 0 };
-        mask <<= bit_idx;
-        curr_byte |= mask;
-
-        if (bit_idx == 0) {
-            bytes.push_back(curr_byte);
-            bit_idx = 7;
-            curr_byte = byte{ 0 };
-        } else {
-            bit_idx--;
-        }
-    });
-
-    if (bools.size() > 0 && bytes.size() == 0) {
-        // Add whatever we have
-        bytes.push_back(curr_byte);
-    }
-}
-
-vector<byte> utils::bools_to_bytes(const vector<bool> &bools)
-{
-    vector<byte> result;
-    bools_to_bytes(bools, result);
-    return result;
-}
-
-partial_label_type utils::get_common_prefix(
-    const partial_label_type &label1, const partial_label_type &label2)
-{
-    partial_label_type result;
-
-    size_t bit_idx = 0;
-    while (bit_idx < label1.size() && bit_idx < label2.size() &&
-           label1[bit_idx] == label2[bit_idx]) {
-        result.push_back(label1[bit_idx]);
-        bit_idx++;
-    }
-
-    return result;
-}
-
-void utils::compute_leaf_hash(
-    const partial_label_type &label, const payload_type &payload, size_t epoch, hash_type &hash)
-{
-    vector<byte> lbl;
-    utils::bools_to_bytes(label, lbl);
-    vector<byte> buffer(lbl.size() + payload.size() + sizeof(size_t));
-    utils::copy_bytes(lbl.data(), lbl.size(), buffer.data());
-    utils::copy_bytes(payload.data(), payload.size(), buffer.data() + lbl.size());
-    utils::copy_bytes(&epoch, sizeof(size_t), buffer.data() + lbl.size() + payload.size());
-
-    hash = compute_hash(buffer, "leaf_hash");
-}
-
-void utils::compute_node_hash(
-    const partial_label_type &partial_left_label,
+hash_type utils::compute_node_hash(
+    const PartialLabel &left_label,
     const hash_type &left_hash,
-    const partial_label_type &partial_right_label,
-    const hash_type &right_hash,
-    hash_type &hash)
+    const PartialLabel &right_label,
+    const hash_type &right_hash)
 {
-    // Hash is a concatenation of left and right hashes
-    label_type left_label = bools_to_bytes(partial_left_label);
-    label_type right_label = bools_to_bytes(partial_right_label);
-
-    vector<byte> buffer(
-        left_label.size() + left_hash.size() + right_label.size() + right_hash.size());
-    utils::copy_bytes(left_label.data(), left_label.size(), buffer.data());
-    utils::copy_bytes(left_hash.data(), left_hash.size(), buffer.data() + left_label.size());
+    array<byte, PartialLabel::ByteCount + hash_size + PartialLabel::ByteCount + hash_size> buffer{};
+    utils::copy_bytes(left_label.data(), PartialLabel::ByteCount, buffer.data());
+    utils::copy_bytes(left_hash.data(), hash_size, buffer.data() + PartialLabel::ByteCount);
     utils::copy_bytes(
         right_label.data(),
-        right_label.size(),
-        buffer.data() + left_label.size() + left_hash.size());
+        PartialLabel::ByteCount,
+        buffer.data() + PartialLabel::ByteCount + hash_size);
     utils::copy_bytes(
         right_hash.data(),
-        right_hash.size(),
-        buffer.data() + left_label.size() + left_hash.size() + right_label.size());
+        hash_size,
+        buffer.data() + PartialLabel::ByteCount + hash_size + PartialLabel::ByteCount);
 
-    hash = compute_hash(buffer, "node_hash");
+    return clear_lsb(compute_hash(buffer, "node_hash"));
 }
 
-void utils::compute_randomness_hash(
-    gsl::span<const byte> buffer, hash_type &hash, randomness_type &randomness)
+hash_type utils::compute_randomness_hash(gsl::span<const byte> buffer, randomness_type &randomness)
 {
-    if (!random_bytes(
-            reinterpret_cast<unsigned char *>(randomness.data()),
-            static_cast<unsigned int>(randomness.size()))) {
+    if (!random_bytes(randomness.data(), randomness.size())) {
         throw runtime_error("Failed to get random bytes");
     }
 
@@ -186,26 +103,81 @@ void utils::compute_randomness_hash(
     utils::copy_bytes(buffer.data(), buffer.size(), hash_buffer.data());
     utils::copy_bytes(randomness.data(), randomness.size(), hash_buffer.data() + buffer.size());
 
-    hash = compute_hash(hash_buffer, "randomness_hash");
+    return compute_hash(hash_buffer, "randomness_hash");
 }
 
 hash_type utils::compute_hash(gsl::span<const byte> in, const string &domain_str)
+{
+    hash_type hash{};
+    compute_hash(in, domain_str, hash);
+    return hash;
+}
+
+void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte> out)
 {
     // Create the actual input buffer by prepending the given input with domain_str
     vector<byte> hash_in(in.size() + domain_str.size());
     utils::copy_bytes(domain_str.c_str(), domain_str.size(), hash_in.data());
     utils::copy_bytes(in.data(), in.size(), hash_in.data() + domain_str.size());
 
-    hash_type hash;
     blake2b(
-        hash.data(),
-        hash.size(),
-        hash_in.data(),
-        hash_in.size(),
-        /* key */ nullptr,
-        /* keylen */ 0);
+        out.data(), out.size(), hash_in.data(), hash_in.size(), /* key */ nullptr, /* keylen */ 0);
+}
 
+hash_type utils::compute_hash(gsl::span<const byte> in)
+{
+    hash_type hash{};
+    compute_hash(in, hash);
     return hash;
+}
+
+void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte> out)
+{
+    blake2b(out.data(), out.size(), in.data(), in.size(), /* key */ nullptr, /* keylen */ 0);
+}
+
+hash_type utils::get_node_label(
+    const key_type &key,
+    const VRFSecretKey &vrf_sk,
+    VRFCache &cache,
+    LabelType label_type,
+    optional<VRFProof> &proof)
+{
+    // In any case, first hash the key with utils::compute_key_hash
+    hash_type key_hash = utils::compute_key_hash(key);
+    proof = nullopt;
+
+    if (label_type == LabelType::VRFLabels) {
+        // Look up the VRF proof from the cache
+        proof = cache.get(key_hash);
+
+        // Not found? Need to compute the proof and add it to the cache
+        if (!proof.has_value()) {
+            proof = vrf_sk.get_vrf_proof(key_hash);
+            cache.add(key_hash, proof.value());
+        }
+
+        // key_hash needs to be updated to be the VRF value hash.
+        // Note that we have not verified the validity of the proof here.
+        // We assume it is valid, as it is loaded from the cache and the
+        // cache is only populated with valid proofs.
+        key_hash = proof.value().compute_vrf_value();
+    }
+
+    return key_hash;
+}
+
+hash_type utils::get_node_label(const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type)
+{
+    // In any case, first hash the key with utils::compute_key_hash
+    hash_type key_hash = utils::compute_key_hash(key);
+
+    if (label_type == LabelType::VRFLabels) {
+        // If this OZKS uses VRFs, set key_hash instead to the VRF value (hash)
+        key_hash = vrf_sk.get_vrf_value(key_hash);
+    }
+
+    return key_hash;
 }
 
 void utils::copy_bytes(const void *src, size_t count, void *dst)
@@ -262,4 +234,152 @@ vector<uint8_t> utils::read_from_serialization_reader(SerializationReader &reade
     read_from_serialization_reader(reader, size, result);
 
     return result;
+}
+
+size_t utils::write_path_element(
+    const PartialLabel &label, const hash_type &hash, SerializationWriter &writer)
+{
+    flatbuffers::FlatBufferBuilder f_builder;
+
+    array<uint8_t, PartialLabel::SaveSize> label_data{};
+    label.save(gsl::span<uint8_t, PartialLabel::SaveSize>(label_data));
+    fbs::PathElementData pe_data(
+        flatbuffers::span<const uint8_t, hash_size>{ reinterpret_cast<const uint8_t *>(hash.data()),
+                                                     hash_size },
+        flatbuffers::span<const uint8_t, PartialLabel::SaveSize>{ label_data });
+
+    fbs::PathElementBuilder pe_builder(f_builder);
+    pe_builder.add_path_element(&pe_data);
+
+    auto fbs_append_proof = pe_builder.Finish();
+    f_builder.FinishSizePrefixed(fbs_append_proof);
+
+    writer.write(f_builder.GetBufferPointer(), f_builder.GetSize());
+    return f_builder.GetSize();
+}
+
+size_t utils::read_path_element(SerializationReader &reader, PartialLabel &label, hash_type &hash)
+{
+    vector<unsigned char> pe_data(read_from_serialization_reader(reader));
+    auto pe_verifier =
+        flatbuffers::Verifier(reinterpret_cast<uint8_t *>(pe_data.data()), pe_data.size());
+    bool pe_safe = fbs::VerifySizePrefixedPathElementBuffer(pe_verifier);
+    if (!pe_safe) {
+        throw runtime_error("Failed to load PathElement: invalid PathElement buffer");
+    }
+
+    auto fbs_path_element = fbs::GetSizePrefixedPathElement(pe_data.data());
+    copy_bytes(fbs_path_element->path_element()->hash().data()->data(), hash_size, hash.data());
+    label.load(gsl::span<const uint8_t, PartialLabel::SaveSize>{
+        fbs_path_element->path_element()->label().data()->data(),
+        fbs_path_element->path_element()->label().data()->size() });
+
+    return pe_data.size();
+}
+
+pair<hash_type, randomness_type> utils::commit_payload(
+    const payload_type &payload, PayloadCommitmentType payload_commitment)
+{
+    randomness_type randomness;
+    hash_type payload_hash;
+
+    if (payload_commitment == PayloadCommitmentType::CommitedPayload) {
+        payload_hash = compute_randomness_hash(payload, randomness);
+    } else {
+        payload_hash = compute_hash(payload, "commitment_hash");
+    }
+
+    // Returns payload_com and the randomness used to compute it
+    return { payload_hash, randomness };
+}
+
+size_t utils::get_insertion_thread_limit(shared_ptr<CTNode> node, size_t max_threads)
+{
+    size_t max_limit = thread::hardware_concurrency();
+    if (max_threads != 0) {
+        max_limit = max_threads;
+    }
+
+    // If node is null, we simply return the max_limit
+    if (node == nullptr) {
+        return max_limit;
+    }
+
+    size_t curr_limit = 1;
+    vector<shared_ptr<CTNode>> level;
+
+    auto check_node = [](shared_ptr<CTNode> n, vector<shared_ptr<CTNode>> &next_lvl) {
+        PartialLabel left_child_lbl = n->label();
+        left_child_lbl.add_bit(false);
+        PartialLabel right_child_lbl = n->label();
+        right_child_lbl.add_bit(true);
+
+        shared_ptr<CTNode> left = n->left();
+        shared_ptr<CTNode> right = n->right();
+
+        if (nullptr == left || nullptr == right || left->label() != left_child_lbl ||
+            right->label() != right_child_lbl) {
+            return false;
+        }
+
+        next_lvl.push_back(left);
+        next_lvl.push_back(right);
+
+        return true;
+    };
+
+    // First level
+    if (!check_node(node, level)) {
+        return curr_limit;
+    }
+
+    curr_limit *= 2;
+
+    // Next levels
+    while (true) {
+        vector<shared_ptr<CTNode>> next_level;
+
+        for (size_t idx = 0; idx < level.size(); idx += 2) {
+            if (!check_node(level[idx], next_level)) {
+                return curr_limit;
+            }
+
+            if (!check_node(level[idx + 1], next_level)) {
+                return curr_limit;
+            }
+
+            curr_limit *= 2;
+            if (curr_limit == max_limit) {
+                return curr_limit;
+            }
+            if (curr_limit > max_limit) {
+                return curr_limit /= 2;
+            }
+
+            level.swap(next_level);
+            next_level.clear();
+        }
+    }
+}
+
+size_t utils::get_insertion_index(size_t bit_count, const PartialLabel &label)
+{
+    size_t result = 0;
+    for (size_t idx = 0; idx < bit_count && idx < label.bit_count(); idx++) {
+        result <<= 1;
+        result |= static_cast<size_t>(label[idx]);
+    }
+
+    return result;
+}
+
+size_t utils::get_log2(size_t n)
+{
+    size_t r = 0;   // r will be log(v)
+    while (n >>= 1) // unroll for more speed...
+    {
+        r++;
+    }
+
+    return r;
 }

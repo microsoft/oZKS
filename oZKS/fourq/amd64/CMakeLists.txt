@@ -3,7 +3,7 @@
 
 # Source files in this directory
 if(OZKS_FOURQ_USE_ASM)
-    if(HAVE_AVX2_EXTENSIONS)
+    if(OZKS_FOURQ_USE_AVX2)
         set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}
             ${CMAKE_CURRENT_LIST_DIR}/consts.c
             ${CMAKE_CURRENT_LIST_DIR}/fp2_1271_AVX2.S

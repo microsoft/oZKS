@@ -4,6 +4,7 @@
 // STD
 
 // OZKS
+#include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage_cache.h"
 
 using namespace std;
@@ -14,12 +15,15 @@ MemoryStorageCache::~MemoryStorageCache()
 {}
 
 bool MemoryStorageCache::load_ctnode(
-    const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
+    trie_id_type trie_id,
+    const PartialLabel &node_id,
+    shared_ptr<Storage> storage,
+    CTNodeStored &node)
 {
     StorageNodeKey key(trie_id, node_id);
     auto cached_node = node_cache_.get(key);
     if (cached_node.isNull()) {
-        if (!storage_->load_ctnode(trie_id, node_id, node))
+        if (!storage_->load_ctnode(trie_id, node_id, storage, node))
             return false;
 
         node_cache_.add(key, node);
@@ -30,14 +34,14 @@ bool MemoryStorageCache::load_ctnode(
     return true;
 }
 
-void MemoryStorageCache::save_ctnode(const vector<byte> &trie_id, const CTNode &node)
+void MemoryStorageCache::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
-    StorageNodeKey key(trie_id, node.label);
+    StorageNodeKey key(trie_id, node.label());
     storage_->save_ctnode(trie_id, node);
     node_cache_.update(key, node);
 }
 
-bool MemoryStorageCache::load_compressed_trie(const vector<byte> &trie_id, CompressedTrie &trie)
+bool MemoryStorageCache::load_compressed_trie(trie_id_type trie_id, CompressedTrie &trie)
 {
     StorageTrieKey key(trie_id);
     auto cached_trie = trie_cache_.get(key);
@@ -60,31 +64,8 @@ void MemoryStorageCache::save_compressed_trie(const CompressedTrie &trie)
     trie_cache_.update(key, trie);
 }
 
-bool MemoryStorageCache::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
-{
-    StorageOZKSKey key(trie_id);
-    auto cached_ozks = ozks_cache_.get(key);
-    if (cached_ozks.isNull()) {
-        if (!storage_->load_ozks(trie_id, ozks))
-            return false;
-
-        ozks_cache_.add(key, ozks);
-        return true;
-    }
-
-    ozks = *(cached_ozks.get());
-    return true;
-}
-
-void MemoryStorageCache::save_ozks(const OZKS &ozks)
-{
-    StorageOZKSKey key(ozks.id());
-    storage_->save_ozks(ozks);
-    ozks_cache_.update(key, ozks);
-}
-
 bool MemoryStorageCache::load_store_element(
-    const vector<byte> &trie_id, const vector<byte> &se_key, store_value_type &value)
+    trie_id_type trie_id, const vector<byte> &se_key, store_value_type &value)
 {
     StorageStoreElementKey key(trie_id, se_key);
     auto cached_store_element = store_element_cache_.get(key);
@@ -101,21 +82,21 @@ bool MemoryStorageCache::load_store_element(
 }
 
 void MemoryStorageCache::save_store_element(
-    const vector<byte> &trie_id, const vector<byte> &se_key, const store_value_type &value)
+    trie_id_type trie_id, const vector<byte> &se_key, const store_value_type &value)
 {
     StorageStoreElementKey key(trie_id, se_key);
     storage_->save_store_element(trie_id, se_key, value);
     store_element_cache_.update(key, value);
 }
 
-void MemoryStorageCache::flush(const vector<byte> &trie_id)
+void MemoryStorageCache::flush(trie_id_type trie_id)
 {
     storage_->flush(trie_id);
 }
 
-void MemoryStorageCache::add_ctnode(const vector<byte> &trie_id, const CTNode &node)
+void MemoryStorageCache::add_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
-    StorageNodeKey key(trie_id, node.label);
+    StorageNodeKey key(trie_id, node.label());
     node_cache_.update(key, node);
 }
 
@@ -126,13 +107,13 @@ void MemoryStorageCache::add_compressed_trie(const CompressedTrie &trie)
 }
 
 void MemoryStorageCache::add_store_element(
-    const vector<byte> &trie_id, const vector<byte> &se_key, const store_value_type &value)
+    trie_id_type trie_id, const vector<byte> &se_key, const store_value_type &value)
 {
     StorageStoreElementKey key(trie_id, se_key);
     store_element_cache_.update(key, value);
 }
 
-size_t MemoryStorageCache::get_compressed_trie_epoch(const vector<byte> &trie_id)
+size_t MemoryStorageCache::get_compressed_trie_epoch(trie_id_type trie_id)
 {
     CompressedTrie trie;
 
@@ -150,12 +131,12 @@ size_t MemoryStorageCache::get_compressed_trie_epoch(const vector<byte> &trie_id
 }
 
 void MemoryStorageCache::load_updated_elements(
-    size_t epoch, const vector<byte> &trie_id, Storage *storage)
+    size_t epoch, trie_id_type trie_id, shared_ptr<Storage> storage)
 {
     storage_->load_updated_elements(epoch, trie_id, storage);
 }
 
-void MemoryStorageCache::delete_ozks(const vector<byte> &trie_id)
+void MemoryStorageCache::delete_ozks(trie_id_type trie_id)
 {
     {
         // Look for nodes to delete
@@ -175,10 +156,6 @@ void MemoryStorageCache::delete_ozks(const vector<byte> &trie_id)
     // There should be a single compressed trie with the id
     StorageTrieKey trie_key(trie_id);
     trie_cache_.remove(trie_key);
-
-    // There should be a single OZKS instance with the id
-    StorageOZKSKey ozks_key(trie_id);
-    ozks_cache_.remove(ozks_key);
 
     {
         // Look for store elements to delete

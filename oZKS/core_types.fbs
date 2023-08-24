@@ -1,0 +1,20 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+namespace ozks.fbs;
+
+struct PartialLabel {
+    data:[ubyte:36];
+}
+
+struct Hash {
+    data:[ubyte:32];
+}
+
+struct RootCommitment {
+    data:[ubyte:32];
+}
+
+struct Randomness {
+    data:[ubyte:32];
+}

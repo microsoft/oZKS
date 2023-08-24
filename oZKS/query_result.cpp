@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 // oZKS
-#include "oZKS/path_element_generated.h"
 #include "oZKS/query_result.h"
 #include "oZKS/query_result_generated.h"
 #include "oZKS/utilities.h"
@@ -19,30 +18,21 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
         throw runtime_error("Append proof cannot be empty");
     }
 
-    partial_label_type common;
-    partial_label_type partial_label = lookup_proof()[0].first;
+    PartialLabel partial_label = lookup_proof()[0].first;
     hash_type hash = lookup_proof()[0].second;
     hash_type temp_hash;
 
     for (size_t idx = 1; idx < lookup_proof().size(); idx++) {
-        auto sibling = lookup_proof()[idx];
-        common = utils::get_common_prefix(sibling.first, partial_label);
-
-        if (!is_member_ && sibling.first == partial_label) {
-            // In the case of non-membership, this case will happen. Verify that the hash
-            // matches.
-            if (hash != sibling.second) {
-                return false;
-            }
-
-            continue;
-        }
+        auto &sibling = lookup_proof()[idx];
+        PartialLabel common = PartialLabel::CommonPrefix(sibling.first, partial_label);
 
         // These are sibling nodes
-        if (partial_label[common.size()] == 0) {
-            utils::compute_node_hash(partial_label, hash, sibling.first, sibling.second, temp_hash);
+        if (partial_label[common.bit_count()] == 0) {
+            temp_hash =
+                utils::compute_node_hash(partial_label, hash, sibling.first, sibling.second);
         } else {
-            utils::compute_node_hash(sibling.first, sibling.second, partial_label, hash, temp_hash);
+            temp_hash =
+                utils::compute_node_hash(sibling.first, sibling.second, partial_label, hash);
         }
 
         // Up the tree
@@ -53,21 +43,21 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
     // At the end, the resulting hash is either:
     // - The commitment
     // - the last child node hash we need to get the commitment
-    commitment_type hash_commitment;
+    commitment_type hash_commitment{};
     utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
     if (hash_commitment == commitment) {
         return true;
     }
 
-    if (partial_label.size() == 0) {
+    if (partial_label.bit_count() == 0) {
         // This means the current hash should have matched the commitment, but it didn't
         return false;
     }
 
     if (partial_label[0] == 0) {
-        utils::compute_node_hash(partial_label, hash, {}, {}, temp_hash);
+        temp_hash = utils::compute_node_hash(partial_label, hash, {}, {});
     } else {
-        utils::compute_node_hash({}, {}, partial_label, hash, temp_hash);
+        temp_hash = utils::compute_node_hash({}, {}, partial_label, hash);
     }
 
     utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
@@ -76,14 +66,14 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
 
 bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
 {
-    hash_type hash;
-    return public_key.verify_proof(key_, vrf_proof(), hash);
+    hash_type key_hash = utils::compute_key_hash(key_);
+    return public_key.verify_vrf_proof(key_hash, vrf_proof_);
 }
 
 bool QueryResult::verify(const Commitment &commitment) const
 {
     bool verified = verify_lookup_path(commitment.root_commitment());
-    if (include_vrf_) {
+    if (use_vrf_) {
         verified = verified && verify_vrf_proof(commitment.public_key());
     }
     return verified;
@@ -95,7 +85,7 @@ size_t QueryResult::save(ostream &stream) const
     return save(writer);
 }
 
-template <class T>
+template <typename T>
 size_t QueryResult::save(vector<T> &vector) const
 {
     VectorSerializationWriter writer(&vector);
@@ -115,7 +105,7 @@ size_t QueryResult::save(SerializationWriter &writer) const
 
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> vrf_proof_data = 0;
 
-    if (include_vrf_) {
+    if (use_vrf_) {
         vector<byte> vrf_proof_bytes(
             utils::ECPoint::save_size + utils::ECPoint::order_size + utils::ECPoint::order_size);
 
@@ -140,7 +130,7 @@ size_t QueryResult::save(SerializationWriter &writer) const
     qr_builder.add_payload(payload_data);
     qr_builder.add_vrf_proof(vrf_proof_data);
     qr_builder.add_randomness(randomness_data);
-    qr_builder.add_include_vrf(include_vrf_);
+    qr_builder.add_use_vrf(use_vrf_);
     qr_builder.add_lookup_proof_count(static_cast<uint32_t>(lookup_proof().size()));
 
     auto fbs_query_result = qr_builder.Finish();
@@ -151,33 +141,14 @@ size_t QueryResult::save(SerializationWriter &writer) const
     // Write all lookup proof elements after the main structure
     size_t lp_size = 0;
     for (size_t idx = 0; idx < lookup_proof().size(); idx++) {
-        flatbuffers::FlatBufferBuilder f_builder;
         const auto &lp = lookup_proof()[idx];
-
-        auto hash_data = f_builder.CreateVector(
-            reinterpret_cast<const uint8_t *>(lp.second.data()), lp.second.size());
-
-        vector<byte> label_bytes = utils::bools_to_bytes(lp.first);
-        auto label_data = f_builder.CreateVector(
-            reinterpret_cast<const uint8_t *>(label_bytes.data()), label_bytes.size());
-
-        fbs::PathElementBuilder pe_builder(f_builder);
-
-        pe_builder.add_hash(hash_data);
-        pe_builder.add_partial_label(label_data);
-        pe_builder.add_partial_label_size(static_cast<uint32_t>(lp.first.size()));
-
-        auto fbs_append_proof = pe_builder.Finish();
-        f_builder.FinishSizePrefixed(fbs_append_proof);
-
-        writer.write(f_builder.GetBufferPointer(), f_builder.GetSize());
-        lp_size += f_builder.GetSize();
+        lp_size += utils::write_path_element(lp.first, lp.second, writer);
     }
 
     return fbs_builder.GetSize() + lp_size;
 }
 
-size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
+pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, SerializationReader &reader)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -191,8 +162,9 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
 
     auto fbs_query_result = fbs::GetSizePrefixedQueryResult(in_data.data());
 
+    QueryResult query_result(config);
     query_result.is_member_ = fbs_query_result->is_member();
-    query_result.include_vrf_ = fbs_query_result->include_vrf();
+    query_result.use_vrf_ = fbs_query_result->use_vrf();
 
     query_result.key_.resize(fbs_query_result->key()->size());
     utils::copy_bytes(
@@ -214,7 +186,7 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
 
     query_result.lookup_proof_.resize(fbs_query_result->lookup_proof_count());
 
-    if (query_result.include_vrf_) {
+    if (query_result.use_vrf_) {
         utils::copy_bytes(
             fbs_query_result->vrf_proof()->data(),
             utils::ECPoint::save_size,
@@ -238,53 +210,31 @@ size_t QueryResult::Load(QueryResult &query_result, SerializationReader &reader)
     size_t lp_size = 0;
 
     for (size_t idx = 0; idx < lp_count; idx++) {
-        vector<unsigned char> pe_data(utils::read_from_serialization_reader(reader));
-        auto pe_verifier =
-            flatbuffers::Verifier(reinterpret_cast<uint8_t *>(pe_data.data()), pe_data.size());
-        bool pe_safe = fbs::VerifySizePrefixedPathElementBuffer(pe_verifier);
-        if (!pe_safe) {
-            throw runtime_error("Failed to load PathElement: invalid PathElement buffer");
-        }
-
-        auto fbs_path_element = fbs::GetSizePrefixedPathElement(pe_data.data());
-
-        query_result.lookup_proof_[idx].first = utils::bytes_to_bools(
-            reinterpret_cast<const byte *>(fbs_path_element->partial_label()->data()),
-            fbs_path_element->partial_label_size());
-
-        // Hash size is fixed
-        if (query_result.lookup_proof_[idx].second.size() != fbs_path_element->hash()->size()) {
-            throw runtime_error("Serialized hash size does not match");
-        }
-
-        utils::copy_bytes(
-            fbs_path_element->hash()->data(),
-            fbs_path_element->hash()->size(),
-            query_result.lookup_proof_[idx].second.data());
-
-        lp_size += pe_data.size();
+        lp_size += utils::read_path_element(
+            reader, query_result.lookup_proof_[idx].first, query_result.lookup_proof_[idx].second);
     }
 
-    return in_data.size() + lp_size;
+    return { query_result, in_data.size() + lp_size };
 }
 
-size_t QueryResult::Load(QueryResult &query_result, istream &stream)
+pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, istream &stream)
 {
     StreamSerializationReader reader(&stream);
-    return Load(query_result, reader);
+    return Load(config, reader);
 }
 
-template <class T>
-size_t QueryResult::Load(QueryResult &query_result, const vector<T> &vector, size_t position)
+template <typename T>
+pair<QueryResult, size_t> QueryResult::Load(
+    const OZKSConfig &config, const vector<T> &vector, size_t position)
 {
     VectorSerializationReader reader(&vector, position);
-    return Load(query_result, reader);
+    return Load(config, reader);
 }
 
 // Explicit instantiations
 template size_t QueryResult::save(vector<uint8_t> &vector) const;
 template size_t QueryResult::save(vector<byte> &vector) const;
-template size_t QueryResult::Load(
-    QueryResult &query_result, const vector<uint8_t> &vector, size_t position);
-template size_t QueryResult::Load(
-    QueryResult &query_result, const vector<byte> &vector, size_t position);
+template pair<QueryResult, size_t> QueryResult::Load(
+    const OZKSConfig &config, const vector<uint8_t> &vector, size_t position);
+template pair<QueryResult, size_t> QueryResult::Load(
+    const OZKSConfig &config, const vector<byte> &vector, size_t position);

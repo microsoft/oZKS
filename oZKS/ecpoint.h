@@ -6,85 +6,157 @@
 // STD
 #include <array>
 #include <cstddef>
-#include <cstring>
 #include <iostream>
-#include <memory>
 
 // OZKS
+#include "oZKS/config.h"
 #include "oZKS/defines.h"
-#include "oZKS/fourq/FourQ.h"
 
 // GSL
 #include "gsl/span"
 
+#ifdef OZKS_USE_OPENSSL_P256
 namespace ozks {
     namespace utils {
-        class ECPoint {
+        class P256Point {
         public:
-            static constexpr std::size_t save_size = sizeof(f2elm_t);
-            static constexpr std::size_t point_size = sizeof(point_t);
-            static constexpr std::size_t order_size = sizeof(digit_t) * NWORDS_ORDER;
+            // Size with point compression
+            static constexpr std::size_t save_size = 33;
+            static constexpr std::size_t order_size = 32;
 
-            using scalar_type = std::array<std::byte, order_size>;
-            using scalar_const_type = const scalar_type;
-
-            using scalar_span_type = gsl::span<std::byte, order_size>;
             using scalar_span_const_type = gsl::span<const std::byte, order_size>;
-
+            using scalar_span_type = gsl::span<std::byte, order_size>;
             using input_span_const_type = gsl::span<const std::byte>;
-
             using point_save_span_type = gsl::span<std::byte, save_size>;
             using point_save_span_const_type = gsl::span<const std::byte, save_size>;
 
-            // Output hash size is 32 bytes: 16 for item hash and 16 for label encryption key
+            class scalar_type {
+            public:
+                scalar_type();
+
+                ~scalar_type();
+
+                scalar_type(void *scalar_ptr);
+
+                scalar_type(scalar_span_const_type in);
+
+                scalar_type &operator=(const scalar_type &assign);
+
+                scalar_type(const scalar_type &assign) : scalar_type()
+                {
+                    operator=(assign);
+                }
+
+                scalar_type &operator=(scalar_type &&source) noexcept;
+
+                scalar_type(scalar_type &&source) noexcept
+                {
+                    operator=(std::move(source));
+                }
+
+                bool operator==(const scalar_type &other) const;
+
+                bool operator!=(const scalar_type &other) const
+                {
+                    return !operator==(other);
+                }
+
+                void *ptr() noexcept
+                {
+                    return scalar_;
+                }
+
+                const void *ptr() const noexcept
+                {
+                    return scalar_;
+                }
+
+                constexpr std::size_t size() noexcept
+                {
+                    return order_size;
+                }
+
+                void set_zero();
+
+                template <typename T>
+                void set_byte(std::size_t index, T value);
+
+                bool is_zero() const;
+
+                void load(scalar_span_const_type in);
+
+                void save(scalar_span_type out) const;
+
+            private:
+                void clean_up();
+
+                void *scalar_ = nullptr;
+            };
+
+            // Output hash size is 32 bytes
             static constexpr std::size_t hash_size = 32;
 
-            using hash_span_type = gsl::span<std::byte, hash_size>;
+            // A string differentiating curve implementations in the library.
+            static constexpr char curve_descriptor[] = "p256_openssl_ozks";
 
-            // Initializes the ECPoint with the neutral element
-            ECPoint() = default;
+            // Initializes the P256Point with the neutral element
+            P256Point();
 
-            ECPoint &operator=(const ECPoint &assign);
+            ~P256Point();
 
-            ECPoint(const ECPoint &copy)
+            P256Point &operator=(const P256Point &assign);
+
+            P256Point &operator=(P256Point &&source) noexcept;
+
+            P256Point(const P256Point &copy) : P256Point()
             {
                 operator=(copy);
             }
 
-            // This function applies SHA512 on value and hashes the output to a uniformly
-            // random elliptic curve point.
-            ECPoint(input_span_const_type value);
+            P256Point(P256Point &&source) noexcept
+            {
+                operator=(std::move(source));
+            }
 
-            // Creates a random non-zero number modulo the prime order subgroup
-            // order and computes its inverse.
-            static void MakeRandomNonzeroScalar(scalar_span_type out);
+            // This function hashes the input to a uniformly random elliptic curve point.
+            // This function is *not* constant-time.
+            P256Point(const hash_type &data);
 
-            static ECPoint MakeGenerator();
+            // This function hashes the input to a uniformly random elliptic curve point.
+            // This function is *not* constant-time.
+            P256Point(const key_type &data);
 
-            static ECPoint MakeGeneratorMultiple(scalar_span_const_type scalar);
+            // Creates a random non-zero number modulo the prime order subgroup.
+            static void MakeRandomNonzeroScalar(scalar_type &out);
 
-            static void InvertScalar(scalar_span_const_type in, scalar_span_type out);
+            static void MakeSeededScalar(input_span_const_type seed, scalar_type &out);
+
+            static P256Point MakeGenerator();
+
+            static P256Point MakeGeneratorMultiple(const scalar_type &scalar);
+
+            static void InvertScalar(const scalar_type &in, scalar_type &out);
 
             static void MultiplyScalar(
-                scalar_span_const_type in1, scalar_span_const_type in2, scalar_span_type out);
+                const scalar_type &in1, const scalar_type &in2, scalar_type &out);
 
-            static void AddScalar(
-                scalar_span_const_type in1, scalar_span_const_type in2, scalar_span_type out);
+            static void AddScalar(const scalar_type &in1, const scalar_type &in2, scalar_type &out);
 
             static void SubtractScalar(
-                scalar_span_const_type in1, scalar_span_const_type in2, scalar_span_type out);
+                const scalar_type &in1, const scalar_type &in2, scalar_type &out);
 
-            static void ReduceModOrder(scalar_span_type scalar);
+            static void ReduceModOrder(scalar_type &scalar);
 
-            bool scalar_multiply(scalar_span_const_type scalar, bool clear_cofactor);
+            static void ReduceModOrder(hash_type &value);
+
+            bool scalar_multiply(const scalar_type &scalar, bool clear_cofactor);
 
             // Computes scalar1*this+scalar2*generator; does not clear cofactor
-            bool double_scalar_multiply(
-                scalar_span_const_type scalar1, scalar_span_const_type scalar2);
+            bool double_scalar_multiply(const scalar_type &scalar1, const scalar_type &scalar2);
 
             bool in_prime_order_subgroup() const;
 
-            void add(const ECPoint &other);
+            void add(const P256Point &other);
 
             void save(std::ostream &stream) const;
 
@@ -94,11 +166,113 @@ namespace ozks {
 
             void load(point_save_span_const_type in);
 
-            hash_type extract_hash() const;
+        private:
+            void clean_up();
+
+            void *pt_ = nullptr;
+        }; // class P256Point
+
+        using ECPoint = P256Point;
+    } // namespace utils
+} // namespace ozks
+#else
+#include "oZKS/fourq/FourQ.h"
+
+namespace ozks {
+    namespace utils {
+        class FourQPoint {
+        public:
+            static constexpr std::size_t save_size = sizeof(f2elm_t);
+            static constexpr std::size_t order_size = sizeof(digit_t) * NWORDS_ORDER;
+
+            using scalar_span_const_type = gsl::span<const std::byte, order_size>;
+            using scalar_span_type = gsl::span<std::byte, order_size>;
+            using input_span_const_type = gsl::span<const std::byte>;
+            using point_save_span_type = gsl::span<std::byte, save_size>;
+            using point_save_span_const_type = gsl::span<const std::byte, save_size>;
+
+            class scalar_type : public std::array<std::byte, order_size> {
+            public:
+                scalar_type() = default;
+
+                scalar_type(scalar_span_const_type in);
+
+                bool is_zero() const;
+
+                void load(scalar_span_const_type in);
+
+                void save(scalar_span_type out) const;
+            };
+
+            // Output hash size is 32 bytes
+            static constexpr std::size_t hash_size = 32;
+
+            // A string differentiating curve implementations in the library.
+            static constexpr char curve_descriptor[] = "fourq_ozks";
+
+            // Initializes the FourQPoint with the neutral element
+            FourQPoint() = default;
+
+            FourQPoint &operator=(const FourQPoint &assign);
+
+            FourQPoint(const FourQPoint &copy)
+            {
+                operator=(copy);
+            }
+
+            // This function hashes the input to a uniformly random elliptic curve point.
+            FourQPoint(const hash_type &value);
+
+            // This function hashes the input to a uniformly random elliptic curve point.
+            FourQPoint(const key_type &data);
+
+            // Creates a random non-zero number modulo the prime order subgroup.
+            static void MakeRandomNonzeroScalar(scalar_type &out);
+
+            // Creates a number modulo the prime order subgropup order using the given data as seed
+            static void MakeSeededScalar(input_span_const_type seed, scalar_type &out);
+
+            static FourQPoint MakeGenerator();
+
+            static FourQPoint MakeGeneratorMultiple(const scalar_type &scalar);
+
+            static void InvertScalar(const scalar_type &in, scalar_type &out);
+
+            static void MultiplyScalar(
+                const scalar_type &in1, const scalar_type &in2, scalar_type &out);
+
+            static void AddScalar(const scalar_type &in1, const scalar_type &in2, scalar_type &out);
+
+            static void SubtractScalar(
+                const scalar_type &in1, const scalar_type &in2, scalar_type &out);
+
+            static void ReduceModOrder(scalar_type &scalar);
+
+            static void ReduceModOrder(hash_type &value);
+
+            bool scalar_multiply(const scalar_type &scalar, bool clear_cofactor);
+
+            // Computes scalar1*this+scalar2*generator; does not clear cofactor
+            bool double_scalar_multiply(const scalar_type &scalar1, const scalar_type &scalar2);
+
+            bool in_prime_order_subgroup() const;
+
+            void add(const FourQPoint &other);
+
+            void save(std::ostream &stream) const;
+
+            void load(std::istream &stream);
+
+            void save(point_save_span_type out) const;
+
+            void load(point_save_span_const_type in);
 
         private:
             // Initialize to neutral element
             point_t pt_ = { { { { 0 } }, { { 1 } } } }; // { {.x = { 0 }, .y = { 1 } }};
-        };                                              // class ECPoint
-    }                                                   // namespace utils
+        };                                              // class FourQPoint
+
+        using ECPoint = FourQPoint;
+    } // namespace utils
 } // namespace ozks
+#endif

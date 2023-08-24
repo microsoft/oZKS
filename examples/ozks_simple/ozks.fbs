@@ -1,0 +1,13 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+namespace ozks.fbs;
+
+table OZKS {
+    version:uint32;
+    vrf_sk:[ubyte];
+    configuration:[ubyte] (required);
+    trie_id:uint64;
+}
+
+root_type OZKS;

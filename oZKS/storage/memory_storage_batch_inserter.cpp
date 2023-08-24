@@ -4,6 +4,8 @@
 // STD
 
 // OZKS
+#include "oZKS/compressed_trie.h"
+#include "oZKS/ct_node_stored.h"
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage_batch_inserter.h"
 
@@ -15,7 +17,10 @@ MemoryStorageBatchInserter::~MemoryStorageBatchInserter()
 {}
 
 bool MemoryStorageBatchInserter::load_ctnode(
-    const vector<byte> &trie_id, const partial_label_type &node_id, CTNode &node)
+    trie_id_type trie_id,
+    const PartialLabel &node_id,
+    shared_ptr<Storage> storage,
+    CTNodeStored &node)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -29,20 +34,19 @@ bool MemoryStorageBatchInserter::load_ctnode(
     }
 
     // Second, check backing storage
-    return storage_->load_ctnode(trie_id, node_id, this, node);
+    return storage_->load_ctnode(trie_id, node_id, storage, node);
 }
 
-void MemoryStorageBatchInserter::save_ctnode(const vector<byte> &trie_id, const CTNode &node)
+void MemoryStorageBatchInserter::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
 
-    StorageNodeKey key(trie_id, node.label);
+    StorageNodeKey key(trie_id, node.label());
     unsaved_nodes_[key] = node;
 }
 
-bool MemoryStorageBatchInserter::load_compressed_trie(
-    const vector<byte> &trie_id, CompressedTrie &trie)
+bool MemoryStorageBatchInserter::load_compressed_trie(trie_id_type trie_id, CompressedTrie &trie)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -68,34 +72,8 @@ void MemoryStorageBatchInserter::save_compressed_trie(const CompressedTrie &trie
     unsaved_tries_[key] = trie;
 }
 
-bool MemoryStorageBatchInserter::load_ozks(const vector<byte> &trie_id, OZKS &ozks)
-{
-    if (nullptr == storage_)
-        throw runtime_error("storage is not initialized");
-
-    // First, check unsaved OZKS instances
-    StorageOZKSKey key(trie_id);
-    auto unsaved_ozks = unsaved_ozks_.find(key);
-    if (unsaved_ozks != unsaved_ozks_.end()) {
-        ozks = unsaved_ozks->second;
-        return true;
-    }
-
-    // Second, check backing storage
-    return storage_->load_ozks(trie_id, ozks);
-}
-
-void MemoryStorageBatchInserter::save_ozks(const OZKS &ozks)
-{
-    if (nullptr == storage_)
-        throw runtime_error("storage is not initialized");
-
-    StorageOZKSKey key(ozks.id());
-    unsaved_ozks_[key] = ozks;
-}
-
 bool MemoryStorageBatchInserter::load_store_element(
-    const vector<byte> &trie_id, const vector<byte> &key, store_value_type &value)
+    trie_id_type trie_id, const vector<byte> &key, store_value_type &value)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -113,7 +91,7 @@ bool MemoryStorageBatchInserter::load_store_element(
 }
 
 void MemoryStorageBatchInserter::save_store_element(
-    const vector<byte> &trie_id, const vector<byte> &key, const store_value_type &value)
+    trie_id_type trie_id, const vector<byte> &key, const store_value_type &value)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
@@ -122,47 +100,40 @@ void MemoryStorageBatchInserter::save_store_element(
     unsaved_store_elements_[sekey] = value;
 }
 
-void MemoryStorageBatchInserter::flush(const vector<byte> &trie_id)
+void MemoryStorageBatchInserter::flush(trie_id_type trie_id)
 {
     if (nullptr == storage_)
         throw runtime_error("storage is not initialized");
 
-    vector<CTNode> nodes;
+    vector<CTNodeStored> nodes;
     vector<CompressedTrie> tries;
-    vector<OZKS> ozkss;
     vector<pair<vector<byte>, store_value_type>> store_elements;
 
     nodes.reserve(unsaved_nodes_.size());
     tries.reserve(unsaved_tries_.size());
-    ozkss.reserve(unsaved_ozks_.size());
     store_elements.reserve(unsaved_store_elements_.size());
 
     for (auto &node_pair : unsaved_nodes_) {
-        nodes.emplace_back(move(node_pair.second));
+        nodes.emplace_back(std::move(node_pair.second));
     }
     unsaved_nodes_.clear();
 
     for (auto &trie_pair : unsaved_tries_) {
-        tries.emplace_back(move(trie_pair.second));
+        tries.emplace_back(std::move(trie_pair.second));
     }
     unsaved_tries_.clear();
-
-    for (auto &ozks_pair : unsaved_ozks_) {
-        ozkss.emplace_back(move(ozks_pair.second));
-    }
-    unsaved_ozks_.clear();
 
     for (auto store_element_pair : unsaved_store_elements_) {
         pair<vector<byte>, store_value_type> se(
             store_element_pair.first.key(), store_element_pair.second);
-        store_elements.emplace_back(move(se));
+        store_elements.emplace_back(std::move(se));
     }
     unsaved_store_elements_.clear();
 
-    storage_->flush(trie_id, nodes, tries, ozkss, store_elements);
+    storage_->flush(trie_id, nodes, tries, store_elements);
 }
 
-void MemoryStorageBatchInserter::add_ctnode(const vector<byte> &, const CTNode &)
+void MemoryStorageBatchInserter::add_ctnode(trie_id_type, const CTNodeStored &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
@@ -173,12 +144,12 @@ void MemoryStorageBatchInserter::add_compressed_trie(const CompressedTrie &)
 }
 
 void MemoryStorageBatchInserter::add_store_element(
-    const vector<byte> &, const vector<byte> &, const store_value_type &)
+    trie_id_type, const vector<byte> &, const store_value_type &)
 {
     throw runtime_error("Does not make sense for this Storage implementation");
 }
 
-size_t MemoryStorageBatchInserter::get_compressed_trie_epoch(const vector<byte> &trie_id)
+size_t MemoryStorageBatchInserter::get_compressed_trie_epoch(trie_id_type trie_id)
 {
     CompressedTrie trie;
 
@@ -196,19 +167,19 @@ size_t MemoryStorageBatchInserter::get_compressed_trie_epoch(const vector<byte> 
 }
 
 void MemoryStorageBatchInserter::load_updated_elements(
-    size_t epoch, const vector<byte> &trie_id, Storage *storage)
+    size_t epoch, trie_id_type trie_id, shared_ptr<Storage> storage)
 {
     // Important: The Batch inserter usually sits between a cache and real storage. As such, it
     // makes sense for the callback to be directed to the caller of this method, instead to this
     // storage itself.
-    if (storage == this) {
+    if (storage.get() == this) {
         // If this is the top storage, however, we don't want the callback.
         storage = nullptr;
     }
     storage_->load_updated_elements(epoch, trie_id, storage);
 }
 
-void MemoryStorageBatchInserter::delete_ozks(const vector<byte> &trie_id)
+void MemoryStorageBatchInserter::delete_ozks(trie_id_type trie_id)
 {
     {
         // Find nodes to delete
@@ -228,10 +199,6 @@ void MemoryStorageBatchInserter::delete_ozks(const vector<byte> &trie_id)
     // There should be a single trie with the trie_id
     StorageTrieKey trie_key(trie_id);
     unsaved_tries_.erase(trie_key);
-
-    // There should be a single OZKS instance with the trie_id
-    StorageOZKSKey ozks_key(trie_id);
-    unsaved_ozks_.erase(ozks_key);
 
     {
         // Find storage elements to delete

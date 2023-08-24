@@ -7,25 +7,22 @@
 #include <vector>
 
 // OZKS
-#include "oZKS/compressed_trie.h"
-#include "oZKS/ct_node.h"
-#include "oZKS/ozks.h"
-#include "oZKS/storage/storage.h"
+#include "oZKS/utilities.h"
 
 namespace ozks {
     namespace storage {
         class StorageNodeKey {
         public:
-            StorageNodeKey(const std::vector<std::byte> &trie_id, const partial_label_type &node_id)
+            StorageNodeKey(trie_id_type trie_id, const PartialLabel &node_id)
                 : trie_id_(trie_id), node_id_(node_id)
             {}
 
-            const std::vector<std::byte> &trie_id() const
+            trie_id_type trie_id() const
             {
                 return trie_id_;
             }
 
-            const partial_label_type &node_id() const
+            const PartialLabel &node_id() const
             {
                 return node_id_;
             }
@@ -44,16 +41,16 @@ namespace ozks {
             }
 
         private:
-            std::vector<std::byte> trie_id_;
-            partial_label_type node_id_;
+            trie_id_type trie_id_;
+            PartialLabel node_id_;
         };
 
         class StorageTrieKey {
         public:
-            StorageTrieKey(const std::vector<std::byte> &trie_id) : trie_id_(trie_id)
+            StorageTrieKey(trie_id_type trie_id) : trie_id_(trie_id)
             {}
 
-            const std::vector<std::byte> &trie_id() const
+            trie_id_type trie_id() const
             {
                 return trie_id_;
             }
@@ -69,41 +66,16 @@ namespace ozks {
             }
 
         private:
-            std::vector<std::byte> trie_id_;
-        };
-
-        class StorageOZKSKey {
-        public:
-            StorageOZKSKey(const std::vector<std::byte> &trie_id) : trie_id_(trie_id)
-            {}
-
-            const std::vector<std::byte> &trie_id() const
-            {
-                return trie_id_;
-            }
-
-            bool operator==(const StorageOZKSKey &other) const
-            {
-                return trie_id_ == other.trie_id_;
-            }
-
-            bool operator<(const StorageOZKSKey &other) const
-            {
-                return trie_id_ < other.trie_id_;
-            }
-
-        private:
-            std::vector<std::byte> trie_id_;
+            trie_id_type trie_id_;
         };
 
         class StorageStoreElementKey {
         public:
-            StorageStoreElementKey(
-                const std::vector<std::byte> &trie_id, const std::vector<std::byte> &key)
+            StorageStoreElementKey(trie_id_type trie_id, const std::vector<std::byte> &key)
                 : trie_id_(trie_id), key_(key)
             {}
 
-            const std::vector<std::byte> &trie_id() const
+            trie_id_type trie_id() const
             {
                 return trie_id_;
             }
@@ -127,30 +99,21 @@ namespace ozks {
             }
 
         private:
-            std::vector<std::byte> trie_id_;
+            trie_id_type trie_id_;
             std::vector<std::byte> key_;
         };
 
         struct StorageNodeKeyHasher {
             std::size_t operator()(const StorageNodeKey &key) const
             {
-                return std::hash<std::vector<bool>>()(key.node_id());
+                return std::hash<ozks::PartialLabel>()(key.node_id());
             }
         };
 
         struct StorageTrieKeyHasher {
             std::size_t operator()(const StorageTrieKey &key) const
             {
-                utils::byte_vector_hash hasher;
-                return hasher(key.trie_id());
-            }
-        };
-
-        struct StorageOZKSKeyHasher {
-            std::size_t operator()(const StorageOZKSKey &key) const
-            {
-                utils::byte_vector_hash hasher;
-                return hasher(key.trie_id());
+                return static_cast<std::size_t>(key.trie_id());
             }
         };
 

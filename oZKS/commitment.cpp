@@ -21,14 +21,13 @@ size_t Commitment::save(SerializationWriter &writer) const
     auto public_key_data = fbs_builder.CreateVector(pk_bin, VRFPublicKey::save_size);
     auto fbs_pk = fbs::CreatePublicKey(fbs_builder, public_key_data);
 
-    auto root_commitment_data = fbs_builder.CreateVector(
-        reinterpret_cast<const uint8_t *>(root_commitment_.data()), root_commitment_.size());
-    auto fbs_rc = fbs::CreateRootCommitment(fbs_builder, root_commitment_data);
+    fbs::RootCommitment root_commitment_data(flatbuffers::span<const uint8_t, 32>{
+        reinterpret_cast<const uint8_t *>(root_commitment_.data()), root_commitment_.size() });
 
     fbs::CommitmentBuilder commitment_builder(fbs_builder);
     commitment_builder.add_version(ozks_serialization_version);
     commitment_builder.add_public_key(fbs_pk);
-    commitment_builder.add_root_commitment(fbs_rc);
+    commitment_builder.add_root_commitment(&root_commitment_data);
 
     auto fbs_commitment = commitment_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_commitment);
@@ -44,7 +43,7 @@ size_t Commitment::save(ostream &stream) const
     return save(writer);
 }
 
-template <class T>
+template <typename T>
 size_t Commitment::save(vector<T> &vec) const
 {
     VectorSerializationWriter writer(&vec);
@@ -95,7 +94,7 @@ pair<Commitment, size_t> Commitment::Load(istream &stream)
     return Load(reader);
 }
 
-template <class T>
+template <typename T>
 pair<Commitment, size_t> Commitment::Load(const vector<T> &vec, size_t position)
 {
     VectorSerializationReader reader(&vec, position);

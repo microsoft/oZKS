@@ -1,10 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
+include "core_types.fbs";
 namespace ozks.fbs;
 
 table InsertResult {
-    commitment:[ubyte];
+    commitment:RootCommitment;
     append_proof_count:uint32;
 }
 

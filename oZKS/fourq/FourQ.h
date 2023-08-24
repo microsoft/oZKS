@@ -22,6 +22,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "oZKS/config.h"
 
 // Definition of operating system
 

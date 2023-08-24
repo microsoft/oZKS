@@ -33,7 +33,7 @@ void StreamSerializationWriter::write(const void *bytes, size_t size)
     stream_->exceptions(old_except_mask);
 }
 
-template <class T>
+template <typename T>
 void VectorSerializationWriter<T>::write(const void *bytes, size_t size)
 {
     size_t original_size = vec_->size();
@@ -62,7 +62,7 @@ void StreamSerializationReader::read(void *destination, size_t size)
     stream_->exceptions(old_except_mask);
 }
 
-template <class T>
+template <typename T>
 void VectorSerializationReader<T>::read(void *destination, size_t size)
 {
     if (vec_->size() < (position_ + size)) {

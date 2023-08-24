@@ -9,7 +9,7 @@ table QueryResult {
     payload:[ubyte];
     vrf_proof:[ubyte];
     randomness:[ubyte];
-    include_vrf:bool;
+    use_vrf:bool;
     lookup_proof_count:uint32;
 }
 

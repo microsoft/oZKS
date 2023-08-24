@@ -55,7 +55,7 @@ namespace ozks {
         /**
         Save commitment to a byte vector
         */
-        template <class T>
+        template <typename T>
         std::size_t save(std::vector<T> &vec) const;
 
         /**
@@ -66,13 +66,13 @@ namespace ozks {
         /**
         Load commitment from a byte vector
         */
-        template <class T>
+        template <typename T>
         static std::pair<Commitment, std::size_t> Load(
             const std::vector<T> &vec, std::size_t position = 0);
 
     private:
         VRFPublicKey public_key_;
-        commitment_type root_commitment_;
+        commitment_type root_commitment_{};
 
         std::size_t save(SerializationWriter &writer) const;
         static std::pair<Commitment, std::size_t> Load(SerializationReader &reader);

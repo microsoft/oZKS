@@ -29,37 +29,49 @@ steps:
     workingDirectory: '$(Build.SourcesDirectory)'
     failOnStderr: false
 
-- task: CmdLine@2
-  displayName: 'Configure vcpkg dependencies'
+- task: CMake@1
+  displayName: 'Configure oZKS for FourQlib'
   inputs:
-    script: |
-      vcpkg install --triplet=x64-windows-static-md flatbuffers ms-gsl gtest
-    workingDirectory: '$(Build.SourcesDirectory)/vcpkg'
-    failOnStderr: false
+    cmakeArgs: -S . -B buildf -DCMAKE_BUILD_TYPE='${{ parameters.configuration }}' -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+    workingDirectory: '$(Build.SourcesDirectory)'
 
 - task: CMake@1
-  displayName: 'Configure oZKS'
+  displayName: 'Configure oZKS for OpenSSL'
   inputs:
-    cmakeArgs: .. -DCMAKE_BUILD_TYPE='${{ parameters.configuration }}' -DOZKS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
-    workingDirectory: '$(Build.SourcesDirectory)/build'
+    cmakeArgs: -S . -B buildo -DCMAKE_BUILD_TYPE='${{ parameters.configuration }}' -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DOZKS_USE_OPENSSL_P256=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+    workingDirectory: '$(Build.SourcesDirectory)'
 
 - task: MSBuild@1
-  displayName: 'Build oZKS'
+  displayName: 'Build oZKS for FourQlib'
   inputs:
-    solution: '$(Build.SourcesDirectory)/build/ozks.sln'
+    solution: '$(Build.SourcesDirectory)/buildf/ozks.sln'
     msbuildArchitecture: 'x64'
     platform: 'x64'
     configuration: '${{ parameters.configuration }}'
 
-- task: VSTest@2
-  displayName: 'VsTest - unit tests'
+- task: MSBuild@1
+  displayName: 'Build oZKS for OpenSSL'
   inputs:
-    testAssemblyVer2: |
-        **\${{ parameters.configuration }}\unit_tests.exe
-        !**\obj\**
+    solution: '$(Build.SourcesDirectory)/buildo/ozks.sln'
+    msbuildArchitecture: 'x64'
     platform: 'x64'
-    configuration: ${{ parameters.configuration }}
-    diagnosticsEnabled: True
+    configuration: '${{ parameters.configuration }}'
+
+- task: CmdLine@2
+  displayName: 'Run unit tests - FourQlib'
+  inputs:
+    script: |
+      .\buildf\bin\${{ parameters.configuration }}\unit_tests.exe
+    workingDirectory: '$(Build.SourcesDirectory)'
+    failOnStderr: true
+
+- task: CmdLine@2
+  displayName: 'Run unit tests - OpenSSL'
+  inputs:
+    script: |
+      .\buildo\bin\${{ parameters.configuration }}\unit_tests.exe
+    workingDirectory: '$(Build.SourcesDirectory)'
+    failOnStderr: true
 
 - ${{ if eq(parameters.configuration, 'Release') }}:
   - task: Semmle@0
@@ -75,6 +87,19 @@ steps:
       addProjectDirToScanningExclusionList: true
       buildCommands: '"%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsMSBuildCmd.bat" && msbuild $(Build.SourcesDirectory)/build/ozks.sln'
       cleanupBuildCommands: '"%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsMSBuildCmd.bat" && msbuild $(Build.SourcesDirectory)/build/ozks.sln /t:Clean'
+
+- task: CmdLine@2
+  displayName: 'Remove unnecessary files'
+  inputs:
+    script: |
+      cd $(Build.SourcesDirectory)
+      rmdir /s /q vcpkg
+      cd $(Build.SourcesDirectory)\buildf
+      rmdir /s /q vcpkg_installed
+      cd $(Build.SourcesDirectory)\buildo
+      rmdir /s /q vcpkg_installed
+    workingDirectory: '$(Build.SourcesDirectory)'
+    failOnStderr: false
 
 - task: PublishSymbols@2
   displayName: 'Publish symbols path'

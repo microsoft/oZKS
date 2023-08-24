@@ -6,6 +6,14 @@ if(CUSTOM_FLATC_PATH)
 endif()
 
 execute_process(
+    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/core_types.fbs"
+    OUTPUT_QUIET
+    RESULT_VARIABLE result)
+if(result)
+    message(FATAL_ERROR "flatc failed to compile core_types.fbs (${result})")
+endif()
+
+execute_process(
     COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/path_element.fbs"
     OUTPUT_QUIET
     RESULT_VARIABLE result)
@@ -30,27 +38,11 @@ if(result)
 endif()
 
 execute_process(
-    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/ct_node.fbs"
+    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/ct_node_stored.fbs"
     OUTPUT_QUIET
     RESULT_VARIABLE result)
 if(result)
-    message(FATAL_ERROR "flatc failed to compile ct_node.fbs (${result})")
-endif()
-
-execute_process(
-    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/ozks.fbs"
-    OUTPUT_QUIET
-    RESULT_VARIABLE result)
-if(result)
-    message(FATAL_ERROR "flatc failed to compile ozks.fbs (${result})")
-endif()
-
-execute_process(
-    COMMAND ${FLATBUFFERS_FLATC_PATH} --cpp -o "${OZKS_BUILD_DIR}/oZKS" "${OZKS_SOURCE_DIR}/oZKS/ozks_store.fbs"
-    OUTPUT_QUIET
-    RESULT_VARIABLE result)
-if(result)
-    message(FATAL_ERROR "flatc failed to compile ozks.fbs (${result})")
+    message(FATAL_ERROR "flatc failed to compile ct_node_stored.fbs (${result})")
 endif()
 
 execute_process(

@@ -7,6 +7,7 @@
  ************************************************************************************/
 
 #include "oZKS/fourq/random.h"
+#include "oZKS/config.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #if defined(__WINDOWS__)
@@ -84,7 +85,8 @@ int random_bytes(unsigned char *random_array, unsigned int nbytes)
         count += r;
         n -= r;
     }
+#else
+    return false; // Unsupported system
 #endif
-
     return true;
 }

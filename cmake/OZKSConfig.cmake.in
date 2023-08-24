@@ -13,6 +13,7 @@
 #   OZKS_VERSION_MINOR : The minor version number
 #   OZKS_VERSION_PATCH : The patch version number
 #   OZKS_BUILD_TYPE : The build type (e.g., "Release" or "Debug")
+#   OZKS_USE_OPENSSL_P256 : If OZKS is configured to use Curve P-256 (OpenSSL)
 
 @PACKAGE_INIT@
 
@@ -48,10 +49,14 @@ set(OZKS_VERSION_MAJOR @OZKS_VERSION_MAJOR@)
 set(OZKS_VERSION_MINOR @OZKS_VERSION_MINOR@)
 set(OZKS_VERSION_PATCH @OZKS_VERSION_PATCH@)
 set(OZKS_BUILD_TYPE @CMAKE_BUILD_TYPE@)
+set(OZKS_USE_OPENSSL_P256 @OZKS_USE_OPENSSL_P256@)
 
 # We must look for dependencies
 ozks_find_dependency(Microsoft.GSL)
 ozks_find_dependency(Flatbuffers)
+if(OZKS_USE_OPENSSL_P256)
+    ozks_find_dependency(OpenSSL)
+endif()
 ozks_find_dependency_component(Poco Foundation)
 
 # Add the current directory to the module search path

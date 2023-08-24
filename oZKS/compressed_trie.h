@@ -18,12 +18,26 @@ namespace ozks {
         class Storage;
     }
 
+    using partial_label_hash_batch_type = std::vector<std::pair<PartialLabel, hash_type>>;
+
     class CompressedTrie {
     public:
         /**
         Constructor
         */
-        CompressedTrie(std::shared_ptr<ozks::storage::Storage> storage);
+        CompressedTrie(
+            std::shared_ptr<ozks::storage::Storage> storage,
+            TrieType trie_type,
+            std::size_t thread_count = 0);
+
+        /**
+        Constructor
+        */
+        CompressedTrie(
+            trie_id_type trie_id,
+            std::shared_ptr<ozks::storage::Storage> storage,
+            TrieType trie_type,
+            std::size_t thread_count = 0);
 
         /**
         Constructor
@@ -31,30 +45,36 @@ namespace ozks {
         CompressedTrie();
 
         /**
+        Destructor
+        */
+        ~CompressedTrie() = default;
+
+        /**
         Insert a single label into the tree. Increments the epoch and computes updated hashes.
         */
         void insert(
-            const label_type &label, const payload_type &payload, append_proof_type &append_proof);
+            const PartialLabel &label,
+            const hash_type &payload_commit,
+            append_proof_type &append_proof);
 
         /**
         Insert a batch of labels and payloads into the tree. Increments the epoch and computes
-        updated hashes.
-        Size of labels needs to match size of payloads.
+        updated hashes. Size of labels needs to match size of payloads.
         */
         void insert(
-            const label_payload_batch_type &label_payload_batch,
+            const partial_label_hash_batch_type &label_commit_batch,
             append_proof_batch_type &append_proofs);
 
         /**
         Returns whether the given label exists in the tree. If it does, gets the path of the label,
         including its sibling node (if any)
         */
-        bool lookup(const label_type &label, lookup_path_type &path) const;
+        bool lookup(const PartialLabel &label, lookup_path_type &path) const;
 
         /**
-        Get the current commitment for the tree
+        Get the commitment (root hash) for the tree
         */
-        void get_commitment(commitment_type &commitment) const;
+        commitment_type get_commitment() const;
 
         /**
         Get the current epoch
@@ -67,7 +87,7 @@ namespace ozks {
         /**
         Get the current id
         */
-        const std::vector<std::byte> id() const
+        trie_id_type id() const
         {
             return id_;
         }
@@ -81,9 +101,17 @@ namespace ozks {
         }
 
         /**
+        Get the Trie Type
+        */
+        TrieType trie_type() const
+        {
+            return trie_type_;
+        }
+
+        /**
         Return a string representation of the tree
         */
-        std::string to_string(bool include_payload = false) const;
+        std::string to_string() const;
 
         /**
         Save the current compressed trie to the given stream
@@ -93,57 +121,72 @@ namespace ozks {
         /**
         Save the current compressed trie to the given vector
         */
-        template <class T>
+        template <typename T>
         std::size_t save(std::vector<T> &vec) const;
-
-        /**
-        Save the current compressed trie to the given serialization writer
-        */
-        std::size_t save(SerializationWriter &writer) const;
-
-        /**
-        Load a Compressed Trie object from the given serialization reader
-        */
-        static std::size_t Load(CompressedTrie &ct, SerializationReader &reader);
 
         /**
         Load a Compressed Trie object from the given stream
         */
-        static std::size_t Load(CompressedTrie &ct, std::istream &stream);
+        static std::pair<std::shared_ptr<CompressedTrie>, std::size_t> Load(
+            std::istream &stream, std::shared_ptr<storage::Storage> storage);
 
         /**
         Load a Compressed Trie object from the given vector
         */
-        template <class T>
-        static std::size_t Load(
-            CompressedTrie &ct, const std::vector<T> &vec, std::size_t position = 0);
+        template <typename T>
+        static std::pair<std::shared_ptr<CompressedTrie>, std::size_t> Load(
+            const std::vector<T> &vec,
+            std::shared_ptr<storage::Storage> storage,
+            std::size_t position = 0);
 
         /**
         Save the current compressed trie to Storage
         */
-        void save() const;
+        void save_to_storage() const;
 
         /**
         Load a compressed trie from Storage
         */
-        static bool Load(
-            const std::vector<std::byte> &trie_id,
-            std::shared_ptr<ozks::storage::Storage> storage,
-            CompressedTrie &trie);
+        static std::pair<std::shared_ptr<CompressedTrie>, bool> LoadFromStorage(
+            trie_id_type trie_id, std::shared_ptr<ozks::storage::Storage> storage);
+
+        /**
+        Load a compressed trie and all its children nodes from storage
+        */
+        static std::pair<std::shared_ptr<CompressedTrie>, bool> LoadFromStorageWithChildren(
+            trie_id_type trie_id, std::shared_ptr<ozks::storage::Storage> storage);
+
+        /**
+        Initialize storage for this CompressedTrie instance
+        */
+        void init(std::shared_ptr<ozks::storage::Storage> storage);
+
+        /**
+        Initialize the id for this CompressedTrie instance
+        */
+        void init(trie_id_type trie_id)
+        {
+            id_ = trie_id;
+        }
 
     private:
-        static constexpr std::size_t id_size_ = 16;
+        std::shared_ptr<CTNode> root_;
 
         std::size_t epoch_;
-        std::vector<std::byte> id_;
+        trie_id_type id_;
         std::shared_ptr<ozks::storage::Storage> storage_;
+        std::size_t thread_count_;
+        TrieType trie_type_;
 
-        bool lookup(const label_type &label, lookup_path_type &path, bool include_searched) const;
+        bool lookup(const PartialLabel &label, lookup_path_type &path, bool include_searched) const;
 
         void init_random_id();
 
-        CTNode load_root() const;
+        void init(std::shared_ptr<CTNode> root);
+        void init_empty_root();
 
-        void init(std::shared_ptr<ozks::storage::Storage> storage);
+        std::size_t save(SerializationWriter &writer) const;
+        static std::pair<std::shared_ptr<CompressedTrie>, std::size_t> Load(
+            SerializationReader &reader, std::shared_ptr<storage::Storage> storage);
     };
 } // namespace ozks

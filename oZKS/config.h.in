@@ -7,3 +7,31 @@
 #define OZKS_VERSION_MAJOR @OZKS_VERSION_MAJOR@
 #define OZKS_VERSION_MINOR @OZKS_VERSION_MINOR@
 #define OZKS_VERSION_PATCH @OZKS_VERSION_PATCH@
+
+#define @OZKS_FOURQ_SYSTEM@
+
+#cmakedefine OZKS_USE_OPENSSL_P256
+#ifndef OZKS_USE_OPENSSL_P256
+#define @OZKS_FOURQ_ARCH@
+#define USE_ENDO @OZKS_FOURQ_USE_ENDO@
+
+#cmakedefine OZKS_FOURQ_USE_AVX2
+#ifdef OZKS_FOURQ_USE_AVX2
+#define _AVX2_
+#endif
+
+#cmakedefine OZKS_FOURQ_USE_AVX
+#ifdef OZKS_FOURQ_USE_AVX
+#define _AVX_
+#endif
+
+#cmakedefine OZKS_FOURQ_USE_ASM
+#ifdef OZKS_FOURQ_USE_ASM
+#define _ASM_
+#endif
+#endif
+
+// Intrinsics
+#cmakedefine OZKS_USE_INTRIN
+#cmakedefine OZKS_USE__BITSCANREVERSE64
+#cmakedefine OZKS_USE___BUILTIN_CLZLL
