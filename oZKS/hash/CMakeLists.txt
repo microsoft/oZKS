@@ -5,13 +5,13 @@
 set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}
     ${CMAKE_CURRENT_LIST_DIR}/blake2b.c
     ${CMAKE_CURRENT_LIST_DIR}/blake2xb.c
+    ${CMAKE_CURRENT_LIST_DIR}/hash.cpp
 )
 
 # Add header files for installation
 install(
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/blake2.h
-        ${CMAKE_CURRENT_LIST_DIR}/blake2-impl.h
+        ${CMAKE_CURRENT_LIST_DIR}/hash.h
     DESTINATION
         ${OZKS_INCLUDES_INSTALL_DIR}/oZKS/hash
 )

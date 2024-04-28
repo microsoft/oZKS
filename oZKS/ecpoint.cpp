@@ -325,43 +325,75 @@ utils::P256Point::~P256Point()
     clean_up();
 }
 
-utils::P256Point::P256Point(const hash_type &data) : P256Point()
+utils::P256Point::P256Point(const hash_type &data, encode_to_curve_salt_type salt) : P256Point()
 {
-    // Extend the input first
-    array<byte, order_size * 2> ext_value;
-    compute_hash(data, "p256_constructor_hash", ext_value);
+    using ctr_type = uint8_t;
 
-    // We use all but the last byte
-    int byte_count = 2 * static_cast<int>(order_size) - 1;
+    constexpr byte domain_separator_front{ 0x01 };
+    constexpr byte domain_separator_back{ 0x00 };
+    constexpr size_t curve_descriptor_size = char_traits<char>::length(curve_descriptor);
 
-    BIGNUM_guard bn;
-    if (!BN_lebin2bn(
-            reinterpret_cast<const unsigned char *>(ext_value.data()), byte_count, bn.get())) {
-        throw runtime_error("Call to BN_lebin2bn failed");
-    }
+    // Compute the positions in the buffer
+    constexpr size_t curve_descriptor_start = 0;
+    constexpr size_t domain_separator_front_start =
+        curve_descriptor_start + curve_descriptor_size;
+    constexpr size_t curve_salt_start =
+        domain_separator_front_start + sizeof(domain_separator_front);
+    constexpr size_t data_start = curve_salt_start + salt.size();
+    constexpr size_t ctr_start = data_start + hash_size;
+    constexpr size_t domain_separator_back_start = ctr_start + sizeof(ctr_type);    
+    constexpr size_t buf_size =
+        domain_separator_back_start + sizeof(domain_separator_back);
 
-    // Reduce down to a possible x-coordinate
-    reduce_mod_p256(bn.get());
+    // Copy in everything to the hash buffer except the counter value
+    array<byte, buf_size> buf{};
+    copy_n(
+        reinterpret_cast<const byte *>(utils::ECPoint::curve_descriptor),
+        curve_descriptor_size,
+        buf.begin() + curve_descriptor_start);
+    copy_n(
+        &domain_separator_front,
+        sizeof(domain_separator_front),
+        buf.begin() + domain_separator_front_start);
+    copy_n(
+        salt.begin(),
+        salt.size(),
+        buf.begin() + curve_salt_start);
+    copy_n(
+        data.begin(),
+        hash_size,
+        buf.begin() + data_start);
+    copy_n(
+        &domain_separator_back,
+        sizeof(domain_separator_back),
+        buf.begin() + domain_separator_back_start);
 
-    // Take the sign from the last byte
-    int sign = static_cast<int>(ext_value.back()) & 1;
+    ctr_type ctr = 0;
+    int ret = 0;
+    do {
+        // Copy in the counter value
+        copy_n(
+            reinterpret_cast<const byte *>(&ctr),
+            sizeof(ctr_type),
+            buf.begin() + ctr_start);
 
-    // Non-constant-time
-    BN_CTX_guard bcg;
-    while (0 == EC_POINT_set_compressed_coordinates(
-                    get_ec_group(), reinterpret_cast<EC_POINT *>(pt_), bn.get(), sign, bcg.get())) {
-        // Increment the x-coordinate
-        if (1 != BN_add_word(bn.get(), 1)) {
-            throw runtime_error("Call to BN_add_word failed");
-        }
-        const BIGNUM *bn_p256 = BN_get0_nist_prime_256();
-        if (0 == BN_cmp(bn.get(), bn_p256)) {
-            BN_zero_ex(bn.get());
-        }
-    }
+        // Hash buf 
+        array<byte, save_size> str_to_point_in{};
+        str_to_point_in[0] = byte(0x02);
+        compute_hash(buf, "p256_constructor_hash", gsl::span<byte, save_size - 1>{ str_to_point_in.data() + 1, save_size - 1 });
+
+        ret = EC_POINT_oct2point(
+            get_ec_group(),
+            reinterpret_cast<EC_POINT *>(pt_),
+            reinterpret_cast<const unsigned char *>(str_to_point_in.data()),
+            save_size,
+            nullptr);
+
+        ctr += 1;
+    } while (1 != ret);
 }
 
-utils::P256Point::P256Point(const key_type &data) : P256Point(compute_key_hash(data))
+utils::P256Point::P256Point(const key_type &data, encode_to_curve_salt_type salt) : P256Point(compute_key_hash(data), salt)
 {}
 
 utils::P256Point &utils::P256Point::operator=(const P256Point &assign)
@@ -395,15 +427,15 @@ void utils::P256Point::MakeRandomNonzeroScalar(scalar_type &out)
 void utils::P256Point::MakeSeededScalar(input_span_const_type seed, scalar_type &out)
 {
     BIGNUM *out_bn = reinterpret_cast<BIGNUM *>(out.ptr());
-    int byte_count = 2 * static_cast<int>(out.size());
+    constexpr int byte_count = 2 * static_cast<int>(scalar_type::Size());
     vector<unsigned char> buf(byte_count);
     vector<byte> hash(byte_count);
-    compute_hash(seed, "seeded_scalar", hash);
+    compute_hash(seed, "seeded_scalar", gsl::span<byte, byte_count>{ hash.data(), byte_count });
     if (byte_count > hash.size()) {
         throw logic_error("Output should be at least equal in size to hash");
     }
 
-    utils::copy_bytes(hash.data(), byte_count, buf.data());
+    copy_n(hash.data(), byte_count, buf.data());
     if (!BN_bin2bn(buf.data(), byte_count, out_bn)) {
         throw logic_error("Unable to convert hash to bignum");
     }
@@ -732,12 +764,18 @@ namespace {
     }
 } // namespace
 
-utils::FourQPoint::FourQPoint(const hash_type &data)
+utils::FourQPoint::FourQPoint(const hash_type &data, encode_to_curve_salt_type salt)
 {
-    // Copy the hashed data to an f2elm_t struct
+    constexpr size_t data_start = salt.size();
+    constexpr size_t buf_size = data_start + hash_size;
+
+    array<byte, buf_size> buf{};
+    copy_n(salt.data(), salt.size(), buf.data());
+    copy_n(data.begin(), hash_size, buf.begin() + data_start);
+    
+    // Hash everything into an f2elm_t struct
     f2elm_t r;
-    static_assert(sizeof(r) <= sizeof(data), "f2elm cannot be larger than hash_type");
-    utils::copy_bytes(data.data(), sizeof(f2elm_t), r);
+    compute_hash(buf, "fourq_constructor_hash", gsl::span<byte, sizeof(r)>{ reinterpret_cast<byte *>(r), sizeof(r) });
 
     // Reduce r; note that this does not produce a perfectly uniform distribution modulo
     // 2^127-1, but it is good enough.
@@ -748,7 +786,7 @@ utils::FourQPoint::FourQPoint(const hash_type &data)
     HashToCurve(r, pt_);
 }
 
-utils::FourQPoint::FourQPoint(const key_type &data) : FourQPoint(compute_key_hash(data))
+utils::FourQPoint::FourQPoint(const key_type &data, encode_to_curve_salt_type salt) : FourQPoint(compute_key_hash(data), salt)
 {}
 
 void utils::FourQPoint::MakeRandomNonzeroScalar(scalar_type &out)
@@ -766,7 +804,7 @@ void utils::FourQPoint::MakeSeededScalar(input_span_const_type seed, scalar_type
         throw logic_error("Output should be at least equal in size to hash");
     }
 
-    utils::copy_bytes(hash.data(), out.size(), out.data());
+    copy_n(hash.data(), out.size(), out.data());
     modulo_order(reinterpret_cast<digit_t *>(out.data()), reinterpret_cast<digit_t *>(out.data()));
 }
 

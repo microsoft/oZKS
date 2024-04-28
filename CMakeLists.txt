@@ -15,7 +15,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
-project(OZKS VERSION 1.5.0 LANGUAGES CXX C)
+project(OZKS VERSION 1.6.0 LANGUAGES CXX C)
 
 # This policy was introduced in CMake 3.13; OLD by default until CMake 3.21
 cmake_policy(SET CMP0077 NEW)
@@ -52,6 +52,12 @@ message(STATUS "${OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR}: ${OZKS_MSVC_PROFILER_S
 set(OZKS_USE_OPENSSL_P256_OPTION_STR "Compile oZKS using NIST-P256 (OpenSSL) for VRF implementation")
 option(OZKS_USE_OPENSSL_P256 ${OZKS_USE_OPENSSL_P256_OPTION_STR} OFF)
 message(STATUS "${OZKS_USE_OPENSSL_P256_OPTION_STR}: ${OZKS_USE_OPENSSL_P256}")
+
+# [option] OZKS_USE_OPENSSL_SHA2 (default: OFF)
+# Compile OZKS library using SHA2 (OpenSSL)
+set(OZKS_USE_OPENSSL_SHA2_OPTION_STR "Compile oZKS using SHA2 (OpenSSL)")
+option(OZKS_USE_OPENSSL_SHA2 ${OZKS_USE_OPENSSL_SHA2_OPTION_STR} OFF)
+message(STATUS "${OZKS_USE_OPENSSL_SHA2_OPTION_STR}: ${OZKS_USE_OPENSSL_SHA2}")
 
 # [option] OZKS_USE_INTRIN (default: OFF)
 # Compile OZKS library using intrinsics
@@ -149,7 +155,7 @@ else()
 endif()
 
 # OpenSSL/libcrypto
-if(OZKS_USE_OPENSSL_P256)
+if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
     find_package(OpenSSL REQUIRED)
     if (NOT OpenSSL_FOUND)
         message(FATAL_ERROR "OpenSSL: not found")
@@ -219,7 +225,7 @@ target_link_libraries(ozks
     PUBLIC Poco::Foundation
     PUBLIC Poco::Util)
 
-if(OZKS_USE_OPENSSL_P256)
+if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
     target_link_libraries(ozks
         PRIVATE OpenSSL::Crypto)
 endif()

@@ -23,25 +23,25 @@ set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}
 # Add header files for installation
 install(
     FILES
-    ${CMAKE_CURRENT_LIST_DIR}/commitment.h
-    ${CMAKE_CURRENT_LIST_DIR}/compressed_trie.h
-    ${CMAKE_CURRENT_LIST_DIR}/ct_node.h
-    ${CMAKE_CURRENT_LIST_DIR}/ct_node_linked.h
-    ${CMAKE_CURRENT_LIST_DIR}/ct_node_stored.h
-    ${CMAKE_CURRENT_LIST_DIR}/defines.h
-    ${CMAKE_CURRENT_LIST_DIR}/ecpoint.h
-    ${CMAKE_CURRENT_LIST_DIR}/insert_result.h
-    ${CMAKE_CURRENT_LIST_DIR}/ozks_config.h
-    ${CMAKE_CURRENT_LIST_DIR}/partial_label.h
-    ${CMAKE_CURRENT_LIST_DIR}/query_result.h
-    ${CMAKE_CURRENT_LIST_DIR}/serialization_helpers.h
-    ${CMAKE_CURRENT_LIST_DIR}/thread_pool.h
-    ${CMAKE_CURRENT_LIST_DIR}/utilities.h
-    ${CMAKE_CURRENT_LIST_DIR}/version.h
-    ${CMAKE_CURRENT_LIST_DIR}/vrf.h
-    ${CMAKE_CURRENT_LIST_DIR}/vrf_cache.h
+        ${CMAKE_CURRENT_LIST_DIR}/commitment.h
+        ${CMAKE_CURRENT_LIST_DIR}/compressed_trie.h
+        ${CMAKE_CURRENT_LIST_DIR}/ct_node.h
+        ${CMAKE_CURRENT_LIST_DIR}/ct_node_linked.h
+        ${CMAKE_CURRENT_LIST_DIR}/ct_node_stored.h
+        ${CMAKE_CURRENT_LIST_DIR}/defines.h
+        ${CMAKE_CURRENT_LIST_DIR}/ecpoint.h
+        ${CMAKE_CURRENT_LIST_DIR}/insert_result.h
+        ${CMAKE_CURRENT_LIST_DIR}/ozks_config.h
+        ${CMAKE_CURRENT_LIST_DIR}/partial_label.h
+        ${CMAKE_CURRENT_LIST_DIR}/query_result.h
+        ${CMAKE_CURRENT_LIST_DIR}/serialization_helpers.h
+        ${CMAKE_CURRENT_LIST_DIR}/thread_pool.h
+        ${CMAKE_CURRENT_LIST_DIR}/utilities.h
+        ${CMAKE_CURRENT_LIST_DIR}/version.h
+        ${CMAKE_CURRENT_LIST_DIR}/vrf.h
+        ${CMAKE_CURRENT_LIST_DIR}/vrf_cache.h
     DESTINATION
-    ${OZKS_INCLUDES_INSTALL_DIR}/oZKS
+        ${OZKS_INCLUDES_INSTALL_DIR}/oZKS
 )
 
 add_subdirectory(fourq)

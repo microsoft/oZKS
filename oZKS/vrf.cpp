@@ -75,7 +75,7 @@ namespace {
             hash_buf.begin() + domain_separator_back_start);
 
         // Compute by applying a hash function to buffer; reduce modulo group order
-        hash_type challenge_hash = utils::compute_hash(hash_buf);
+        hash_type challenge_hash = utils::compute_hash(gsl::span{ hash_buf.data(), hash_buf.size() });
         utils::ECPoint::ReduceModOrder(challenge_hash);
         decltype(VRFProof::c) c{};
         copy_n(challenge_hash.begin(), utils::ECPoint::order_size, c.begin());
@@ -94,7 +94,7 @@ namespace {
         array<byte, utils::ECPoint::order_size> key_data{};
         array<byte, 64> key_hash{};
         key_scalar.save(key_data);
-        utils::compute_hash(gsl::span<const byte>(key_data), gsl::span<byte>(key_hash));
+        utils::compute_hash<64>(gsl::span<const byte>(key_data), key_hash);
 
         // Next build the input for the nonce hash
         array<byte, 32 + point_size> nonce_buf{};
@@ -184,6 +184,7 @@ void VRFSecretKey::compute_public_key()
 {
     // Compute the VRF public key so we have it easily available
     pk_ = utils::ECPoint::MakeGeneratorMultiple(key_scalar_);
+    pk_.save(h2c_salt_);
 }
 
 void VRFSecretKey::initialize()
@@ -211,7 +212,7 @@ VRFProof VRFSecretKey::get_vrf_proof(const hash_type &data) const
     // 6. hash-to-curve(data) multiplied by nonce
 
     utils::ECPoint generator = utils::ECPoint::MakeGenerator();
-    utils::ECPoint h2c_data(data); // cofactor cleared
+    utils::ECPoint h2c_data(data, h2c_salt_); // cofactor cleared
 
     utils::ECPoint sk_times_h2c_data(h2c_data);
     sk_times_h2c_data.scalar_multiply(key_scalar_, false);
@@ -253,7 +254,7 @@ hash_type VRFSecretKey::get_vrf_value(const hash_type &data) const
 {
     throw_if_uninitialized();
 
-    utils::ECPoint sk_times_h2c_data(data);
+    utils::ECPoint sk_times_h2c_data(data, h2c_salt_);
     sk_times_h2c_data.scalar_multiply(key_scalar_, false);
 
     // We write the VRF value in a VRFProof struct, then extract the hash
@@ -335,7 +336,9 @@ bool VRFPublicKey::verify_vrf_proof(const hash_type &data, const VRFProof &vrf_p
     u.double_scalar_multiply(scalar_c, scalar_s);
 
     // Next compute hash-to-curve of data
-    utils::ECPoint h2c_data(data); // cofactor cleared
+    array<byte, utils::ECPoint::save_size> h2c_salt{};
+    save(h2c_salt);
+    utils::ECPoint h2c_data(data, h2c_salt); // cofactor cleared
 
     // Load gamma. We already know this will succeed from checking validity above.
     utils::ECPoint gamma_pt;

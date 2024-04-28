@@ -4,6 +4,7 @@
 #pragma once
 
 // STD
+#include <array>
 #include <cstddef>
 #include <vector>
 
@@ -97,6 +98,8 @@ namespace ozks {
         utils::ECPoint::scalar_type key_scalar_ = {};
 
         VRFPublicKey pk_;
+
+        std::array<std::byte, utils::ECPoint::save_size> h2c_salt_ = {};
 
         void throw_if_uninitialized() const;
 

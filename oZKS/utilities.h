@@ -90,31 +90,29 @@ namespace ozks {
             gsl::span<const std::byte> buffer, randomness_type &randomness);
 
         /**
-        Compute a domain-separated BLAKE2 hash of the given input. In other words, this function
-        returns BLAKE2(domain_str || in). The benefit is that we can create multiple independent
-        hash functions from BLAKE2: a separate one for each distinct use.
+        Compute a domain-separated hash of the given input. In other words, this function
+        returns hash(domain_str||in).
         */
         hash_type compute_hash(gsl::span<const std::byte> in, const std::string &domain_str);
 
         /**
-        Compute a domain-separated BLAKE2 hash of the given input. In other words, this function
-        returns BLAKE2(domain_str || in). The benefit is that we can create multiple independent
-        hash functions from BLAKE2: a separate one for each distinct use.
-        The output of this function is of arbitrary length.
+        Compute a domain-separated hash of the given input. In other words, this function
+        returns hash(domain_str||in). The output of this function is of arbitrary length.
         */
+        template<std::size_t sz>
         void compute_hash(
-            gsl::span<const std::byte> in, const std::string &domain_str, gsl::span<std::byte> out);
+            gsl::span<const std::byte> in, const std::string &domain_str, gsl::span<std::byte, sz> out);
 
         /**
-        Compute a BLAKE2 hash of the given input.
+        Compute a hash of the given input.
         */
         hash_type compute_hash(gsl::span<const std::byte> in);
 
         /**
-        Compute a BLAKE2 hash of the given input. The output of this function is of arbitrary
-        length.
+        Compute a hash of the given input. The output of this function is of arbitrary length.
         */
-        void compute_hash(gsl::span<const std::byte> in, gsl::span<std::byte> out);
+        template<std::size_t sz>
+        void compute_hash(gsl::span<const std::byte> in, gsl::span<std::byte, sz> out);
 
         /**
         Compute the label for a given key.

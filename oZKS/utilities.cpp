@@ -11,7 +11,7 @@
 // OZKS
 #include "oZKS/core_types_generated.h"
 #include "oZKS/fourq/random.h"
-#include "oZKS/hash/blake2.h"
+#include "oZKS/hash/hash.h"
 #include "oZKS/path_element_generated.h"
 #include "oZKS/utilities.h"
 
@@ -109,31 +109,32 @@ hash_type utils::compute_randomness_hash(gsl::span<const byte> buffer, randomnes
 hash_type utils::compute_hash(gsl::span<const byte> in, const string &domain_str)
 {
     hash_type hash{};
-    compute_hash(in, domain_str, hash);
+    compute_hash<hash_size>(in, domain_str, hash);
     return hash;
 }
 
-void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte> out)
+template<size_t sz>
+void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte, sz> out)
 {
     // Create the actual input buffer by prepending the given input with domain_str
     vector<byte> hash_in(in.size() + domain_str.size());
     utils::copy_bytes(domain_str.c_str(), domain_str.size(), hash_in.data());
     utils::copy_bytes(in.data(), in.size(), hash_in.data() + domain_str.size());
 
-    blake2b(
-        out.data(), out.size(), hash_in.data(), hash_in.size(), /* key */ nullptr, /* keylen */ 0);
+    hash::hash<sz>(hash_in.data(), hash_in.size(), out.data());
 }
 
 hash_type utils::compute_hash(gsl::span<const byte> in)
 {
     hash_type hash{};
-    compute_hash(in, hash);
+    compute_hash<hash_size>(in, hash);
     return hash;
 }
 
-void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte> out)
+template<size_t sz>
+void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
 {
-    blake2b(out.data(), out.size(), in.data(), in.size(), /* key */ nullptr, /* keylen */ 0);
+    hash::hash<sz>(in.data(), in.size(), out.data());
 }
 
 hash_type utils::get_node_label(
@@ -383,3 +384,9 @@ size_t utils::get_log2(size_t n)
 
     return r;
 }
+
+// Explicit instantiations
+template void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte, 32> out);
+template void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte, 64> out);
+template void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, 32> out);
+template void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, 64> out);

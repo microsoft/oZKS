@@ -594,9 +594,11 @@ TEST(P256PointTests, Hash2Curve)
         return out;
     };
 
+    array<byte, P256Point::save_size> h2c_salt = {};
+
     string str1 = "hello worla", str2 = "hello worla";
-    P256Point pt1(str_to_key_type(str1));
-    P256Point pt2(str_to_key_type(str1));
+    P256Point pt1(str_to_key_type(str1), h2c_salt);
+    P256Point pt2(str_to_key_type(str1), h2c_salt);
 
     array<byte, P256Point::save_size> buf1{}, buf2{};
     pt1.save(buf1);
@@ -604,7 +606,7 @@ TEST(P256PointTests, Hash2Curve)
     ASSERT_EQ(buf1, buf2);
 
     str2 = "hello worlh";
-    pt2 = P256Point(str_to_key_type(str2));
+    pt2 = P256Point(str_to_key_type(str2), h2c_salt);
     pt2.save(buf2);
     ASSERT_NE(buf1, buf2);
 }

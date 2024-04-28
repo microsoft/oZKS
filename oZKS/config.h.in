@@ -31,6 +31,8 @@
 #endif
 #endif
 
+#cmakedefine OZKS_USE_OPENSSL_SHA2
+
 // Intrinsics
 #cmakedefine OZKS_USE_INTRIN
 #cmakedefine OZKS_USE__BITSCANREVERSE64

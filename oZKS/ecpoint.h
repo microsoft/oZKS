@@ -29,6 +29,7 @@ namespace ozks {
             using input_span_const_type = gsl::span<const std::byte>;
             using point_save_span_type = gsl::span<std::byte, save_size>;
             using point_save_span_const_type = gsl::span<const std::byte, save_size>;
+            using encode_to_curve_salt_type = point_save_span_const_type;
 
             class scalar_type {
             public:
@@ -71,9 +72,14 @@ namespace ozks {
                     return scalar_;
                 }
 
-                constexpr std::size_t size() noexcept
+                static constexpr std::size_t Size() noexcept
                 {
                     return order_size;
+                }
+
+                constexpr std::size_t size() noexcept
+                {
+                    return Size();
                 }
 
                 void set_zero();
@@ -120,11 +126,11 @@ namespace ozks {
 
             // This function hashes the input to a uniformly random elliptic curve point.
             // This function is *not* constant-time.
-            P256Point(const hash_type &data);
+            P256Point(const hash_type &data, encode_to_curve_salt_type salt);
 
             // This function hashes the input to a uniformly random elliptic curve point.
             // This function is *not* constant-time.
-            P256Point(const key_type &data);
+            P256Point(const key_type &data, encode_to_curve_salt_type salt);
 
             // Creates a random non-zero number modulo the prime order subgroup.
             static void MakeRandomNonzeroScalar(scalar_type &out);
@@ -190,6 +196,7 @@ namespace ozks {
             using input_span_const_type = gsl::span<const std::byte>;
             using point_save_span_type = gsl::span<std::byte, save_size>;
             using point_save_span_const_type = gsl::span<const std::byte, save_size>;
+            using encode_to_curve_salt_type = point_save_span_const_type;
 
             class scalar_type : public std::array<std::byte, order_size> {
             public:
@@ -221,10 +228,10 @@ namespace ozks {
             }
 
             // This function hashes the input to a uniformly random elliptic curve point.
-            FourQPoint(const hash_type &value);
+            FourQPoint(const hash_type &value, encode_to_curve_salt_type salt);
 
             // This function hashes the input to a uniformly random elliptic curve point.
-            FourQPoint(const key_type &data);
+            FourQPoint(const key_type &data, encode_to_curve_salt_type salt);
 
             // Creates a random non-zero number modulo the prime order subgroup.
             static void MakeRandomNonzeroScalar(scalar_type &out);

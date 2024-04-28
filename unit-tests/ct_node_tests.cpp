@@ -6,6 +6,7 @@
 
 // OZKS
 #include "oZKS/compressed_trie.h"
+#include "oZKS/config.h"
 #include "oZKS/ct_node.h"
 #include "oZKS/ct_node_linked.h"
 #include "oZKS/ct_node_stored.h"
@@ -123,9 +124,15 @@ void DoUpdateHashTest(shared_ptr<CTNode> root)
 
     EXPECT_EQ(label, left_node->label());
     EXPECT_FALSE(nullptr == left_node);
+#ifdef OZKS_USE_OPENSSL_SHA2
+    EXPECT_EQ(
+        "02f59c3b7eabe50c198271492acd99ffa1ab5cd77187b08ce58bfe6042a824fc",
+        to_string(left_node->hash()));
+#else
     EXPECT_EQ(
         "d62bf80933cf992e03269ad9c20e01ac5b48e6d33ed88c53da4b8ab6ecf3f5d9",
         to_string(left_node->hash()));
+#endif
 
     label = make_bytes<PartialLabel>(0x02);
     payload = make_bytes<hash_type>(0xE0, 0xE1, 0xE2);
@@ -142,13 +149,22 @@ void DoUpdateHashTest(shared_ptr<CTNode> root)
     EXPECT_FALSE(nullptr == left_left_node);
     EXPECT_FALSE(nullptr == left_right_node);
 
+#ifdef OZKS_USE_OPENSSL_SHA2
+    EXPECT_EQ(
+        "02f59c3b7eabe50c198271492acd99ffa1ab5cd77187b08ce58bfe6042a824fc",
+        to_string(left_left_node->hash()));
+    EXPECT_EQ(
+        "a4b9d4701038d31cdef70c2ee0556033cb26165402cd69352300d3d33e386374",
+        to_string(left_right_node->hash()));
+#else
     EXPECT_EQ(
         "d62bf80933cf992e03269ad9c20e01ac5b48e6d33ed88c53da4b8ab6ecf3f5d9",
         to_string(left_left_node->hash()));
-
     EXPECT_EQ(
         "8605735e32a63473571408785a63bf36b1d19fb3329eaa2c4d1424ded5f2c3b8",
         to_string(left_right_node->hash()));
+#endif
+
     EXPECT_NE(hash_root, root->hash());
 }
 
