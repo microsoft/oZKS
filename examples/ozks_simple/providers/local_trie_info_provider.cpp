@@ -10,7 +10,6 @@ using namespace ozks;
 using namespace ozks_simple;
 using namespace ozks_simple::providers;
 
-
 LocalTrieInfoProvider::LocalTrieInfoProvider(const OZKSConfig &config)
 {
     set_config(config.storage(), config.trie_type(), config.thread_count());

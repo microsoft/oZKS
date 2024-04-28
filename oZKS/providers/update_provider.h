@@ -4,9 +4,9 @@
 #pragma once
 
 // STD
+#include <functional>
 #include <memory>
 #include <optional>
-#include <functional>
 
 // OZKS
 #include "oZKS/defines.h"

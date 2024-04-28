@@ -9,7 +9,6 @@
 // OZKS
 #include "oZKS/defines.h"
 
-
 namespace ozks {
     namespace providers {
         class QueryProvider {

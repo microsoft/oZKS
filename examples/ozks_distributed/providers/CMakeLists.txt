@@ -24,4 +24,3 @@ add_subdirectory(querier)
 add_subdirectory(updater)
 
 set(OZKSDISTRIBUTED_SOURCE_FILES ${OZKSDISTRIBUTED_SOURCE_FILES} PARENT_SCOPE)
-

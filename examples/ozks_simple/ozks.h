@@ -10,26 +10,24 @@
 #include <unordered_map>
 
 // oZKS
-#include "oZKS/defines.h"
 #include "oZKS/commitment.h"
+#include "oZKS/defines.h"
 #include "oZKS/insert_result.h"
 #include "oZKS/ozks_config.h"
-#include "oZKS/insert_result.h"
+#include "oZKS/providers/query_provider.h"
+#include "oZKS/providers/trie_info_provider.h"
+#include "oZKS/providers/update_provider.h"
 #include "oZKS/query_result.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/utilities.h"
 #include "oZKS/vrf.h"
 #include "oZKS/vrf_cache.h"
-#include "oZKS/providers/query_provider.h"
-#include "oZKS/providers/update_provider.h"
-#include "oZKS/providers/trie_info_provider.h"
-
 
 namespace ozks {
     namespace storage {
         class Storage;
     }
-}
+} // namespace ozks
 
 namespace ozks_simple {
     class OZKS {
@@ -55,7 +53,8 @@ namespace ozks_simple {
         /**
         Insert a key and payload into this instance
         */
-        std::shared_ptr<ozks::InsertResult> insert(const ozks::key_type &key, const ozks::payload_type &payload);
+        std::shared_ptr<ozks::InsertResult> insert(
+            const ozks::key_type &key, const ozks::payload_type &payload);
 
         /**
         Insert a batch of keys and payloads into this instance
@@ -163,4 +162,4 @@ namespace ozks_simple {
 
         std::shared_ptr<ozks::storage::Storage> storage() const;
     };
-} // namespace ozks
+} // namespace ozks_simple

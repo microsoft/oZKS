@@ -38,7 +38,7 @@ steps:
 - task: CMake@1
   displayName: 'Configure oZKS for OpenSSL'
   inputs:
-    cmakeArgs: -S . -B buildo -DCMAKE_BUILD_TYPE='${{ parameters.configuration }}' -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DOZKS_USE_OPENSSL_P256=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+    cmakeArgs: -S . -B buildo -DCMAKE_BUILD_TYPE='${{ parameters.configuration }}' -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DOZKS_USE_OPENSSL_SHA2=ON -DOZKS_USE_OPENSSL_P256=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
     workingDirectory: '$(Build.SourcesDirectory)'
 
 - task: MSBuild@1

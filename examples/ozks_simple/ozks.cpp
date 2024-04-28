@@ -7,12 +7,12 @@
 #include <thread>
 
 // oZKS
-#include "ozks.h"
 #include "oZKS/ozks_generated.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/thread_pool.h"
 #include "oZKS/utilities.h"
 #include "oZKS/version.h"
+#include "ozks.h"
 #include "providers/local_query_provider.h"
 #include "providers/local_trie_info_provider.h"
 #include "providers/local_update_provider.h"
@@ -184,12 +184,12 @@ void OZKS::check_for_update()
             storage()->load_updated_elements(epoch, id(), storage());
         }
 
-    //    // Need to update our local copy
-    //    CompressedTrie trie;
-    //    if (!storage()->load_compressed_trie(id(), trie)) {
-    //        throw runtime_error("Should have found trie");
-    //    }
-    //    *trie_ = trie;
+        //    // Need to update our local copy
+        //    CompressedTrie trie;
+        //    if (!storage()->load_compressed_trie(id(), trie)) {
+        //        throw runtime_error("Should have found trie");
+        //    }
+        //    *trie_ = trie;
     }
 }
 

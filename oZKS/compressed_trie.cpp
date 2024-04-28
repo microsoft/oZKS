@@ -24,8 +24,7 @@ using namespace ozks;
 using namespace ozks::storage;
 using namespace ozks::utils;
 
-CompressedTrie::CompressedTrie(
-    shared_ptr<Storage> storage, TrieType trie_type, size_t thread_count)
+CompressedTrie::CompressedTrie(shared_ptr<Storage> storage, TrieType trie_type, size_t thread_count)
     : epoch_(0), storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
 {
     init_random_id();

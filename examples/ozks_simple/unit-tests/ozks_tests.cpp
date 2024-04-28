@@ -4,12 +4,12 @@
 // STD
 
 // OZKS
-#include "../ozks.h"
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/storage/memory_storage_batch_inserter.h"
 #include "oZKS/storage/memory_storage_cache.h"
 #include "oZKS/utilities.h"
+#include "../ozks.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -140,7 +140,7 @@ namespace {
             trie_id_type trie_id,
             const vector<CTNodeStored> &nodes,
             const vector<CompressedTrie> &tries,
-            //const vector<OZKS> &ozks,
+            // const vector<OZKS> &ozks,
             const vector<pair<vector<byte>, store_value_type>> &store_elements) override
         {
             CompressedTrie t;
@@ -969,7 +969,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
     EXPECT_EQ(0, tbs->node_count());
     EXPECT_EQ(0, tbs->store_element_count());
     EXPECT_EQ(0, tbs->trie_count());
-//    EXPECT_EQ(0, tbs->ozks_count());
+    //    EXPECT_EQ(0, tbs->ozks_count());
 
     ozks.flush();
 
@@ -977,7 +977,7 @@ TEST(OZKSTests, RandomInsertVerificationBatchInserterTest)
     EXPECT_GE(tbs->node_count(), random_iterations);
     EXPECT_EQ(random_iterations, tbs->store_element_count());
     EXPECT_EQ(1, tbs->trie_count());
- //   EXPECT_EQ(0, tbs->ozks_count());
+    //   EXPECT_EQ(0, tbs->ozks_count());
 
     // And we can verify results
     for (auto &insert_result : insert_results) {

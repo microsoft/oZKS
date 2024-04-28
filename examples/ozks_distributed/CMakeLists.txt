@@ -14,7 +14,7 @@ set(OZKSDISTRIBUTED_SOURCE_FILES
 
 add_subdirectory("providers")
 
-target_sources(ozks-distributed PRIVATE 
+target_sources(ozks-distributed PRIVATE
     ${OZKSDISTRIBUTED_SOURCE_FILES}
 )
 

@@ -23,7 +23,7 @@ Querier::Querier(trie_id_type trie_id, shared_ptr<Storage> storage)
     trie_ = loaded.first;
 }
 
-bool Querier::query(const hash_type& label, lookup_path_type& lookup_path) const
+bool Querier::query(const hash_type &label, lookup_path_type &lookup_path) const
 {
     PartialLabel plabel(label);
     return trie_->lookup(plabel, lookup_path);
@@ -37,8 +37,7 @@ void Querier::query(
     found.resize(labels.size());
     lookup_paths.resize(labels.size());
 
-    for (size_t i = 0; i < labels.size(); i++)
-    {
+    for (size_t i = 0; i < labels.size(); i++) {
         found[i] = query(labels[i], lookup_paths[i]);
     }
 }

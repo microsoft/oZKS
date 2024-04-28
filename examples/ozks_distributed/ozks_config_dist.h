@@ -8,7 +8,6 @@
 // oZKS
 #include "oZKS/ozks_config.h"
 
-
 namespace ozks_distributed {
     class OZKSConfigDist : public ozks::OZKSConfig {
     public:

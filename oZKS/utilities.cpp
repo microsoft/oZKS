@@ -113,8 +113,9 @@ hash_type utils::compute_hash(gsl::span<const byte> in, const string &domain_str
     return hash;
 }
 
-template<size_t sz>
-void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte, sz> out)
+template <size_t sz>
+void utils::compute_hash(
+    gsl::span<const byte> in, const string &domain_str, gsl::span<byte, sz> out)
 {
     // Create the actual input buffer by prepending the given input with domain_str
     vector<byte> hash_in(in.size() + domain_str.size());
@@ -131,7 +132,7 @@ hash_type utils::compute_hash(gsl::span<const byte> in)
     return hash;
 }
 
-template<size_t sz>
+template <size_t sz>
 void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
 {
     hash::hash<sz>(in.data(), in.size(), out.data());
@@ -168,7 +169,8 @@ hash_type utils::get_node_label(
     return key_hash;
 }
 
-hash_type utils::get_node_label(const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type)
+hash_type utils::get_node_label(
+    const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
@@ -386,7 +388,9 @@ size_t utils::get_log2(size_t n)
 }
 
 // Explicit instantiations
-template void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte, 32> out);
-template void utils::compute_hash(gsl::span<const byte> in, const string &domain_str, gsl::span<byte, 64> out);
+template void utils::compute_hash(
+    gsl::span<const byte> in, const string &domain_str, gsl::span<byte, 32> out);
+template void utils::compute_hash(
+    gsl::span<const byte> in, const string &domain_str, gsl::span<byte, 64> out);
 template void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, 32> out);
 template void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, 64> out);

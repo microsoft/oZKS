@@ -4,14 +4,14 @@
 // STD
 
 // OZKS
-#include "../ozks_distributed.h"
-#include "../ozks_config_dist.h"
+#include "oZKS/compressed_trie.h"
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/storage/memory_storage_batch_inserter.h"
 #include "oZKS/storage/memory_storage_cache.h"
-#include "oZKS/compressed_trie.h"
 #include "oZKS/utilities.h"
+#include "../ozks_config_dist.h"
+#include "../ozks_distributed.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -340,7 +340,7 @@ namespace {
         payload_type payload(40);
         vector<key_type> valid_keys;
         vector<payload_type> valid_payloads;
-        //vector<shared_ptr<InsertResult>> insert_results;
+        // vector<shared_ptr<InsertResult>> insert_results;
 
         ozks.check_for_update();
 
@@ -384,7 +384,7 @@ namespace {
 
         return valid_keys;
     }
-}
+} // namespace
 
 TEST(OZKSDistTests, UpdatedNodesTest)
 {
@@ -436,7 +436,8 @@ TEST(OZKSDistTests, UpdaterTest)
         PayloadCommitmentType::CommitedPayload,
         LabelType::VRFLabels,
         TrieType::Linked,
-        batch_inserter, {});
+        batch_inserter,
+        {});
     OZKS ozks(config);
 
     EXPECT_EQ(0, ozks.get_epoch());

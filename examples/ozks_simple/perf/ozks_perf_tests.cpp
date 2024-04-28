@@ -11,9 +11,9 @@
 #include <string>
 
 // OZKS
-#include "../ozks.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
+#include "../ozks.h"
 #include "mem_utils.h"
 
 // Google Benchmark

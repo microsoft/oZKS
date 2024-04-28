@@ -17,14 +17,15 @@ using namespace ozks;
 
 namespace {
     template <size_t Size, typename... Points>
-    void append_ecpt_to_buffer(gsl::span<byte, Size> out, Points &&...);
+    void append_ecpt_to_buffer([[maybe_unused]] gsl::span<byte, Size> out, Points &&...);
 
     template <>
-    void append_ecpt_to_buffer(gsl::span<byte, 0> out)
+    void append_ecpt_to_buffer([[maybe_unused]] gsl::span<byte, 0> out)
     {}
 
     template <size_t Size, typename First, typename... Rest>
-    void append_ecpt_to_buffer(gsl::span<byte, Size> out, First &&pt, Rest &&... rest)
+    void append_ecpt_to_buffer(
+        [[maybe_unused]] gsl::span<byte, Size> out, First &&pt, Rest &&... rest)
     {
         constexpr size_t subspan_offset = utils::ECPoint::save_size;
         constexpr size_t subspan_size = sizeof...(Rest) * utils::ECPoint::save_size;
@@ -75,7 +76,8 @@ namespace {
             hash_buf.begin() + domain_separator_back_start);
 
         // Compute by applying a hash function to buffer; reduce modulo group order
-        hash_type challenge_hash = utils::compute_hash(gsl::span{ hash_buf.data(), hash_buf.size() });
+        hash_type challenge_hash =
+            utils::compute_hash(gsl::span{ hash_buf.data(), hash_buf.size() });
         utils::ECPoint::ReduceModOrder(challenge_hash);
         decltype(VRFProof::c) c{};
         copy_n(challenge_hash.begin(), utils::ECPoint::order_size, c.begin());
@@ -204,14 +206,12 @@ VRFProof VRFSecretKey::get_vrf_proof(const hash_type &data) const
     throw_if_uninitialized();
 
     // The proof requires the hash of the following data:
-    // 1. generator
+    // 1. public key
     // 2. hash-to-curve(data)
-    // 3. generator multiplied by secret key (public key)
-    // 4. hash-to-curve(data) multiplied by secret key
-    // 5. generator multiplied by nonce
-    // 6. hash-to-curve(data) multiplied by nonce
+    // 3. hash-to-curve(data) multiplied by secret key
+    // 4. generator multiplied by nonce
+    // 5. hash-to-curve(data) multiplied by nonce
 
-    utils::ECPoint generator = utils::ECPoint::MakeGenerator();
     utils::ECPoint h2c_data(data, h2c_salt_); // cofactor cleared
 
     utils::ECPoint sk_times_h2c_data(h2c_data);
@@ -351,7 +351,6 @@ bool VRFPublicKey::verify_vrf_proof(const hash_type &data, const VRFProof &vrf_p
     v.add(temp);
 
     // Compute c_comp by hashing together all of the curve points and check that it equals c
-    utils::ECPoint generator = utils::ECPoint::MakeGenerator();
     decltype(VRFProof::c) c_comp = make_challenge(key_point_, h2c_data, gamma_pt, u, v);
     if (c_comp != vrf_proof.c) {
         return false;

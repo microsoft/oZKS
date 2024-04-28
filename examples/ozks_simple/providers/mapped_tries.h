@@ -23,5 +23,5 @@ namespace ozks_simple {
         Get the Compressed Trie that has the given trie ID
         */
         std::shared_ptr<ozks::CompressedTrie> get_compressed_trie(ozks::trie_id_type trie_id);
-    }
+    } // namespace providers
 } // namespace ozks_simple

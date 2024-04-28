@@ -2,15 +2,14 @@
 // Licensed under the MIT license.
 
 // OZKS
-#include "oZKS/utilities.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/utilities.h"
 #include "dist_trie_info_provider.h"
 
 using namespace std;
 using namespace ozks;
 using namespace ozks_distributed;
 using namespace ozks_distributed::providers;
-
 
 TrieInfoProvider::TrieInfoProvider(const OZKSConfigDist &config) : storage_(config.storage())
 {}

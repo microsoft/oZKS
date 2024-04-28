@@ -99,9 +99,11 @@ namespace ozks {
         Compute a domain-separated hash of the given input. In other words, this function
         returns hash(domain_str||in). The output of this function is of arbitrary length.
         */
-        template<std::size_t sz>
+        template <std::size_t sz>
         void compute_hash(
-            gsl::span<const std::byte> in, const std::string &domain_str, gsl::span<std::byte, sz> out);
+            gsl::span<const std::byte> in,
+            const std::string &domain_str,
+            gsl::span<std::byte, sz> out);
 
         /**
         Compute a hash of the given input.
@@ -111,7 +113,7 @@ namespace ozks {
         /**
         Compute a hash of the given input. The output of this function is of arbitrary length.
         */
-        template<std::size_t sz>
+        template <std::size_t sz>
         void compute_hash(gsl::span<const std::byte> in, gsl::span<std::byte, sz> out);
 
         /**
@@ -128,7 +130,8 @@ namespace ozks {
         This function computes the label for a given key. In case the VRF proof is not needed,
         this is faster than calling the overload that includes the VRF proof.
         */
-        hash_type get_node_label(const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type);
+        hash_type get_node_label(
+            const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type);
 
         /**
         Hasher for a byte vector.

@@ -30,4 +30,4 @@ namespace ozks_simple {
             std::size_t get_epoch(ozks::trie_id_type trie_id) override;
         };
     } // namespace providers
-} // namespace ozks
+} // namespace ozks_simple

@@ -19,12 +19,13 @@ namespace ozks_simple {
             virtual ~LocalQueryProvider()
             {}
 
-
             /**
             Query a compressed trie
             */
             bool query(
-                ozks::trie_id_type trie_id, const ozks::hash_type &label, ozks::lookup_path_type &lookup_path) override;
+                ozks::trie_id_type trie_id,
+                const ozks::hash_type &label,
+                ozks::lookup_path_type &lookup_path) override;
 
             /**
             Perform several queries on a compressed trie
@@ -46,7 +47,6 @@ namespace ozks_simple {
             void check_for_update(ozks::trie_id_type trie_id) override;
 
         private:
-
         };
     } // namespace providers
 } // namespace ozks_simple

@@ -19,9 +19,10 @@ using namespace ozks_distributed::providers::updater;
 namespace {
     mutex updates_mtx_;
     unordered_map<trie_id_type, label_hash_batch_type> updates_;
-}
+} // namespace
 
-UpdateProvider::UpdateProvider(trie_id_type trie_id, int time_period, const ozks::OZKSConfig& config)
+UpdateProvider::UpdateProvider(
+    trie_id_type trie_id, int time_period, const ozks::OZKSConfig &config)
 {
     updater_ = make_shared<Updater>(
         trie_id,
@@ -69,12 +70,8 @@ void UpdateProvider::insert(
 }
 
 void UpdateProvider::get_append_proofs(
-    trie_id_type trie_id,
-    vector<hash_type>& labels,
-    vector<append_proof_type>& append_proofs)
-{
-
-}
+    trie_id_type trie_id, vector<hash_type> &labels, vector<append_proof_type> &append_proofs)
+{}
 
 label_hash_batch_type UpdateProvider::get_updates(trie_id_type trie_id)
 {
@@ -83,7 +80,7 @@ label_hash_batch_type UpdateProvider::get_updates(trie_id_type trie_id)
     if (updates == updates_.end()) {
         return {};
     }
-    
+
     label_hash_batch_type result(std::move(updates->second));
     updates->second.clear();
 

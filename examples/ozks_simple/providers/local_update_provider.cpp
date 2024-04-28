@@ -16,7 +16,6 @@ using namespace ozks;
 using namespace ozks_simple;
 using namespace ozks_simple::providers;
 
-
 namespace {
     mutex app_proofs_mtx_;
     unordered_map<trie_id_type, vector<pair<hash_type, append_proof_type>>> append_proofs_;
@@ -44,8 +43,7 @@ namespace {
     {
         lock_guard<mutex> app_proofs_lock(app_proofs_mtx_);
         auto trie_proofs = append_proofs_.find(trie_id);
-        if (trie_proofs == append_proofs_.end())
-        {
+        if (trie_proofs == append_proofs_.end()) {
             vector<pair<hash_type, append_proof_type>> app_proofs;
             append_proofs_.insert_or_assign(trie_id, std::move(app_proofs));
             trie_proofs = append_proofs_.find(trie_id);
@@ -56,7 +54,6 @@ namespace {
         }
     }
 } // namespace
-
 
 LocalUpdateProvider::LocalUpdateProvider(const OZKSConfig &config)
 {
@@ -80,7 +77,6 @@ void LocalUpdateProvider::insert(
         add_append_proof(trie_id, label, app_proof);
     }
 }
-
 
 void LocalUpdateProvider::insert(
     trie_id_type trie_id,

@@ -5,15 +5,14 @@
 #include <mutex>
 
 // oZKS
-#include "ozks_distributed.h"
+#include "oZKS/ozks_distributed_generated.h"
 #include "oZKS/storage/memory_storage.h"
+#include "oZKS/thread_pool.h"
+#include "oZKS/version.h"
+#include "ozks_distributed.h"
 #include "providers/dist_query_provider.h"
 #include "providers/dist_trie_info_provider.h"
 #include "providers/dist_update_provider.h"
-#include "oZKS/thread_pool.h"
-#include "oZKS/ozks_distributed_generated.h"
-#include "oZKS/version.h"
-
 
 using namespace std;
 using namespace ozks;
@@ -95,7 +94,7 @@ void OZKS::insert(const key_type &key, const payload_type &payload)
     update_provider_->insert(id(), label, commit_result.first);
 }
 
-void OZKS::insert(const key_payload_batch_type& input)
+void OZKS::insert(const key_payload_batch_type &input)
 {
     label_hash_batch_type label_commit_batch(input.size());
 
@@ -146,7 +145,7 @@ void OZKS::insert(const key_payload_batch_type& input)
     update_provider_->insert(id(), label_commit_batch);
 }
 
-QueryResult OZKS::query(const key_type& key) const
+QueryResult OZKS::query(const key_type &key) const
 {
     // get_node_label below will set this to nullopt if the OZKS is not using VRFs
     optional<VRFProof> vrf_proof;
@@ -154,8 +153,7 @@ QueryResult OZKS::query(const key_type& key) const
         utils::get_node_label(key, vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
 
     lookup_path_type lookup_path;
-    if (!query_provider_->query(id(), label, lookup_path))
-    {
+    if (!query_provider_->query(id(), label, lookup_path)) {
         // Non-existence
         return { config_,
                  /* is_member */ false,
@@ -164,7 +162,6 @@ QueryResult OZKS::query(const key_type& key) const
                  lookup_path,
                  vrf_proof.value_or(VRFProof{}),
                  /* randomness */ {} };
-            
     }
 
     // Existence
@@ -199,12 +196,12 @@ Commitment OZKS::get_commitment() const
     return { get_vrf_public_key(), root_hash };
 }
 
-const OZKSConfig& OZKS::get_config() const
+const OZKSConfig &OZKS::get_config() const
 {
     return config_;
 }
 
-size_t OZKS::save(ostream& stream) const
+size_t OZKS::save(ostream &stream) const
 {
     StreamSerializationWriter writer(&stream);
     return save(writer);
@@ -217,7 +214,7 @@ size_t OZKS::save(vector<T> &vec) const
     return save(writer);
 }
 
-size_t OZKS::save(SerializationWriter& writer) const
+size_t OZKS::save(SerializationWriter &writer) const
 {
     flatbuffers::FlatBufferBuilder fbs_builder;
 
@@ -262,8 +259,7 @@ pair<OZKS, size_t> OZKS::Load(shared_ptr<Storage> storage, const vector<T> &vec,
     return Load(reader, storage);
 }
 
-pair<OZKS, size_t> OZKS::Load(
-    SerializationReader& reader, shared_ptr<Storage> storage)
+pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> storage)
 {
     vector<unsigned char> in_data(utils::read_from_serialization_reader(reader));
 
@@ -317,7 +313,6 @@ void OZKS::check_for_update()
 {
     query_provider_->check_for_update(id());
 }
-
 
 // Explicit instantiations
 template size_t OZKS::save(vector<uint8_t> &vec) const;

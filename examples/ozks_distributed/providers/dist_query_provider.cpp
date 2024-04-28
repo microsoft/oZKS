@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 
 // STD
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 // OZKS
 #include "oZKS/utilities.h"
@@ -53,7 +53,7 @@ namespace {
     }
 } // namespace
 
-QueryProvider::QueryProvider(const OZKSConfigDist& config)
+QueryProvider::QueryProvider(const OZKSConfigDist &config)
 {
     storage_[this] = config.storage_querier();
 }

@@ -6,8 +6,8 @@
 // STD
 
 // OZKS
-#include "../ozks_config_dist.h"
 #include "oZKS/providers/query_provider.h"
+#include "../ozks_config_dist.h"
 
 namespace ozks_distributed {
     namespace providers {
@@ -47,7 +47,6 @@ namespace ozks_distributed {
             void check_for_update(ozks::trie_id_type trie_id) override;
 
         private:
-
         };
     } // namespace providers
 } // namespace ozks_distributed

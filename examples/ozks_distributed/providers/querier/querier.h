@@ -8,9 +8,9 @@
 #include <vector>
 
 // OZKS
+#include "oZKS/compressed_trie.h"
 #include "oZKS/ozks_config.h"
 #include "oZKS/storage/storage.h"
-#include "oZKS/compressed_trie.h"
 
 namespace ozks_distributed {
     namespace providers {
@@ -20,7 +20,8 @@ namespace ozks_distributed {
             */
             class Querier {
             public:
-                Querier(ozks::trie_id_type trie_id, std::shared_ptr<ozks::storage::Storage> storage);
+                Querier(
+                    ozks::trie_id_type trie_id, std::shared_ptr<ozks::storage::Storage> storage);
                 Querier() = delete;
 
                 bool query(const ozks::hash_type &label, ozks::lookup_path_type &lookup_path) const;

@@ -13,7 +13,6 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
 
-
 TEST(ConfigTests, DefaultConstructorTest)
 {
     OZKSConfig config;
@@ -65,15 +64,15 @@ TEST(ConfigTests, VRFSeedTest)
 
     // Non-empty VRF seed with VRF labels disabled
     {
-		auto storage = make_shared<MemoryStorage>();
-		auto vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05);
+        auto storage = make_shared<MemoryStorage>();
+        auto vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05);
         EXPECT_THROW(
             OZKSConfig config(
-				PayloadCommitmentType::UncommitedPayload,
-				LabelType::HashedLabels,
-				TrieType::Stored,
-				storage,
-				vrf_seed),
-			invalid_argument);
-	}
+                PayloadCommitmentType::UncommitedPayload,
+                LabelType::HashedLabels,
+                TrieType::Stored,
+                storage,
+                vrf_seed),
+            invalid_argument);
+    }
 }

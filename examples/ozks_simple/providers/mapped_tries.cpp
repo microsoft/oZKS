@@ -5,8 +5,8 @@
 #include <unordered_map>
 
 // OZKS
-#include "oZKS/defines.h"
 #include "oZKS/compressed_trie.h"
+#include "oZKS/defines.h"
 #include "mapped_tries.h"
 
 using namespace std;
@@ -19,12 +19,10 @@ namespace {
     size_t thread_count_ = 0;
     TrieType trie_type_ = TrieType::Stored;
     shared_ptr<storage::Storage> storage_;
-}
+} // namespace
 
 void ozks_simple::providers::set_config(
-    shared_ptr<storage::Storage> storage,
-    TrieType trie_type,
-    size_t thread_count)
+    shared_ptr<storage::Storage> storage, TrieType trie_type, size_t thread_count)
 {
     storage_ = storage;
     trie_type_ = trie_type;

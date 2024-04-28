@@ -135,8 +135,8 @@ void MemoryStorage::delete_ozks(trie_id_type trie_id)
     tries_.erase(trie_key);
 
     //// There should be a single OZKS instance with the id
-    //StorageOZKSKey ozks_key(trie_id);
-    //ozks_.erase(ozks_key);
+    // StorageOZKSKey ozks_key(trie_id);
+    // ozks_.erase(ozks_key);
 
     {
         // Find store elements to delete

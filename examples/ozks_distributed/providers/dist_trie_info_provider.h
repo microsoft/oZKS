@@ -7,9 +7,9 @@
 #include <memory>
 
 // OZKS
-#include "../ozks_config_dist.h"
 #include "oZKS/providers/trie_info_provider.h"
 #include "oZKS/storage/storage.h"
+#include "../ozks_config_dist.h"
 
 namespace ozks_distributed {
     namespace providers {

@@ -5,9 +5,9 @@
 #include <mutex>
 
 // OZKS
-#include "updater.h"
 #include "oZKS/compressed_trie.h"
 #include "oZKS/ct_node_stored.h"
+#include "updater.h"
 
 // Poco
 #include "Poco/Util/Timer.h"
@@ -66,8 +66,7 @@ void Updater::time_tick()
         return;
     }
 
-    for (size_t i = 0; i < updates.size(); i++)
-    {
+    for (size_t i = 0; i < updates.size(); i++) {
         pupdates[i] = { PartialLabel(updates[i].first), updates[i].second };
     }
 

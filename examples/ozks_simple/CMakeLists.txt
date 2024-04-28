@@ -11,7 +11,7 @@ set(OZKSSIMPLE_SOURCE_FILES "${CMAKE_CURRENT_LIST_DIR}/ozks.cpp")
 
 add_subdirectory("providers")
 
-target_sources(ozks-simple PRIVATE 
+target_sources(ozks-simple PRIVATE
     ${OZKSSIMPLE_SOURCE_FILES}
 )
 

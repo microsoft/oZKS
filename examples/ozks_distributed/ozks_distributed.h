@@ -7,12 +7,12 @@
 
 // oZKS
 #include "oZKS/insert_result.h"
-#include "oZKS/query_result.h"
-#include "oZKS/vrf.h"
-#include "oZKS/vrf_cache.h"
 #include "oZKS/providers/query_provider.h"
 #include "oZKS/providers/trie_info_provider.h"
 #include "oZKS/providers/update_provider.h"
+#include "oZKS/query_result.h"
+#include "oZKS/vrf.h"
+#include "oZKS/vrf_cache.h"
 #include "ozks_config_dist.h"
 
 namespace ozks {
@@ -45,8 +45,7 @@ namespace ozks_distributed {
         /**
         Insert a key and payload into this instance
         */
-        void insert(
-            const ozks::key_type &key, const ozks::payload_type &payload);
+        void insert(const ozks::key_type &key, const ozks::payload_type &payload);
 
         /**
         Insert a batch of keys and payloads into this instance
@@ -145,4 +144,4 @@ namespace ozks_distributed {
         std::shared_ptr<ozks::storage::Storage> storage() const;
         std::shared_ptr<ozks::storage::Storage> storage_querier() const;
     };
-} // namespace ozks_simple
+} // namespace ozks_distributed

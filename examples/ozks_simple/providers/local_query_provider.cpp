@@ -6,12 +6,10 @@
 #include "local_query_provider.h"
 #include "mapped_tries.h"
 
-
 using namespace std;
 using namespace ozks;
 using namespace ozks_simple;
 using namespace ozks_simple::providers;
-
 
 LocalQueryProvider::LocalQueryProvider(const OZKSConfig &config)
 {
@@ -19,9 +17,7 @@ LocalQueryProvider::LocalQueryProvider(const OZKSConfig &config)
 }
 
 bool LocalQueryProvider::query(
-    trie_id_type trie_id,
-    const hash_type& label,
-    lookup_path_type& lookup_path)
+    trie_id_type trie_id, const hash_type &label, lookup_path_type &lookup_path)
 {
     auto trie = get_compressed_trie(trie_id);
     PartialLabel plabel(label);
@@ -31,8 +27,8 @@ bool LocalQueryProvider::query(
 
 void LocalQueryProvider::query(
     trie_id_type trie_id,
-    const vector<hash_type>& labels,
-    vector<bool>& found,
+    const vector<hash_type> &labels,
+    vector<bool> &found,
     vector<lookup_path_type> &lookup_paths)
 {
     vector<PartialLabel> plabels(labels.size());

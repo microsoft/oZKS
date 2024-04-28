@@ -133,19 +133,6 @@ namespace {
         }
     }
 
-    void reduce_mod_p256(BIGNUM *value)
-    {
-        // BN_nist_mod_256 requires an allocated BN_CTX
-        BN_CTX_guard bcg;
-        BIGNUM_guard bn_temp;
-        if (1 != BN_nist_mod_256(bn_temp.get(), value, nullptr, bcg.get())) {
-            throw runtime_error("Call to BN_nist_mod_256 failed");
-        }
-        if (!BN_copy(value, bn_temp.get())) {
-            throw runtime_error("Call to BN_copy failed");
-        }
-    }
-
     void random_scalar(utils::P256Point::scalar_type &value)
     {
         BIGNUM *value_bn = reinterpret_cast<BIGNUM *>(value.ptr());
@@ -335,15 +322,13 @@ utils::P256Point::P256Point(const hash_type &data, encode_to_curve_salt_type sal
 
     // Compute the positions in the buffer
     constexpr size_t curve_descriptor_start = 0;
-    constexpr size_t domain_separator_front_start =
-        curve_descriptor_start + curve_descriptor_size;
+    constexpr size_t domain_separator_front_start = curve_descriptor_start + curve_descriptor_size;
     constexpr size_t curve_salt_start =
         domain_separator_front_start + sizeof(domain_separator_front);
     constexpr size_t data_start = curve_salt_start + salt.size();
     constexpr size_t ctr_start = data_start + hash_size;
-    constexpr size_t domain_separator_back_start = ctr_start + sizeof(ctr_type);    
-    constexpr size_t buf_size =
-        domain_separator_back_start + sizeof(domain_separator_back);
+    constexpr size_t domain_separator_back_start = ctr_start + sizeof(ctr_type);
+    constexpr size_t buf_size = domain_separator_back_start + sizeof(domain_separator_back);
 
     // Copy in everything to the hash buffer except the counter value
     array<byte, buf_size> buf{};
@@ -355,14 +340,8 @@ utils::P256Point::P256Point(const hash_type &data, encode_to_curve_salt_type sal
         &domain_separator_front,
         sizeof(domain_separator_front),
         buf.begin() + domain_separator_front_start);
-    copy_n(
-        salt.begin(),
-        salt.size(),
-        buf.begin() + curve_salt_start);
-    copy_n(
-        data.begin(),
-        hash_size,
-        buf.begin() + data_start);
+    copy_n(salt.begin(), salt.size(), buf.begin() + curve_salt_start);
+    copy_n(data.begin(), hash_size, buf.begin() + data_start);
     copy_n(
         &domain_separator_back,
         sizeof(domain_separator_back),
@@ -372,15 +351,15 @@ utils::P256Point::P256Point(const hash_type &data, encode_to_curve_salt_type sal
     int ret = 0;
     do {
         // Copy in the counter value
-        copy_n(
-            reinterpret_cast<const byte *>(&ctr),
-            sizeof(ctr_type),
-            buf.begin() + ctr_start);
+        copy_n(reinterpret_cast<const byte *>(&ctr), sizeof(ctr_type), buf.begin() + ctr_start);
 
-        // Hash buf 
+        // Hash buf
         array<byte, save_size> str_to_point_in{};
         str_to_point_in[0] = byte(0x02);
-        compute_hash(buf, "p256_constructor_hash", gsl::span<byte, save_size - 1>{ str_to_point_in.data() + 1, save_size - 1 });
+        compute_hash(
+            buf,
+            "p256_constructor_hash",
+            gsl::span<byte, save_size - 1>{ str_to_point_in.data() + 1, save_size - 1 });
 
         ret = EC_POINT_oct2point(
             get_ec_group(),
@@ -389,11 +368,12 @@ utils::P256Point::P256Point(const hash_type &data, encode_to_curve_salt_type sal
             save_size,
             nullptr);
 
-        ctr += 1;
+        ctr++;
     } while (1 != ret);
 }
 
-utils::P256Point::P256Point(const key_type &data, encode_to_curve_salt_type salt) : P256Point(compute_key_hash(data), salt)
+utils::P256Point::P256Point(const key_type &data, encode_to_curve_salt_type salt)
+    : P256Point(compute_key_hash(data), salt)
 {}
 
 utils::P256Point &utils::P256Point::operator=(const P256Point &assign)
@@ -435,7 +415,7 @@ void utils::P256Point::MakeSeededScalar(input_span_const_type seed, scalar_type 
         throw logic_error("Output should be at least equal in size to hash");
     }
 
-    copy_n(hash.data(), byte_count, buf.data());
+    copy_n(reinterpret_cast<const unsigned char *>(hash.data()), byte_count, buf.data());
     if (!BN_bin2bn(buf.data(), byte_count, out_bn)) {
         throw logic_error("Unable to convert hash to bignum");
     }
@@ -772,10 +752,13 @@ utils::FourQPoint::FourQPoint(const hash_type &data, encode_to_curve_salt_type s
     array<byte, buf_size> buf{};
     copy_n(salt.data(), salt.size(), buf.data());
     copy_n(data.begin(), hash_size, buf.begin() + data_start);
-    
+
     // Hash everything into an f2elm_t struct
     f2elm_t r;
-    compute_hash(buf, "fourq_constructor_hash", gsl::span<byte, sizeof(r)>{ reinterpret_cast<byte *>(r), sizeof(r) });
+    compute_hash(
+        buf,
+        "fourq_constructor_hash",
+        gsl::span<byte, sizeof(r)>{ reinterpret_cast<byte *>(r), sizeof(r) });
 
     // Reduce r; note that this does not produce a perfectly uniform distribution modulo
     // 2^127-1, but it is good enough.
@@ -786,7 +769,8 @@ utils::FourQPoint::FourQPoint(const hash_type &data, encode_to_curve_salt_type s
     HashToCurve(r, pt_);
 }
 
-utils::FourQPoint::FourQPoint(const key_type &data, encode_to_curve_salt_type salt) : FourQPoint(compute_key_hash(data), salt)
+utils::FourQPoint::FourQPoint(const key_type &data, encode_to_curve_salt_type salt)
+    : FourQPoint(compute_key_hash(data), salt)
 {}
 
 void utils::FourQPoint::MakeRandomNonzeroScalar(scalar_type &out)
