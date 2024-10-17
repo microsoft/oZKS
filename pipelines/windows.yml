@@ -9,6 +9,8 @@ steps:
   inputs:
     restoreSolution: tools/config/packages.config
     restoreDirectory: ConfigPackages
+    feedsToUse: config
+    nugetConfigPath: nuget.config
 
 - ${{ if eq(parameters.configuration, 'Release') }}:
   - task: securedevelopmentteam.vss-secure-development-tools.build-task-credscan.CredScan@2
