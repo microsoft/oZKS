@@ -2,7 +2,7 @@
 
 ## Introduction
 
-oZKS is a library that provides an implementation of an Ordered (and Append Only) Zero-knowledge Set. Zero-knowledge sets allow a prover to convince a verifier that a given value is a member of a specific set without revealing any information about the value or the set itself. oZLS implements a Zero-knowledge dictionary, where the user can add Key/Value pairs in a given epoch, obtain a proof of the correctness of the added Key/Value pair, and then retrieve a proof of whether a given Key is present in the dictionary.
+oZKS is a library that provides an implementation of an Ordered (and Append Only) Zero-knowledge Set. Zero-knowledge sets allow a prover to convince a verifier that a given value is a member of a specific set without revealing any information about the value or the set itself. oZKS implements a Zero-knowledge dictionary, where the user can add Key/Value pairs in a given epoch, obtain a proof of the correctness of the added Key/Value pair, and then retrieve a proof of whether a given Key is present in the dictionary.
 
 ## Zero-Knowledge Set definition
 
