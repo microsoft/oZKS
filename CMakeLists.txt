@@ -165,7 +165,7 @@ if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
 endif()
 
 # Poco
-find_package(Poco CONFIG REQUIRED COMPONENTS Foundation Util)
+find_package(Poco CONFIG REQUIRED COMPONENTS Foundation)
 if (NOT Poco_FOUND)
     message(FATAL_ERROR "Poco: not found")
 else()
@@ -222,8 +222,7 @@ ozks_install_target(ozks OZKSTargets)
 target_link_libraries(ozks
     PUBLIC Microsoft.GSL::GSL
     PRIVATE flatbuffers::flatbuffers
-    PUBLIC Poco::Foundation
-    PUBLIC Poco::Util)
+    PUBLIC Poco::Foundation)
 
 if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
     target_link_libraries(ozks
