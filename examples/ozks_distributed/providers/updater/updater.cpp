@@ -10,7 +10,7 @@
 #include "updater.h"
 
 // Poco
-#include "Poco/Util/Timer.h"
+#include "Poco/Timer.h"
 
 using namespace std;
 using namespace ozks;
