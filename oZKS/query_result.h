@@ -18,7 +18,7 @@ namespace ozks {
     /**
     Represents the result of a QueryResult verification
     */
-    enum class QueryVerificationResult {
+    enum class QueryVerificationResult : std::uint8_t {
         /**
         QueryResult is not valid
         */
