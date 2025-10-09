@@ -156,7 +156,6 @@ QueryResult OZKS::query(const key_type &key) const
     if (!query_provider_->query(id(), label, lookup_path)) {
         // Non-existence
         return { config_,
-                 /* is_member */ false,
                  key,
                  /* payload */ {},
                  lookup_path,
@@ -171,7 +170,6 @@ QueryResult OZKS::query(const key_type &key) const
     }
 
     return { config_,
-             /* is_member */ true,
              key,
              element.payload,
              lookup_path,
