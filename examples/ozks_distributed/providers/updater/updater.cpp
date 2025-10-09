@@ -10,7 +10,7 @@
 #include "updater.h"
 
 // Poco
-#include "Poco/Util/Timer.h"
+#include "Poco/Timer.h"
 
 using namespace std;
 using namespace ozks;
@@ -30,7 +30,7 @@ Updater::Updater(
     SaveInsertResultFn save_insert_result,
     shared_ptr<Storage> storage)
     : trie_id_(trie_id), time_period_(time_period), get_updates_(get_updates),
-      save_insert_result_(save_insert_result), storage_(storage)
+      save_insert_result_(save_insert_result), storage_(storage), updater_tick_(std::make_unique<UpdaterTick>(*this))
 {
     // Get Trie
     if (nullptr == trie_) {
@@ -44,10 +44,11 @@ Updater::Updater(
         }
     }
 
-    timer_.schedule(
-        Poco::Util::Timer::func([this]() { this->time_tick(); }),
-        /* delay */ time_period,
-        /* interval */ time_period);
+    timer_.setPeriodicInterval(time_period);
+    timer_.setStartInterval(time_period);
+
+    Poco::TimerCallback<UpdaterTick> callback(*updater_tick_, &UpdaterTick::time_tick);
+    timer_.start(callback);
 }
 
 void Updater::time_tick()

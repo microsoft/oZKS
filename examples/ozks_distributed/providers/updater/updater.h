@@ -12,7 +12,7 @@
 #include "oZKS/storage/storage.h"
 
 // Poco
-#include "Poco/Util/Timer.h"
+#include "Poco/Timer.h"
 
 namespace ozks_distributed {
     namespace providers {
@@ -30,6 +30,8 @@ namespace ozks_distributed {
                 const ozks::append_proof_batch_type &append_proofs,
                 const ozks::hash_type &root_hash);
 
+            class UpdaterTick;
+
             /**
             Updater
 
@@ -44,16 +46,31 @@ namespace ozks_distributed {
                     SaveInsertResultFn save_insert_result,
                     std::shared_ptr<ozks::storage::Storage> storage);
 
+                void time_tick();
+
             private:
                 ozks::trie_id_type trie_id_;
                 int time_period_;
                 GetUpdatesFn get_updates_;
                 SaveInsertResultFn save_insert_result_;
                 std::shared_ptr<ozks::storage::Storage> storage_;
-                Poco::Util::Timer timer_;
+                Poco::Timer timer_;
+                std::unique_ptr<UpdaterTick> updater_tick_;
                 std::shared_ptr<ozks::CompressedTrie> trie_;
+            };
 
-                void time_tick();
+            class UpdaterTick {
+            public:
+                UpdaterTick(Updater &updater) : updater_(updater)
+                {}
+
+                void time_tick(Poco::Timer &timer)
+                {
+                    updater_.time_tick();
+                }
+
+            private:
+                Updater &updater_;
             };
         } // namespace updater
     }     // namespace providers

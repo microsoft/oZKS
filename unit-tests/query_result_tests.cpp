@@ -57,12 +57,11 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     vrf_proof.s[2] = static_cast<byte>(0x33);
 
     qr = QueryResult(
-        config, /* is_member */ true, key, payload, lookup_proof, vrf_proof, randomness);
+        config, key, payload, lookup_proof, vrf_proof, randomness);
 }
 
 void VerifyLoadedQueryResult(QueryResult &qr, const OZKSConfig &config)
 {
-    EXPECT_TRUE(qr.is_member());
     EXPECT_EQ(static_cast<byte>(0xFE), qr.key()[0]);
     EXPECT_EQ(static_cast<byte>(0xEF), qr.key()[1]);
     EXPECT_EQ(static_cast<byte>(0xCD), qr.key()[2]);

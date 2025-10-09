@@ -15,6 +15,26 @@
 #include "oZKS/vrf.h"
 
 namespace ozks {
+    /**
+    Represents the result of a QueryResult verification
+    */
+    enum class QueryVerificationResult {
+        /**
+        QueryResult is not valid
+        */
+        NotValid,
+
+        /**
+        QueryResult is valid, key is a member
+        */
+        ValidIsMember,
+
+        /**
+        QueryResult is valid, key is not a member
+        */
+        ValidNotMember
+    };
+
     class QueryResult {
     public:
         /**
@@ -34,24 +54,19 @@ namespace ozks {
         */
         QueryResult(
             const OZKSConfig config,
-            bool is_member,
             const key_type &key,
             const payload_type &payload,
             const lookup_path_type &lookup_proof,
             const VRFProof &vrf_proof,
             const randomness_type &randomness)
-            : is_member_(is_member), key_(key), payload_(payload), lookup_proof_(lookup_proof),
-              vrf_proof_(vrf_proof), randomness_(randomness),
-              use_vrf_(config.label_type() == LabelType::VRFLabels)
+            : key_(key), payload_(payload), lookup_proof_(lookup_proof), vrf_proof_(vrf_proof),
+              randomness_(randomness), use_vrf_(config.label_type() == LabelType::VRFLabels)
         {}
 
         /**
         Whether the query found the key that was searched for
         */
-        bool is_member() const noexcept
-        {
-            return is_member_;
-        }
+        bool is_member() const noexcept;
 
         /**
         The key that was looked up
@@ -96,7 +111,7 @@ namespace ozks {
         /**
         Verify whether the lookup proof is correct
         */
-        bool verify_lookup_path(const commitment_type &commitment) const;
+        QueryVerificationResult verify_lookup_path(const commitment_type &commitment) const;
 
         /**
         Verify that the queried key is valid for the VRF proof in this query result
@@ -108,7 +123,7 @@ namespace ozks {
         - the lookup proof is correct
         - the queried key is valid for the VRF proof in this query result
         */
-        bool verify(const Commitment &commitment) const;
+        QueryVerificationResult verify(const Commitment &commitment) const;
 
         /**
         Save this query result to a stream
@@ -135,7 +150,6 @@ namespace ozks {
             const OZKSConfig &config, const std::vector<T> &vector, std::size_t position = 0);
 
     private:
-        bool is_member_ = false;
         key_type key_{};
         payload_type payload_{};
         lookup_path_type lookup_proof_{};
@@ -146,5 +160,7 @@ namespace ozks {
         std::size_t save(SerializationWriter &writer) const;
         static std::pair<QueryResult, std::size_t> Load(
             const OZKSConfig &config, SerializationReader &reader);
+
+        bool is_member_from_path() const noexcept;
     };
 } // namespace ozks

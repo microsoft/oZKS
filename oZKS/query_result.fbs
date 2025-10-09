@@ -4,7 +4,6 @@
 namespace ozks.fbs;
 
 table QueryResult {
-    is_member:bool;
     key:[ubyte];
     payload:[ubyte];
     vrf_proof:[ubyte];

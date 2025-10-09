@@ -12,10 +12,30 @@
 using namespace std;
 using namespace ozks;
 
-bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
+namespace {
+    QueryVerificationResult determine_query_result(bool is_member, bool is_valid)
+    {
+        if (!is_valid) {
+            return QueryVerificationResult::NotValid;
+        }
+
+        if (is_member) {
+            return QueryVerificationResult::ValidIsMember;
+        }
+
+        return QueryVerificationResult::ValidNotMember;
+    }
+}
+
+bool QueryResult::is_member() const noexcept
+{
+    return is_member_from_path();
+}
+
+QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &commitment) const
 {
     if (lookup_proof().size() == 0) {
-        throw runtime_error("Append proof cannot be empty");
+        throw runtime_error("Lookup proof cannot be empty");
     }
 
     PartialLabel partial_label = lookup_proof()[0].first;
@@ -46,12 +66,12 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
     commitment_type hash_commitment{};
     utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
     if (hash_commitment == commitment) {
-        return true;
+        return determine_query_result(is_member(), /* is_valiid */ true);
     }
 
     if (partial_label.bit_count() == 0) {
         // This means the current hash should have matched the commitment, but it didn't
-        return false;
+        return determine_query_result(is_member(), /* is_valid */ false);
     }
 
     if (partial_label[0] == 0) {
@@ -61,7 +81,50 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
     }
 
     utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
-    return (hash_commitment == commitment);
+    bool is_valid = (hash_commitment == commitment);
+
+    return determine_query_result(is_member(), is_valid);
+}
+
+bool QueryResult::is_member_from_path() const noexcept
+{
+    if (lookup_proof().size() == 0) {
+        return false;
+    }
+
+    bool is_member = false;
+    hash_type vrf_value = utils::compute_key_hash(key_);
+
+    if (use_vrf_) {
+        vrf_value = vrf_proof_.compute_vrf_value();
+    }
+
+    PartialLabel vrf_label = vrf_value;
+    PartialLabel lvl1 = lookup_proof_[0].first;
+
+    if (lookup_proof().size() == 1) {
+        // Path label is the actual VRF label, or it's not a member
+        is_member = (vrf_label == lvl1);
+        return is_member;
+    }
+
+    PartialLabel lvl2 = lookup_proof_[1].first;
+
+    // If both labels are leaves, one of them must be the vrf_value
+    if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
+        lvl2.bit_count() == PartialLabel::MaxBitCount) {
+        is_member = (vrf_label == lvl1 || vrf_label == lvl2);
+        return is_member;
+    }
+
+    // If first node is leaf and second is not, then this is a membership proof
+    if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
+        lvl2.bit_count() < PartialLabel::MaxBitCount) {
+
+        is_member = (vrf_label == lvl1);
+    }
+
+    return is_member;
 }
 
 bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
@@ -70,13 +133,15 @@ bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
     return public_key.verify_vrf_proof(key_hash, vrf_proof_);
 }
 
-bool QueryResult::verify(const Commitment &commitment) const
+QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
 {
-    bool verified = verify_lookup_path(commitment.root_commitment());
     if (use_vrf_) {
-        verified = verified && verify_vrf_proof(commitment.public_key());
+        if (!verify_vrf_proof(commitment.public_key())) {
+            return QueryVerificationResult::NotValid;
+        }
     }
-    return verified;
+
+    return verify_lookup_path(commitment.root_commitment());
 }
 
 size_t QueryResult::save(ostream &stream) const
@@ -125,7 +190,6 @@ size_t QueryResult::save(SerializationWriter &writer) const
     }
 
     fbs::QueryResultBuilder qr_builder(fbs_builder);
-    qr_builder.add_is_member(is_member());
     qr_builder.add_key(key_data);
     qr_builder.add_payload(payload_data);
     qr_builder.add_vrf_proof(vrf_proof_data);
@@ -163,7 +227,6 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
     auto fbs_query_result = fbs::GetSizePrefixedQueryResult(in_data.data());
 
     QueryResult query_result(config);
-    query_result.is_member_ = fbs_query_result->is_member();
     query_result.use_vrf_ = fbs_query_result->use_vrf();
 
     query_result.key_.resize(fbs_query_result->key()->size());
