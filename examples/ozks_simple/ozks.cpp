@@ -146,7 +146,6 @@ QueryResult OZKS::query(const key_type &key) const
     if (!query_provider_->query(id(), label, lookup_path)) {
         // Non-existence: return path to partial label that matches key and its two children
         return { config_,
-                 /* is_member */ false,
                  key,
                  /* payload */ {},
                  lookup_path,
@@ -161,7 +160,6 @@ QueryResult OZKS::query(const key_type &key) const
         throw runtime_error("Store should contain the key we found in the trie");
 
     return { config_,
-             /* is_member */ true,
              key,
              store_element.payload,
              lookup_path,
