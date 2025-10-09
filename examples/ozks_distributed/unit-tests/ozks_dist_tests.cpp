@@ -368,7 +368,7 @@ namespace {
             auto result = ozks.query(valid_keys[i]);
             EXPECT_TRUE(result.is_member());
             EXPECT_NE(0, result.payload().size());
-            EXPECT_TRUE(result.verify(ozks.get_commitment()));
+            EXPECT_EQ(QueryVerificationResult::ValidIsMember, result.verify(ozks.get_commitment()));
             EXPECT_EQ(valid_payloads[i], result.payload());
         }
 
@@ -379,7 +379,7 @@ namespace {
             auto result = ozks.query(key);
             EXPECT_FALSE(result.is_member());
             EXPECT_EQ(0, result.payload().size());
-            EXPECT_TRUE(result.verify(ozks.get_commitment()));
+            EXPECT_EQ(QueryVerificationResult::ValidNotMember, result.verify(ozks.get_commitment()));
         }
 
         return valid_keys;
