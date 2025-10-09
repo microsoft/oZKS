@@ -330,13 +330,17 @@ namespace {
 
 } // namespace
 
-vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = false)
+vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_at_end = false, bool verify_while_inserting = false)
 {
-    key_type key(16);
+    key_type key(PartialLabel::ByteCount);
     payload_type payload(40);
     vector<key_type> valid_keys;
     vector<payload_type> valid_payloads;
     vector<shared_ptr<InsertResult>> insert_results;
+
+    if (verify_while_inserting && flush_at_end) {
+        throw runtime_error("Incompatible options for test function.");
+    }
 
     for (size_t i = 0; i < iterations; i++) {
         get_random_bytes(key.data(), key.size());
@@ -346,6 +350,12 @@ vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_
         if (!flush_at_end) {
             ozks.flush();
             EXPECT_EQ(true, insert_result->verify());
+
+            if (verify_while_inserting) {
+                QueryResult qr = ozks.query(key);
+                EXPECT_TRUE(qr.is_member());
+                EXPECT_TRUE(qr.verify(ozks.get_commitment()));
+            }
         } else {
             insert_results.push_back(insert_result);
         }
@@ -366,13 +376,15 @@ vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations, bool flush_
         }
     }
 
-    // Check the valid keys are found and that their path is verified correctly
-    for (size_t i = 0; i < valid_keys.size(); i++) {
-        auto result = ozks.query(valid_keys[i]);
-        EXPECT_TRUE(result.is_member());
-        EXPECT_NE(0, result.payload().size());
-        EXPECT_TRUE(result.verify(ozks.get_commitment()));
-        EXPECT_EQ(valid_payloads[i], result.payload());
+    if (!verify_while_inserting) {
+        // Check the valid keys are found and that their path is verified correctly
+        for (size_t i = 0; i < valid_keys.size(); i++) {
+            auto result = ozks.query(valid_keys[i]);
+            EXPECT_TRUE(result.is_member());
+            EXPECT_NE(0, result.payload().size());
+            EXPECT_TRUE(result.verify(ozks.get_commitment()));
+            EXPECT_EQ(valid_payloads[i], result.payload());
+        }
     }
 
     // Check that invalid keys are not found and that their path is verified correctly
@@ -447,23 +459,23 @@ void RandomInsertCore(OZKS &ozks, size_t iterations, vector<key_type> *valid_key
 }
 
 vector<key_type> RandomInsertTestCore(
-    shared_ptr<storage::Storage> storage, size_t iterations, bool flush_at_end = false)
+    shared_ptr<storage::Storage> storage, size_t iterations, bool flush_at_end = false, bool verify_while_inserting = false)
 {
     OZKSConfig config(
         PayloadCommitmentType::CommitedPayload, LabelType::VRFLabels, TrieType::Stored, storage);
     OZKS ozks(config);
-    return RandomInsertTestCore(ozks, iterations, flush_at_end);
+    return RandomInsertTestCore(ozks, iterations, flush_at_end, verify_while_inserting);
 }
 
 vector<key_type> RandomInsertTestCore(
-    TrieType trie_type, size_t iterations, bool flush_at_end = false)
+    TrieType trie_type, size_t iterations, bool flush_at_end = false, bool verify_while_inserting = false)
 {
     auto storage = make_shared<storage::MemoryStorage>();
     OZKSConfig config{
         PayloadCommitmentType::CommitedPayload, LabelType::VRFLabels, trie_type, storage
     };
     OZKS ozks(config);
-    return RandomInsertTestCore(ozks, iterations, flush_at_end);
+    return RandomInsertTestCore(ozks, iterations, flush_at_end, verify_while_inserting);
 }
 
 TEST(OZKSTests, InsertTest)
@@ -800,6 +812,25 @@ TEST(OZKSTests, StoredRandomInsertVerificationTest)
 TEST(OZKSTests, LinkedRandomInsertVerificationTest)
 {
     RandomInsertTestCore(TrieType::Linked, /* use_storage */ true, random_iterations);
+}
+
+TEST(OZKSTests, StoredRandomInsertVerifyWhileInsertingTest)
+{
+    shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
+    RandomInsertTestCore(
+        storage,
+        random_iterations,
+        /* flush_at_end */ false,
+        /* verify_while_inserting */ true);
+}
+
+TEST(OZKSTests, LinkedRandomInsertVerifyWhileInsertingTest)
+{
+    RandomInsertTestCore(
+        TrieType::Linked,
+        random_iterations,
+        /* flush_at_end */ false,
+        /* verify_while_inserting */ true);
 }
 
 TEST(OZKSTests, LinkedRandomInsertVerificationNoStorageTest)
