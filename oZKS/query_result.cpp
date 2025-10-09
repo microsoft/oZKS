@@ -99,7 +99,7 @@ bool QueryResult::is_member_from_path() const noexcept
         vrf_value = vrf_proof_.compute_vrf_value();
     }
 
-    PartialLabel vrf_label = vrf_value;
+    PartialLabel vrf_label(vrf_value);
     PartialLabel lvl1 = lookup_proof_[0].first;
 
     if (lookup_proof().size() == 1) {
