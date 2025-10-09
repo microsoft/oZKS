@@ -146,5 +146,7 @@ namespace ozks {
         std::size_t save(SerializationWriter &writer) const;
         static std::pair<QueryResult, std::size_t> Load(
             const OZKSConfig &config, SerializationReader &reader);
+
+        bool is_member_from_path() const;
     };
 } // namespace ozks
