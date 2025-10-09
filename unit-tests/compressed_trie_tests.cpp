@@ -1089,7 +1089,7 @@ void DoFailedLookupTest(CompressedTrie &trie)
     QueryResult qr(config, /* is_member */ false, {}, {}, result, {}, {});
     commitment_type commitment = trie.get_commitment();
 
-    EXPECT_TRUE(qr.verify_lookup_path(commitment));
+    EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify_lookup_path(commitment));
     EXPECT_EQ(5, result.size());
     EXPECT_EQ(make_bytes<vector<byte>>(0xFF, 0x06), result[0].first.to_bytes());
     EXPECT_EQ(make_bytes<vector<byte>>(0xEE, 0x03), result[1].first.to_bytes());
@@ -1103,7 +1103,7 @@ void DoFailedLookupTest(CompressedTrie &trie)
 
     qr = QueryResult(config, /* is_member */ false, {}, {}, result, {}, {});
 
-    EXPECT_TRUE(qr.verify_lookup_path(commitment));
+    EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify_lookup_path(commitment));
     EXPECT_EQ(3, result.size());
     EXPECT_EQ(make_bytes<vector<byte>>(0x11, 0x01), result[0].first.to_bytes());
     EXPECT_EQ(make_bytes<vector<byte>>(0x01, 0x02), result[1].first.to_bytes());
@@ -1115,7 +1115,7 @@ void DoFailedLookupTest(CompressedTrie &trie)
 
     qr = QueryResult(config, /* is_member */ false, {}, {}, result, {}, {});
 
-    EXPECT_TRUE(qr.verify_lookup_path(commitment));
+    EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify_lookup_path(commitment));
     EXPECT_EQ(3, result.size());
     EXPECT_EQ(make_bytes<vector<byte>>(0x11, 0x01), result[0].first.to_bytes());
     EXPECT_EQ(make_bytes<vector<byte>>(0x01, 0x02), result[1].first.to_bytes());

@@ -12,7 +12,22 @@
 using namespace std;
 using namespace ozks;
 
-bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
+namespace {
+    QueryVerificationResult determine_query_result(bool is_member, bool is_valid)
+    {
+        if (!is_valid) {
+            return QueryVerificationResult::NotValid;
+        }
+
+        if (is_member) {
+            return QueryVerificationResult::ValidIsMember;
+        }
+
+        return QueryVerificationResult::ValidNotMember;
+    }
+}
+
+QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &commitment) const
 {
     if (lookup_proof().size() == 0) {
         throw runtime_error("Lookup proof cannot be empty");
@@ -48,12 +63,12 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
     commitment_type hash_commitment{};
     utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
     if (hash_commitment == commitment) {
-        return true;
+        return determine_query_result(is_member, /* is_valiid */ true);
     }
 
     if (partial_label.bit_count() == 0) {
         // This means the current hash should have matched the commitment, but it didn't
-        return false;
+        return determine_query_result(is_member, /* is_valid */ false);
     }
 
     if (partial_label[0] == 0) {
@@ -62,13 +77,10 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
         temp_hash = utils::compute_node_hash({}, {}, partial_label, hash);
     }
 
-    // Check agreement
-    if (is_member != is_member_) {
-        throw runtime_error("Computed is_member does not match field is_member");
-    }
-
     utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
-    return (hash_commitment == commitment);
+    bool is_valid = (hash_commitment == commitment);
+
+    return determine_query_result(is_member, is_valid);
 }
 
 bool QueryResult::is_member_from_path() const
@@ -106,8 +118,7 @@ bool QueryResult::is_member_from_path() const
     if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
         lvl2.bit_count() < PartialLabel::MaxBitCount) {
 
-        PartialLabel common = PartialLabel::CommonPrefix(vrf_label, lvl1);
-        is_member = (common == lvl2);
+        is_member = (vrf_label == lvl1);
     }
 
     return is_member;
@@ -119,13 +130,15 @@ bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
     return public_key.verify_vrf_proof(key_hash, vrf_proof_);
 }
 
-bool QueryResult::verify(const Commitment &commitment) const
+QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
 {
-    bool verified = verify_lookup_path(commitment.root_commitment());
     if (use_vrf_) {
-        verified = verified && verify_vrf_proof(commitment.public_key());
+        if (!verify_vrf_proof(commitment.public_key())) {
+            return QueryVerificationResult::NotValid;
+        }
     }
-    return verified;
+
+    return verify_lookup_path(commitment.root_commitment());
 }
 
 size_t QueryResult::save(ostream &stream) const

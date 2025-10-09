@@ -15,6 +15,26 @@
 #include "oZKS/vrf.h"
 
 namespace ozks {
+    /**
+    Represents the result of a QueryResult verification
+    */
+    enum class QueryVerificationResult {
+        /**
+        QueryResult is not valid
+        */
+        NotValid,
+
+        /**
+        QueryResult is valid, key is a member
+        */
+        ValidIsMember,
+
+        /**
+        QueryResult is valid, key is not a member
+        */
+        ValidNotMember
+    };
+
     class QueryResult {
     public:
         /**
@@ -96,7 +116,7 @@ namespace ozks {
         /**
         Verify whether the lookup proof is correct
         */
-        bool verify_lookup_path(const commitment_type &commitment) const;
+        QueryVerificationResult verify_lookup_path(const commitment_type &commitment) const;
 
         /**
         Verify that the queried key is valid for the VRF proof in this query result
@@ -108,7 +128,7 @@ namespace ozks {
         - the lookup proof is correct
         - the queried key is valid for the VRF proof in this query result
         */
-        bool verify(const Commitment &commitment) const;
+        QueryVerificationResult verify(const Commitment &commitment) const;
 
         /**
         Save this query result to a stream
