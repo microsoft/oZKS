@@ -105,7 +105,9 @@ bool QueryResult::is_member_from_path() const
     // If first node is leaf and second is not, then this is a membership proof
     if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
         lvl2.bit_count() < PartialLabel::MaxBitCount) {
-        is_member = true;
+
+        PartialLabel common = PartialLabel::CommonPrefix(vrf_label, lvl1);
+        is_member = (common == lvl2);
     }
 
     return is_member;
