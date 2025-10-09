@@ -78,10 +78,7 @@ bool QueryResult::is_member_from_path() const
     }
 
     bool is_member = false;
-    hash_type vrf_value;
-
-    // Default VRF value is key itself
-    utils::copy_bytes(key_.data(), key_.size(), vrf_value.data());
+    hash_type vrf_value = utils::compute_key_hash(key_);
 
     if (use_vrf_) {
         vrf_value = vrf_proof_.compute_vrf_value();
