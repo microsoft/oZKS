@@ -15,12 +15,14 @@ using namespace ozks;
 bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
 {
     if (lookup_proof().size() == 0) {
-        throw runtime_error("Append proof cannot be empty");
+        throw runtime_error("Lookup proof cannot be empty");
     }
 
     PartialLabel partial_label = lookup_proof()[0].first;
     hash_type hash = lookup_proof()[0].second;
     hash_type temp_hash;
+
+    bool is_member = is_member_from_path();
 
     for (size_t idx = 1; idx < lookup_proof().size(); idx++) {
         auto &sibling = lookup_proof()[idx];
@@ -60,8 +62,56 @@ bool QueryResult::verify_lookup_path(const commitment_type &commitment) const
         temp_hash = utils::compute_node_hash({}, {}, partial_label, hash);
     }
 
+    // Check agreement
+    if (is_member != is_member_) {
+        throw runtime_error("Computed is_member does not match field is_member");
+    }
+
     utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
     return (hash_commitment == commitment);
+}
+
+bool QueryResult::is_member_from_path() const
+{
+    if (lookup_proof().size() == 0) {
+        throw runtime_error("Lookup proof cannot be empty");
+    }
+
+    bool is_member = false;
+    hash_type vrf_value;
+
+    // Default VRF value is key itself
+    utils::copy_bytes(key_.data(), key_.size(), vrf_value.data());
+
+    if (use_vrf_) {
+        vrf_value = vrf_proof_.compute_vrf_value();
+    }
+
+    PartialLabel vrf_label = vrf_value;
+    PartialLabel lvl1 = lookup_proof_[0].first;
+
+    if (lookup_proof().size() == 1) {
+        // Path label is the actual VRF label, or it's not a member
+        is_member = (vrf_label == lvl1);
+        return is_member;
+    }
+
+    PartialLabel lvl2 = lookup_proof_[1].first;
+
+    // If both labels are leaves, one of them must be the vrf_value
+    if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
+        lvl2.bit_count() == PartialLabel::MaxBitCount) {
+        is_member = (vrf_label == lvl1 || vrf_label == lvl2);
+        return is_member;
+    }
+
+    // If first node is leaf and second is not, then this is a membership proof
+    if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
+        lvl2.bit_count() < PartialLabel::MaxBitCount) {
+        is_member = true;
+    }
+
+    return is_member;
 }
 
 bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
