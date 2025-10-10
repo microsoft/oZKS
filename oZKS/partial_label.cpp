@@ -15,7 +15,11 @@
 #ifdef __WINDOWS__
 #include <intrin.h>
 #else
+#ifdef OZKS_ARCH_ARM64
+#include <arm_neon.h>
+#else
 #include <x86intrin.h>
+#endif
 #endif
 #endif
 
