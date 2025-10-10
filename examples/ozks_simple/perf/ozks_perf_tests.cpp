@@ -523,14 +523,14 @@ static void OZKSVerifySuccessfulQuery(benchmark::State &state)
         auto query_result = ozks_->query(keys_[idx]);
         state.ResumeTiming();
 
-        if (!query_result.is_member()) {
-            state.SkipWithError("query should have been found");
-        }
-
-        bool verification_result = query_result.verify(ozks_->get_commitment());
+        QueryVerificationResult verification_result = query_result.verify(ozks_->get_commitment());
         idx++;
 
-        if (!verification_result) {
+        if (verification_result != QueryVerificationResult::ValidIsMember) {
+            state.SkipWithError("Query should have been found");
+        }
+
+        if (verification_result == QueryVerificationResult::NotValid) {
             state.SkipWithError("Verification should have succeeded");
         }
     }
@@ -546,12 +546,12 @@ static void OZKSVerifyFailedQuery(benchmark::State &state)
         auto query_result = ozks_->query(key);
         state.ResumeTiming();
 
-        if (query_result.is_member()) {
-            state.SkipWithError("query should not have been found");
+        QueryVerificationResult verification_result = query_result.verify(ozks_->get_commitment());
+        if (verification_result != QueryVerificationResult::ValidNotMember) {
+            state.SkipWithError("Query should not have been found");
         }
 
-        bool verification_result = query_result.verify(ozks_->get_commitment());
-        if (!verification_result) {
+        if (verification_result == QueryVerificationResult::NotValid) {
             state.SkipWithError("Verification should have succeeded");
         }
     }
