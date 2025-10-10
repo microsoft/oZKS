@@ -35,5 +35,7 @@
 
 // Intrinsics
 #cmakedefine OZKS_USE_INTRIN
+#cmakedefine OZKS_ARCH_ARM64
+#cmakedefine OZKS_ARCH_AMD64
 #cmakedefine OZKS_USE__BITSCANREVERSE64
 #cmakedefine OZKS_USE___BUILTIN_CLZLL
