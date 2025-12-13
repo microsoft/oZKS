@@ -32,8 +32,8 @@ CompressedTrie::CompressedTrie(shared_ptr<Storage> storage, TrieType trie_type, 
 }
 
 CompressedTrie::CompressedTrie(
-    trie_id_type trie_id, shared_ptr<Storage> storage, TrieType trie_type, size_t thread_count)
-    : epoch_(0), id_(trie_id), storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
+    trie_id_type trie_id, shared_ptr<Storage> storage, TrieType trie_type, size_t epoch, size_t thread_count)
+    : epoch_(epoch), id_(trie_id), storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
 {
     init_empty_root();
 }

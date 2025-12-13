@@ -37,6 +37,7 @@ namespace ozks {
             trie_id_type trie_id,
             std::shared_ptr<ozks::storage::Storage> storage,
             TrieType trie_type,
+            std::size_t epoch = 0,
             std::size_t thread_count = 0);
 
         /**
@@ -106,6 +107,14 @@ namespace ozks {
         TrieType trie_type() const
         {
             return trie_type_;
+        }
+
+        /**
+        Get the thread count
+        */
+        std::size_t thread_count() const
+        {
+            return thread_count_;
         }
 
         /**
