@@ -16,7 +16,8 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
-CTNode::CTNode(const CompressedTrie *trie) : trie_(trie)
+CTNode::CTNode(const CompressedTrie *trie)
+    : trie_(trie), left_child_epoch_(0), right_child_epoch_(0)
 {
     memset(hash_.data(), 0, hash_.size());
 }

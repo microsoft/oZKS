@@ -141,6 +141,22 @@ namespace ozks {
         }
 
         /**
+        Left child epoch
+        */
+        inline std::size_t left_child_epoch() const
+        {
+            return left_child_epoch_;
+        }
+
+        /**
+        Right child epoch
+        */
+        inline std::size_t right_child_epoch() const
+        {
+            return right_child_epoch_;
+        }
+
+        /**
         Save a node to storage
         */
         virtual void save_to_storage(
@@ -189,6 +205,8 @@ namespace ozks {
 
     protected:
         hash_type hash_ = {};
+        std::size_t left_child_epoch_ = 0;
+        std::size_t right_child_epoch_ = 0;
 
         /**
         Non-owning pointer to the owning CompressedTrie
