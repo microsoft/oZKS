@@ -377,48 +377,48 @@ TEST(Utilities, InsertionThreadLimitTest)
     size_t limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(1, limit);
 
-    root->set_new_right_node({ 1 });
+    root->set_new_right_node({ 1 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(1, limit);
 
-    root->set_new_left_node({ 0 });
+    root->set_new_left_node({ 0 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(2, limit);
 
-    root->right()->set_new_right_node({ 1, 1 });
+    root->right()->set_new_right_node({ 1, 1 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(2, limit);
 
-    root->right()->set_new_left_node({ 1, 0 });
+    root->right()->set_new_left_node({ 1, 0 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(2, limit);
 
-    root->left()->set_new_left_node({ 0, 0 });
+    root->left()->set_new_left_node({ 0, 0 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(2, limit);
 
-    root->left()->set_new_right_node({ 0, 1 });
+    root->left()->set_new_right_node({ 0, 1 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(4, limit);
 
-    root->left()->left()->set_new_left_node({ 0, 0, 0 });
-    root->left()->left()->set_new_right_node({ 0, 0, 1 });
-    root->left()->right()->set_new_left_node({ 0, 1, 0 });
-    root->left()->right()->set_new_right_node({ 0, 1, 1 });
-    root->right()->left()->set_new_left_node({ 1, 0, 0 });
-    root->right()->left()->set_new_right_node({ 1, 0, 1 });
-    root->right()->right()->set_new_right_node({ 1, 1, 1 });
+    root->left()->left()->set_new_left_node({ 0, 0, 0 }, trie.epoch());
+    root->left()->left()->set_new_right_node({ 0, 0, 1 }, trie.epoch());
+    root->left()->right()->set_new_left_node({ 0, 1, 0 }, trie.epoch());
+    root->left()->right()->set_new_right_node({ 0, 1, 1 }, trie.epoch());
+    root->right()->left()->set_new_left_node({ 1, 0, 0 }, trie.epoch());
+    root->right()->left()->set_new_right_node({ 1, 0, 1 }, trie.epoch());
+    root->right()->right()->set_new_right_node({ 1, 1, 1 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(4, limit);
 
-    root->right()->right()->set_new_left_node({ 1, 1, 0 });
+    root->right()->right()->set_new_left_node({ 1, 1, 0 }, trie.epoch());
 
     limit = get_insertion_thread_limit(root, /* max_threads */ 100);
     EXPECT_EQ(8, limit);

@@ -81,12 +81,14 @@ CTNodeStored &CTNodeStored::operator=(const CTNodeStored &node)
 void CTNodeStored::set_left_node(shared_ptr<CTNode> new_left_node)
 {
     left_ = new_left_node->label();
+    left_child_epoch_ = new_left_node->epoch();
     set_dirty_bit(true);
 }
 
-void CTNodeStored::set_left_node(const PartialLabel &label)
+void CTNodeStored::set_left_node(const PartialLabel &label, std::size_t epoch)
 {
     left_ = label;
+    left_child_epoch_ = epoch;
     set_dirty_bit(true);
 }
 
@@ -94,6 +96,7 @@ shared_ptr<CTNode> CTNodeStored::set_left_node(
     const PartialLabel &label, const hash_type &hash, std::size_t epoch)
 {
     left_ = label;
+    left_child_epoch_ = epoch;
     set_dirty_bit(true);
     return make_shared<CTNodeStored>(trie_, label, hash, epoch);
 }
@@ -101,13 +104,15 @@ shared_ptr<CTNode> CTNodeStored::set_left_node(
 shared_ptr<CTNode> CTNodeStored::set_left_node(const PartialLabel &label, const hash_type &hash)
 {
     left_ = label;
+    left_child_epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return make_shared<CTNodeStored>(trie_, label, hash);
 }
 
-shared_ptr<CTNode> CTNodeStored::set_new_left_node(const PartialLabel &label)
+shared_ptr<CTNode> CTNodeStored::set_new_left_node(const PartialLabel &label, std::size_t epoch)
 {
     left_ = label;
+    left_child_epoch_ = epoch;
     set_dirty_bit(true);
     return make_shared<CTNodeStored>(trie_, label);
 }
@@ -115,12 +120,14 @@ shared_ptr<CTNode> CTNodeStored::set_new_left_node(const PartialLabel &label)
 void CTNodeStored::set_right_node(shared_ptr<CTNode> new_right_node)
 {
     right_ = new_right_node->label();
+    right_child_epoch_ = new_right_node->epoch();
     set_dirty_bit(true);
 }
 
-void CTNodeStored::set_right_node(const PartialLabel &label)
+void CTNodeStored::set_right_node(const PartialLabel &label, std::size_t epoch)
 {
     right_ = label;
+    right_child_epoch_ = epoch;
     set_dirty_bit(true);
 }
 
@@ -128,6 +135,7 @@ shared_ptr<CTNode> CTNodeStored::set_right_node(
     const PartialLabel &label, const hash_type &hash, std::size_t epoch)
 {
     right_ = label;
+    right_child_epoch_ = epoch;
     set_dirty_bit(true);
     return make_shared<CTNodeStored>(trie_, label, hash, epoch);
 }
@@ -135,13 +143,15 @@ shared_ptr<CTNode> CTNodeStored::set_right_node(
 shared_ptr<CTNode> CTNodeStored::set_right_node(const PartialLabel &label, const hash_type &hash)
 {
     right_ = label;
+    right_child_epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return make_shared<CTNodeStored>(trie_, label, hash);
 }
 
-shared_ptr<CTNode> CTNodeStored::set_new_right_node(const PartialLabel &label)
+shared_ptr<CTNode> CTNodeStored::set_new_right_node(const PartialLabel &label, std::size_t epoch)
 {
     right_ = label;
+    right_child_epoch_ = epoch;
     set_dirty_bit(true);
     return make_shared<CTNodeStored>(trie_, label);
 }

@@ -19,6 +19,12 @@ using namespace ozks::utils;
 CTNode::CTNode(const CompressedTrie *trie)
     : trie_(trie), left_child_epoch_(0), right_child_epoch_(0)
 {
+    if (nullptr != trie_) {
+        epoch_ = trie_->epoch();
+    } else {
+        epoch_ = 0;
+    }
+
     memset(hash_.data(), 0, hash_.size());
 }
 
@@ -66,6 +72,9 @@ CTNode &CTNode::operator=(const CTNode &node)
     label_ = node.label_;
     hash_ = node.hash_;
     trie_ = node.trie_;
+    left_child_epoch_ = node.left_child_epoch_;
+    right_child_epoch_ = node.right_child_epoch_;
+    epoch_ = node.epoch_;
 
     return *this;
 }
@@ -76,6 +85,8 @@ void CTNode::init(const PartialLabel &init_label, const hash_type &init_hash, si
         throw runtime_error("Should only be used for leaf nodes");
 
     hash_type new_hash = compute_leaf_hash(init_label, init_hash, epoch);
+    epoch_ = epoch;
+
     init(init_label, new_hash);
 }
 
@@ -86,12 +97,14 @@ void CTNode::init(const PartialLabel &init_label, const hash_type &init_hash)
     set_dirty_bit(false);
 }
 
-void CTNode::init(const PartialLabel &init_label)
+void CTNode::init(const PartialLabel &init_label, std::size_t epoch)
 {
     if (!is_root() && is_leaf())
         throw runtime_error("Should not be used for leaf nodes");
 
     label_ = init_label;
+    epoch_ = epoch;
+
     set_dirty_bit(true);
 }
 
@@ -179,7 +192,7 @@ const PartialLabel &CTNode::insert(
         }
 
         // No longer needing common in this function
-        init(common);
+        init(common, epoch);
         left_node->save_to_storage(updated_nodes);
         right_node->save_to_storage(updated_nodes);
         save_to_storage(updated_nodes);
@@ -195,7 +208,7 @@ const PartialLabel &CTNode::insert(
         const PartialLabel &new_right =
             right_node->insert(insert_label, insert_hash, epoch, updated_nodes);
         if (new_right != old_right) {
-            set_right_node(new_right);
+            set_right_node(new_right, epoch);
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
@@ -207,7 +220,7 @@ const PartialLabel &CTNode::insert(
         const PartialLabel &new_left =
             left_node->insert(insert_label, insert_hash, epoch, updated_nodes);
         if (new_left != old_left) {
-            set_left_node(new_left);
+            set_left_node(new_left, epoch);
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
@@ -228,7 +241,7 @@ const PartialLabel &CTNode::insert(
             return label();
         }
 
-        left_node = set_new_left_node(label());
+        left_node = set_new_left_node(label(), epoch);
         right_node = set_right_node(insert_label, insert_hash, epoch);
 
         if (nullptr != current_left_node) {
@@ -248,7 +261,7 @@ const PartialLabel &CTNode::insert(
         }
 
         left_node = set_left_node(insert_label, insert_hash, epoch);
-        right_node = set_new_right_node(label());
+        right_node = set_new_right_node(label(), epoch);
 
         if (nullptr != current_left_node) {
             right_node->set_left_node(current_left_node);
@@ -259,7 +272,7 @@ const PartialLabel &CTNode::insert(
     }
 
     // No longer needing common in this function
-    init(common);
+    init(common, epoch);
     left_node->save_to_storage(updated_nodes);
     right_node->save_to_storage(updated_nodes);
     set_dirty_bit(true);

@@ -34,7 +34,7 @@ namespace ozks {
 
         CTNodeLinked(const CompressedTrie *trie, const PartialLabel &label) : CTNode(trie)
         {
-            init(label);
+            init(label, trie->epoch());
         }
 
         /**
@@ -109,15 +109,15 @@ namespace ozks {
 
     protected:
         void set_left_node(std::shared_ptr<CTNode> new_left_node) override;
-        void set_left_node(const PartialLabel &label) override;
-        std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label) override;
+        void set_left_node(const PartialLabel &label, std::size_t epoch) override;
+        std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label, std::size_t epoch) override;
         std::shared_ptr<CTNode> set_left_node(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch) override;
         std::shared_ptr<CTNode> set_left_node(
             const PartialLabel &label, const hash_type &hash) override;
         void set_right_node(std::shared_ptr<CTNode> new_right_node) override;
-        void set_right_node(const PartialLabel &label) override;
-        std::shared_ptr<CTNode> set_new_right_node(const PartialLabel &label) override;
+        void set_right_node(const PartialLabel &label, std::size_t epoch) override;
+        std::shared_ptr<CTNode> set_new_right_node(const PartialLabel &label, std::size_t epoch) override;
         std::shared_ptr<CTNode> set_right_node(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch) override;
         std::shared_ptr<CTNode> set_right_node(

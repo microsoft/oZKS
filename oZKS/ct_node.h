@@ -157,6 +157,14 @@ namespace ozks {
         }
 
         /**
+        Epoch when this node was created / modified
+        */
+        inline std::size_t epoch() const
+        {
+            return epoch_;
+        }
+
+        /**
         Save a node to storage
         */
         virtual void save_to_storage(
@@ -205,8 +213,21 @@ namespace ozks {
 
     protected:
         hash_type hash_ = {};
+
+        /**
+        Epoch of the left child
+        */
         std::size_t left_child_epoch_ = 0;
+
+        /**
+        Epoch of the right child
+        */
         std::size_t right_child_epoch_ = 0;
+
+        /**
+        Epoch when this node was created / modified
+        */
+        std::size_t epoch_ = 0;
 
         /**
         Non-owning pointer to the owning CompressedTrie
@@ -228,7 +249,7 @@ namespace ozks {
         Initialize node with given label.
         Payload is cleared. Hash is updated.
         */
-        void init(const PartialLabel &init_label);
+        void init(const PartialLabel &init_label, std::size_t epoch);
 
         /**
         Return whether the node is marked as dirty.
@@ -248,15 +269,15 @@ namespace ozks {
         }
 
         virtual void set_left_node(std::shared_ptr<CTNode> new_left_node) = 0;
-        virtual void set_left_node(const PartialLabel &label) = 0;
-        virtual std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label) = 0;
+        virtual void set_left_node(const PartialLabel &label, std::size_t epoch) = 0;
+        virtual std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label, std::size_t epoch) = 0;
         virtual std::shared_ptr<CTNode> set_left_node(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch) = 0;
         virtual std::shared_ptr<CTNode> set_left_node(
             const PartialLabel &label, const hash_type &hash) = 0;
         virtual void set_right_node(std::shared_ptr<CTNode> new_right_node) = 0;
-        virtual void set_right_node(const PartialLabel &label) = 0;
-        virtual std::shared_ptr<CTNode> set_new_right_node(const PartialLabel &label) = 0;
+        virtual void set_right_node(const PartialLabel &label, std::size_t epoch) = 0;
+        virtual std::shared_ptr<CTNode> set_new_right_node(const PartialLabel &label, std::size_t epoch) = 0;
         virtual std::shared_ptr<CTNode> set_right_node(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch) = 0;
         virtual std::shared_ptr<CTNode> set_right_node(
