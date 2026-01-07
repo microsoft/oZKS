@@ -11,8 +11,11 @@ table OptionalPartialLabel {
 table CTNodeStored {
     label:PartialLabel;
     hash:Hash;
+    epoch:uint64;
     left:OptionalPartialLabel;
+    left_epoch:uint64;
     right:OptionalPartialLabel;
+    right_epoch:uint64;
 }
 
 root_type CTNodeStored;

@@ -423,9 +423,12 @@ TEST(CTNodeTests, StoredSaveLoadTest)
 
     node.init(label, hash);
     node.left_ = PartialLabel{ 1, 0, 0, 1 };
+    node.epoch_ = 3;
+    node.left_child_epoch_ = 2;
 
     // Make sure left node exists in storage
-    CTNodeStored left_node(&trie, node.left_);
+    hash_type left_hash{};
+    CTNodeStored left_node(&trie, node.left_, left_hash, /* epoch */ 2);
     left_node.save_to_storage();
 
     PartialLabel empty_label;
@@ -438,6 +441,8 @@ TEST(CTNodeTests, StoredSaveLoadTest)
     EXPECT_EQ(node.hash(), get<0>(result).hash());
     EXPECT_EQ(node.label(), get<0>(result).label());
     EXPECT_EQ(node.left()->label(), get<1>(result));
+    EXPECT_EQ(node.left_child_epoch(), get<0>(result).left_child_epoch());
+    EXPECT_EQ(node.epoch(), get<0>(result).epoch());
     EXPECT_EQ(empty_label, get<2>(result));
     EXPECT_EQ(save_size, get<3>(result));
 

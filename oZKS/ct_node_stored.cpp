@@ -188,8 +188,11 @@ size_t CTNodeStored::save(SerializationWriter &writer) const
 
     fbs::CTNodeStoredBuilder ctnode_builder(fbs_builder);
     ctnode_builder.add_label(&pl_data);
+    ctnode_builder.add_epoch(epoch());
     ctnode_builder.add_left(left_label);
+    ctnode_builder.add_left_epoch(left_child_epoch());
     ctnode_builder.add_right(right_label);
+    ctnode_builder.add_right_epoch(right_child_epoch());
     ctnode_builder.add_hash(&hash_data);
 
     auto fbs_ctnode = ctnode_builder.Finish();
@@ -252,8 +255,11 @@ tuple<CTNodeStored, PartialLabel, PartialLabel, size_t> CTNodeStored::Load(
 
     node.init(label, hash);
     node.init(trie);
+    node.epoch_ = fbs_ctnode->epoch();
     node.left_ = left;
+    node.left_child_epoch_ = fbs_ctnode->left_epoch();
     node.right_ = right;
+    node.right_child_epoch_ = fbs_ctnode->right_epoch();
 
     tuple<CTNodeStored, PartialLabel, PartialLabel, size_t> result;
     get<0>(result) = node;
