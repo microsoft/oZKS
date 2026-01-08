@@ -230,6 +230,7 @@ const PartialLabel &CTNode::insert(
     // If there is no route to follow, insert here
     auto current_left_node = left_node;
     auto current_right_node = right_node;
+    size_t current_epoch = this->epoch();
 
     if (next_bit == 1) {
         if (nullptr == current_right_node) {
@@ -241,7 +242,7 @@ const PartialLabel &CTNode::insert(
             return label();
         }
 
-        left_node = set_new_left_node(label(), epoch);
+        left_node = set_new_left_node(this->label(), current_epoch);
         right_node = set_right_node(insert_label, insert_hash, epoch);
 
         if (nullptr != current_left_node) {
@@ -250,6 +251,9 @@ const PartialLabel &CTNode::insert(
         if (nullptr != current_right_node) {
             left_node->set_right_node(current_right_node);
         }
+
+        // Node has not changed, so keep current epoch. Setting children above will have updated it.
+        left_node->epoch_ = current_epoch;
     } else {
         if (nullptr == current_left_node) {
             left_node = set_left_node(insert_label, insert_hash, epoch);
@@ -261,7 +265,7 @@ const PartialLabel &CTNode::insert(
         }
 
         left_node = set_left_node(insert_label, insert_hash, epoch);
-        right_node = set_new_right_node(label(), epoch);
+        right_node = set_new_right_node(this->label(), current_epoch);
 
         if (nullptr != current_left_node) {
             right_node->set_left_node(current_left_node);
@@ -269,6 +273,9 @@ const PartialLabel &CTNode::insert(
         if (nullptr != current_right_node) {
             right_node->set_right_node(current_right_node);
         }
+
+        // Node has not changed, so keep current epoch. Setting children above will have updated it.
+        right_node->epoch_ = current_epoch;
     }
 
     // No longer needing common in this function

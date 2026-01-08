@@ -78,6 +78,7 @@ void CTNodeLinked::set_left_node(shared_ptr<CTNode> new_left_node)
 {
     left_ = new_left_node;
     left_child_epoch_ = new_left_node->epoch();
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
 }
 
@@ -90,6 +91,7 @@ shared_ptr<CTNode> CTNodeLinked::set_new_left_node(const PartialLabel &label, st
 {
     left_ = make_shared<CTNodeLinked>(trie_, label);
     left_child_epoch_ = epoch;
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return left_;
 }
@@ -99,6 +101,7 @@ shared_ptr<CTNode> CTNodeLinked::set_left_node(
 {
     left_ = make_shared<CTNodeLinked>(trie_, label, hash, epoch);
     left_child_epoch_ = epoch;
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return left_;
 }
@@ -107,6 +110,7 @@ shared_ptr<CTNode> CTNodeLinked::set_left_node(const PartialLabel &label, const 
 {
     left_ = make_shared<CTNodeLinked>(trie_, label, hash);
     left_child_epoch_ = left_->epoch();
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return left_;
 }
@@ -115,6 +119,7 @@ void CTNodeLinked::set_right_node(shared_ptr<CTNode> new_right_node)
 {
     right_ = new_right_node;
     right_child_epoch_ = new_right_node->epoch();
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
 }
 
@@ -127,6 +132,7 @@ shared_ptr<CTNode> CTNodeLinked::set_new_right_node(const PartialLabel &label, s
 {
     right_ = make_shared<CTNodeLinked>(trie_, label);
     right_child_epoch_ = epoch;
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return right_;
 }
@@ -136,6 +142,7 @@ shared_ptr<CTNode> CTNodeLinked::set_right_node(
 {
     right_ = make_shared<CTNodeLinked>(trie_, label, hash, epoch);
     right_child_epoch_ = epoch;
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return right_;
 }
@@ -144,6 +151,7 @@ shared_ptr<CTNode> CTNodeLinked::set_right_node(const PartialLabel &label, const
 {
     right_ = make_shared<CTNodeLinked>(trie_, label, hash);
     right_child_epoch_ = right_->epoch();
+    epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return right_;
 }

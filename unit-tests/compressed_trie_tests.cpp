@@ -1040,6 +1040,223 @@ TEST(CompressedTrieTests, LinkedLookupTest)
     DoLookupTest(trie);
 }
 
+TEST(CompressedTrieTests, ChildrenEpochTest)
+{
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Stored);
+
+    // Insert 4 nodes
+    partial_label_hash_batch_type batch1
+    {
+        pair<PartialLabel, hash_type>{ PartialLabel({ false, false, false, false }), // 0000
+                                       make_bytes<hash_type>(0xA0, 0xB0, 0xC0) },
+        pair<PartialLabel, hash_type>{ PartialLabel({ false, false, false, true }),  // 0001
+                                       make_bytes<hash_type>(0xA1, 0xB1, 0xC1) },
+        pair<PartialLabel, hash_type>{ PartialLabel({ true, false, false, false }),  // 1000
+                                       make_bytes<hash_type>(0xA2, 0xB2, 0xC2) },
+        pair<PartialLabel, hash_type>{ PartialLabel({ true, false, false, true }),   // 1001
+                                       make_bytes<hash_type>(0xA3, 0xB3, 0xC3) }
+    };
+
+    append_proof_batch_type append_proofs1;
+    trie.insert(batch1, append_proofs1);
+
+    // Epoch should be 1
+    EXPECT_EQ(1, trie.epoch());
+
+    string status = trie.to_string();
+    EXPECT_EQ(
+        "n::l:000:r:100;"
+        "n:000:l:0000:r:0001;"
+        "n:0000:l:(null):r:(null);"
+        "n:0001:l:(null):r:(null);"
+        "n:100:l:1000:r:1001;"
+        "n:1000:l:(null):r:(null);"
+        "n:1001:l:(null):r:(null);",
+        status);
+
+    PartialLabel root_label = {};
+    PartialLabel label000 = { false, false, false };
+    PartialLabel label0000 = { false, false, false, false };
+    PartialLabel label0001 = { false, false, false, true };
+    PartialLabel label100 = { true, false, false };
+    PartialLabel label1000 = { true, false, false, false };
+    PartialLabel label1001 = { true, false, false, true };
+
+    CTNodeStored some_node;
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), root_label, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0001, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label100, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label1000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label1001, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+
+    // Insert 1 more node
+    partial_label_hash_batch_type batch2
+    {
+        pair<PartialLabel, hash_type>{ PartialLabel({ false, true, false, true }), // 0101
+                                       make_bytes<hash_type>(0xA4, 0xB4, 0xC4) }
+    };
+
+    append_proof_batch_type append_proofs2;
+    trie.insert(batch2, append_proofs2);
+
+    // Epoch should be 2
+    EXPECT_EQ(2, trie.epoch());
+
+    status = trie.to_string();
+    EXPECT_EQ(
+        "n::l:0:r:100;"
+        "n:0:l:000:r:0101;"
+        "n:000:l:0000:r:0001;"
+        "n:0000:l:(null):r:(null);"
+        "n:0001:l:(null):r:(null);"
+        "n:0101:l:(null):r:(null);"
+        "n:100:l:1000:r:1001;"
+        "n:1000:l:(null):r:(null);"
+        "n:1001:l:(null):r:(null);",
+        status);
+
+    PartialLabel label0 = { false };
+    PartialLabel label0101 = { false, true, false, true };
+
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), root_label, /* storage */ nullptr, some_node));
+    EXPECT_EQ(2, some_node.epoch());
+    EXPECT_EQ(2, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0, /* storage */ nullptr, some_node));
+    EXPECT_EQ(2, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(2, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0001, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0101, /* storage */ nullptr, some_node));
+    EXPECT_EQ(2, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label100, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label1000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label1001, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+
+    // Insert one more node
+    partial_label_hash_batch_type batch3
+    {
+        pair<PartialLabel, hash_type>{ PartialLabel({ false, false, true, false }), // 0010
+                                       make_bytes<hash_type>(0xA5, 0xB5, 0xC5) }
+    };
+
+    append_proof_batch_type append_proofs3;
+    trie.insert(batch3, append_proofs3);
+
+    // Epoch should be 3
+    EXPECT_EQ(3, trie.epoch());
+
+    status = trie.to_string();
+    EXPECT_EQ(
+        "n::l:0:r:100;"
+        "n:0:l:00:r:0101;"
+        "n:00:l:000:r:0010;"
+        "n:000:l:0000:r:0001;"
+        "n:0000:l:(null):r:(null);"
+        "n:0001:l:(null):r:(null);"
+        "n:0010:l:(null):r:(null);"
+        "n:0101:l:(null):r:(null);"
+        "n:100:l:1000:r:1001;"
+        "n:1000:l:(null):r:(null);"
+        "n:1001:l:(null):r:(null);",
+        status
+    );
+
+    PartialLabel label00 = { false, false };
+    PartialLabel label0010 = { false, false, true, false };
+
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), root_label, /* storage */ nullptr, some_node));
+    EXPECT_EQ(3, some_node.epoch());
+    EXPECT_EQ(3, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0, /* storage */ nullptr, some_node));
+    EXPECT_EQ(3, some_node.epoch());
+    EXPECT_EQ(3, some_node.left_child_epoch());
+    EXPECT_EQ(2, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label00, /* storage */ nullptr, some_node));
+    EXPECT_EQ(3, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(3, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0001, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0010, /* storage */ nullptr, some_node));
+    EXPECT_EQ(3, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label0101, /* storage */ nullptr, some_node));
+    EXPECT_EQ(2, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label100, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(1, some_node.left_child_epoch());
+    EXPECT_EQ(1, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label1000, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+    EXPECT_TRUE(storage->load_ctnode(trie.id(), label1001, /* storage */ nullptr, some_node));
+    EXPECT_EQ(1, some_node.epoch());
+    EXPECT_EQ(0, some_node.left_child_epoch());
+    EXPECT_EQ(0, some_node.right_child_epoch());
+}
+
 void DoFailedLookupTest(CompressedTrie &trie)
 {
     partial_label_hash_batch_type label_payload_batch{
