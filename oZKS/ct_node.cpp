@@ -205,10 +205,16 @@ const PartialLabel &CTNode::insert(
 
     if (next_bit == 1 && nullptr != right_node && right_node->label()[common.bit_count()] == 1) {
         PartialLabel old_right = right_node->label();
+        size_t old_epoch = right_node->epoch();
+
         const PartialLabel &new_right =
             right_node->insert(insert_label, insert_hash, epoch, updated_nodes);
         if (new_right != old_right) {
             set_right_node(new_right, epoch);
+        } else if (right_node->epoch() != old_epoch) {
+            // Epoch of child changed, so update ours as well
+            epoch_ = epoch;
+            right_child_epoch_ = right_node->epoch();
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
@@ -217,10 +223,16 @@ const PartialLabel &CTNode::insert(
 
     if (next_bit == 0 && nullptr != left_node && left_node->label()[common.bit_count()] == 0) {
         PartialLabel old_left = left_node->label();
+        size_t old_epoch = left_node->epoch();
+
         const PartialLabel &new_left =
             left_node->insert(insert_label, insert_hash, epoch, updated_nodes);
         if (new_left != old_left) {
             set_left_node(new_left, epoch);
+        } else if (left_node->epoch() != old_epoch) {
+            // Epoch of child changed, so update ours as well
+            epoch_ = epoch;
+            left_child_epoch_ = left_node->epoch();
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
