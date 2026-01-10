@@ -52,6 +52,16 @@ namespace {
             return storage_.load_ctnode(trie_id, node_id, storage, node);
         }
 
+        bool load_ctnode(
+            trie_id_type trie_id,
+            const PartialLabel &node_id,
+            size_t epoch,
+            shared_ptr<Storage> storage,
+            CTNodeStored &node) override
+        {
+            return storage_.load_ctnode(trie_id, node_id, epoch, storage, node);
+        }
+
         void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) override
         {
             storage_.save_ctnode(trie_id, node);

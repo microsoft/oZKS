@@ -37,6 +37,30 @@ bool MemoryStorageBatchInserter::load_ctnode(
     return storage_->load_ctnode(trie_id, node_id, storage, node);
 }
 
+bool MemoryStorageBatchInserter::load_ctnode(
+    trie_id_type trie_id,
+    const PartialLabel &node_id,
+    size_t epoch,
+    shared_ptr<Storage> storage,
+    CTNodeStored &node)
+{
+    if (nullptr == storage_)
+        throw runtime_error("storage is not initialized");
+
+    // First, check unsaved nodes
+    StorageNodeKey key(trie_id, node_id);
+    auto unsaved_node = unsaved_nodes_.find(key);
+    if (unsaved_node != unsaved_nodes_.end()) {
+        if (unsaved_node->second.epoch() == epoch) {
+            node = unsaved_node->second;
+            return true;
+        }
+    }
+
+    // Second, check backing storage
+    return storage_->load_ctnode(trie_id, node_id, epoch, storage, node);
+}
+
 void MemoryStorageBatchInserter::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
     if (nullptr == storage_)

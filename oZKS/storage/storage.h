@@ -34,6 +34,20 @@ namespace ozks {
                 CTNodeStored &node) = 0;
 
             /**
+            Get a node from storage from a specific epoch.
+            The implementation has the possibility of deciding to load a batch of nodes related to
+            the given node. If that is the case, additional nodes will be added to the Storage
+            instance given as parameter.
+            The storage pointer can be null. In such a case no node addition will happen.
+            */
+            virtual bool load_ctnode(
+                trie_id_type trie_id,
+                const PartialLabel &node_id,
+                std::size_t epoch,
+                std::shared_ptr<Storage> storage,
+                CTNodeStored &node) = 0;
+
+            /**
             Save a node to storage
             */
             virtual void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) = 0;

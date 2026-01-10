@@ -34,6 +34,31 @@ bool MemoryStorageCache::load_ctnode(
     return true;
 }
 
+bool MemoryStorageCache::load_ctnode(
+    trie_id_type trie_id,
+    const PartialLabel &node_id,
+    size_t epoch,
+    shared_ptr<Storage> storage,
+    CTNodeStored &node)
+{
+    StorageNodeKey key(trie_id, node_id);
+    auto cached_node = node_cache_.get(key);
+    if (cached_node.isNull()) {
+        if (!storage_->load_ctnode(trie_id, node_id, epoch, storage, node))
+            return false;
+
+        node_cache_.add(key, node);
+        return true;
+    }
+
+    if (cached_node->epoch() != epoch) {
+        return false;
+    }
+
+    node = *(cached_node.get());
+    return true;
+}
+
 void MemoryStorageCache::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
     StorageNodeKey key(trie_id, node.label());

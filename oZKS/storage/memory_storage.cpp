@@ -32,6 +32,27 @@ bool MemoryStorage::load_ctnode(
     return true;
 }
 
+bool MemoryStorage::load_ctnode(
+    trie_id_type trie_id,
+    const PartialLabel& node_id,
+    std::size_t epoch,
+    std::shared_ptr<Storage> storage,
+    CTNodeStored& node)
+{
+    CTNodeStored loaded_node;
+    if (!load_ctnode(trie_id, node_id, storage, loaded_node)) {
+        return false;
+    }
+
+    if (loaded_node.epoch() != epoch) {
+        return false;
+    }
+
+    node = loaded_node;
+    return true;
+}
+
+
 void MemoryStorage::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
     StorageNodeKey key(trie_id, node.label());

@@ -53,6 +53,23 @@ namespace {
         }
 
         /**
+        Get a node from storage.
+        The implementation has the possibility of deciding to load a batch of nodes related to
+        the given node. If that is the case, additional nodes will be added to the Storage
+        instance given as parameter.
+        The storage pointer can be null. In such a case no node addition will happen.
+        */
+        bool load_ctnode(
+            trie_id_type trie_id,
+            const PartialLabel &node_id,
+            size_t epoch,
+            shared_ptr<Storage> storage,
+            CTNodeStored &node) override
+        {
+            return backing_->load_ctnode(trie_id, node_id, epoch, storage, node);
+        }
+
+        /**
         Save a node to storage
         */
         void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) override

@@ -31,6 +31,16 @@ namespace ozks {
                 CTNodeStored &node) override;
 
             /**
+            Get a node from storage
+            */
+            bool load_ctnode(
+                trie_id_type trie_id,
+                const PartialLabel &node_id,
+                std::size_t epoch,
+                std::shared_ptr<Storage> storage,
+                CTNodeStored &node) override;
+
+            /**
             Save a node to storage
             */
             void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) override;
