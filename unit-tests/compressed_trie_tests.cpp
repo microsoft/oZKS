@@ -1691,6 +1691,8 @@ TEST(CompressedTrieTests, LinkedSaveStoredQueryWithUpdatesTest)
 
             if (coin > (byte)127 && added_labels < 100) {
                 labels.push_back(batch[idx].first);
+                size_t labels_size = labels.size();
+                EXPECT_TRUE(labels_size < 100);
                 added_labels++;
             }
         }
@@ -1703,8 +1705,11 @@ TEST(CompressedTrieTests, LinkedSaveStoredQueryWithUpdatesTest)
     auto query_labels = [&labels](CompressedTrie &trie) {
         lookup_path_type lookup_path;
 
-        for (auto &lbl : labels) {
-            EXPECT_TRUE(trie.lookup(lbl, lookup_path));
+        for (size_t i = 0; i < labels.size(); i++)
+        {
+            auto &lbl = labels[i];
+            bool found = trie.lookup(lbl, lookup_path);
+            EXPECT_TRUE(found);
         }
     };
 

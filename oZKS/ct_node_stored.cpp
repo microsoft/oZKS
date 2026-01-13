@@ -20,7 +20,8 @@ shared_ptr<CTNode> CTNodeStored::left()
 {
     if (!left_.empty()) {
         auto node = make_shared<CTNodeStored>();
-        if (trie_->storage()->load_ctnode(trie_->id(), left_, trie_->storage(), *node)) {
+        if (trie_->storage()->load_ctnode(
+                trie_->id(), left_, left_child_epoch(), trie_->storage(), *node)) {
             node->init(trie_);
             return node;
         }
@@ -33,7 +34,8 @@ shared_ptr<const CTNode> CTNodeStored::left() const
 {
     if (!left_.empty()) {
         auto node = make_shared<CTNodeStored>();
-        if (trie_->storage()->load_ctnode(trie_->id(), left_, trie_->storage(), *node)) {
+        if (trie_->storage()->load_ctnode(
+                trie_->id(), left_, left_child_epoch(), trie_->storage(), *node)) {
             node->init(trie_);
             return node;
         }
@@ -46,7 +48,8 @@ shared_ptr<CTNode> CTNodeStored::right()
 {
     if (!right_.empty()) {
         auto node = make_shared<CTNodeStored>();
-        if (trie_->storage()->load_ctnode(trie_->id(), right_, trie_->storage(), *node)) {
+        if (trie_->storage()->load_ctnode(
+                trie_->id(), right_, right_child_epoch(), trie_->storage(), *node)) {
             node->init(trie_);
             return node;
         }
@@ -59,7 +62,7 @@ shared_ptr<const CTNode> CTNodeStored::right() const
 {
     if (!right_.empty()) {
         auto node = make_shared<CTNodeStored>();
-        if (trie_->storage()->load_ctnode(trie_->id(), right_, trie_->storage(), *node)) {
+        if (trie_->storage()->load_ctnode(trie_->id(), right_, right_child_epoch(), trie_->storage(), *node)) {
             node->init(trie_);
             return node;
         }
