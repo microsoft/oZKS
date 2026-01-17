@@ -33,7 +33,7 @@ CTNode::CTNode(const CTNode &node)
     *this = node;
 }
 
-string CTNode::to_string() const
+string CTNode::to_string(bool show_epochs) const
 {
     stringstream ss;
     const PartialLabel *left_label = nullptr;
@@ -52,15 +52,25 @@ string CTNode::to_string() const
         !right_label || right_label->empty() ? "(null)" : utils::to_string(*right_label);
 
     ss << "n:" << utils::to_string(label());
-    ss << ":l:" << left_str << ":r:" << right_str;
+    if (show_epochs) {
+        ss << ":e:" << epoch_;
+    }
+    ss << ":l:" << left_str;
+    if (show_epochs && nullptr != left_node) {
+        ss << ":le:" << left_child_epoch();
+    }
+    ss << ":r:" << right_str;
+    if (show_epochs && nullptr != right_node) {
+        ss << ":re:" << right_child_epoch();
+    }
     ss << ";";
 
     if (nullptr != left_node) {
-        string sub = left_node->to_string();
+        string sub = left_node->to_string(show_epochs);
         ss << sub;
     }
     if (nullptr != right_node) {
-        string sub = right_node->to_string();
+        string sub = right_node->to_string(show_epochs);
         ss << sub;
     }
 

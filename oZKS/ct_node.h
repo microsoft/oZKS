@@ -95,7 +95,7 @@ namespace ozks {
         /**
         Returns a string representation of this node.
         */
-        std::string to_string() const;
+        std::string to_string(bool show_epochs = false) const;
 
         /**
         Assignment operator

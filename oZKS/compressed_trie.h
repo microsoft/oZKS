@@ -120,7 +120,7 @@ namespace ozks {
         /**
         Return a string representation of the tree
         */
-        std::string to_string() const;
+        std::string to_string(bool show_epochs = false) const;
 
         /**
         Save the current compressed trie to the given stream

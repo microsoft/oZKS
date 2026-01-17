@@ -236,9 +236,9 @@ bool CompressedTrie::lookup(
     return CTNode::lookup(label, root_, path, include_searched);
 }
 
-string CompressedTrie::to_string() const
+string CompressedTrie::to_string(bool show_epochs) const
 {
-    return root_->to_string();
+    return root_->to_string(show_epochs);
 }
 
 commitment_type CompressedTrie::get_commitment() const

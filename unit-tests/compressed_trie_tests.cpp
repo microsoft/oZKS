@@ -1081,15 +1081,15 @@ TEST(CompressedTrieTests, ChildrenEpochTest)
     // Epoch should be 1
     EXPECT_EQ(1, trie.epoch());
 
-    string status = trie.to_string();
+    string status = trie.to_string(/* show_epochs */ true);
     EXPECT_EQ(
-        "n::l:000:r:100;"
-        "n:000:l:0000:r:0001;"
-        "n:0000:l:(null):r:(null);"
-        "n:0001:l:(null):r:(null);"
-        "n:100:l:1000:r:1001;"
-        "n:1000:l:(null):r:(null);"
-        "n:1001:l:(null):r:(null);",
+        "n::e:1:l:000:le:1:r:100:re:1;"
+        "n:000:e:1:l:0000:le:1:r:0001:re:1;"
+        "n:0000:e:1:l:(null):r:(null);"
+        "n:0001:e:1:l:(null):r:(null);"
+        "n:100:e:1:l:1000:le:1:r:1001:re:1;"
+        "n:1000:e:1:l:(null):r:(null);"
+        "n:1001:e:1:l:(null):r:(null);",
         status);
 
     PartialLabel root_label = {};
@@ -1143,17 +1143,17 @@ TEST(CompressedTrieTests, ChildrenEpochTest)
     // Epoch should be 2
     EXPECT_EQ(2, trie.epoch());
 
-    status = trie.to_string();
+    status = trie.to_string(/* show_epochs */ true);
     EXPECT_EQ(
-        "n::l:0:r:100;"
-        "n:0:l:000:r:0101;"
-        "n:000:l:0000:r:0001;"
-        "n:0000:l:(null):r:(null);"
-        "n:0001:l:(null):r:(null);"
-        "n:0101:l:(null):r:(null);"
-        "n:100:l:1000:r:1001;"
-        "n:1000:l:(null):r:(null);"
-        "n:1001:l:(null):r:(null);",
+        "n::e:2:l:0:le:2:r:100:re:1;"
+        "n:0:e:2:l:000:le:1:r:0101:re:2;"
+        "n:000:e:1:l:0000:le:1:r:0001:re:1;"
+        "n:0000:e:1:l:(null):r:(null);"
+        "n:0001:e:1:l:(null):r:(null);"
+        "n:0101:e:2:l:(null):r:(null);"
+        "n:100:e:1:l:1000:le:1:r:1001:re:1;"
+        "n:1000:e:1:l:(null):r:(null);"
+        "n:1001:e:1:l:(null):r:(null);",
         status);
 
     PartialLabel label0 = { false };
@@ -1209,19 +1209,19 @@ TEST(CompressedTrieTests, ChildrenEpochTest)
     // Epoch should be 3
     EXPECT_EQ(3, trie.epoch());
 
-    status = trie.to_string();
+    status = trie.to_string(/* show_epochs */ true);
     EXPECT_EQ(
-        "n::l:0:r:100;"
-        "n:0:l:00:r:0101;"
-        "n:00:l:000:r:0010;"
-        "n:000:l:0000:r:0001;"
-        "n:0000:l:(null):r:(null);"
-        "n:0001:l:(null):r:(null);"
-        "n:0010:l:(null):r:(null);"
-        "n:0101:l:(null):r:(null);"
-        "n:100:l:1000:r:1001;"
-        "n:1000:l:(null):r:(null);"
-        "n:1001:l:(null):r:(null);",
+        "n::e:3:l:0:le:3:r:100:re:1;"
+        "n:0:e:3:l:00:le:3:r:0101:re:2;"
+        "n:00:e:3:l:000:le:1:r:0010:re:3;"
+        "n:000:e:1:l:0000:le:1:r:0001:re:1;"
+        "n:0000:e:1:l:(null):r:(null);"
+        "n:0001:e:1:l:(null):r:(null);"
+        "n:0010:e:3:l:(null):r:(null);"
+        "n:0101:e:2:l:(null):r:(null);"
+        "n:100:e:1:l:1000:le:1:r:1001:re:1;"
+        "n:1000:e:1:l:(null):r:(null);"
+        "n:1001:e:1:l:(null):r:(null);",
         status
     );
 
@@ -1286,21 +1286,21 @@ TEST(CompressedTrieTests, ChildrenEpochTest)
     // Epoch should be 4
     EXPECT_EQ(4, trie.epoch());
 
-    status = trie.to_string();
+    status = trie.to_string(/* show_epochs */ true);
     EXPECT_EQ(
-        "n::l:0:r:10;"
-        "n:0:l:00:r:0101;"
-        "n:00:l:000:r:0010;"
-        "n:000:l:0000:r:0001;"
-        "n:0000:l:(null):r:(null);"
-        "n:0001:l:(null):r:(null);"
-        "n:0010:l:(null):r:(null);"
-        "n:0101:l:(null):r:(null);"
-        "n:10:l:100:r:1010;"
-        "n:100:l:1000:r:1001;"
-        "n:1000:l:(null):r:(null);"
-        "n:1001:l:(null):r:(null);"
-        "n:1010:l:(null):r:(null);",
+        "n::e:4:l:0:le:3:r:10:re:4;"
+        "n:0:e:3:l:00:le:3:r:0101:re:2;"
+        "n:00:e:3:l:000:le:1:r:0010:re:3;"
+        "n:000:e:1:l:0000:le:1:r:0001:re:1;"
+        "n:0000:e:1:l:(null):r:(null);"
+        "n:0001:e:1:l:(null):r:(null);"
+        "n:0010:e:3:l:(null):r:(null);"
+        "n:0101:e:2:l:(null):r:(null);"
+        "n:10:e:4:l:100:le:1:r:1010:re:4;"
+        "n:100:e:1:l:1000:le:1:r:1001:re:1;"
+        "n:1000:e:1:l:(null):r:(null);"
+        "n:1001:e:1:l:(null):r:(null);"
+        "n:1010:e:4:l:(null):r:(null);",
         status);
 
     PartialLabel label10 = { true, false };
@@ -1686,6 +1686,17 @@ TEST(CompressedTrieTests, LinkedSaveStoredQuerySimpleTest)
     trie1.insert(batch1, append_proofs);
     trie1.storage()->flush(trie1.id());
 
+    string status = trie1.to_string(/* show_epochs */ true);
+    EXPECT_EQ(
+        "n::e:1:l:0:le:1:r:1:re:1;"
+        "n:0:e:1:l:0000:le:1:r:0100:re:1;"
+        "n:0000:e:1:l:(null):r:(null);"
+        "n:0100:e:1:l:(null):r:(null);"
+        "n:1:e:1:l:1000:le:1:r:1100:re:1;"
+        "n:1000:e:1:l:(null):r:(null);"
+        "n:1100:e:1:l:(null):r:(null);",
+        status);
+
     for (const auto &pair : batch1) {
         lookup_path_type lookup_path;
         bool found = trie1.lookup(pair.first, lookup_path);
@@ -1720,6 +1731,25 @@ TEST(CompressedTrieTests, LinkedSaveStoredQuerySimpleTest)
     append_proof_batch_type append_proofs2;
     trie1.insert(batch2, append_proofs2);
     trie1.storage()->flush(trie1.id());
+
+    status = trie1.to_string(/* show_epochs */ true);
+    EXPECT_EQ(
+        "n::e:2:l:0:le:2:r:1:re:2;"
+        "n:0:e:2:l:00:le:2:r:0100:re:1;"
+        "n:00:e:2:l:000:le:2:r:0010:re:2;"
+        "n:000:e:2:l:0000:le:1:r:0001:re:2;"
+        "n:0000:e:1:l:(null):r:(null);"
+        "n:0001:e:2:l:(null):r:(null);"
+        "n:0010:e:2:l:(null):r:(null);"
+        "n:0100:e:1:l:(null):r:(null);"
+        "n:1:e:2:l:10:le:2:r:1100:re:1;"
+        "n:10:e:2:l:100:le:2:r:1010:re:2;"
+        "n:100:e:2:l:1000:le:1:r:1001:re:2;"
+        "n:1000:e:1:l:(null):r:(null);"
+        "n:1001:e:2:l:(null):r:(null);"
+        "n:1010:e:2:l:(null):r:(null);"
+        "n:1100:e:1:l:(null):r:(null);",
+        status);
 
     for (const auto &pair : batch1) {
         lookup_path_type lookup_path;
