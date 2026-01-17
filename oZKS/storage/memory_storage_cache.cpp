@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 // STD
+#include <algorithm>
 
 // OZKS
 #include "oZKS/storage/batch_storage.h"
@@ -11,8 +12,21 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
 
+
+MemoryStorageCache::MemoryStorageCache(
+    shared_ptr<ozks::storage::Storage> backing_storage, size_t cache_size)
+    : storage_(backing_storage),
+      node_cache_(static_cast<Poco::UInt32>(cache_size)),
+      trie_cache_(static_cast<Poco::UInt32>(cache_size)),
+      store_element_cache_(static_cast<Poco::UInt32>(cache_size))
+{
+    node_cache_.Remove += Poco::delegate(this, &MemoryStorageCache::on_node_removed);
+}
+
 MemoryStorageCache::~MemoryStorageCache()
-{}
+{
+    node_cache_.Remove -= Poco::delegate(this, &MemoryStorageCache::on_node_removed);
+}
 
 bool MemoryStorageCache::load_ctnode(
     trie_id_type trie_id,
@@ -20,18 +34,24 @@ bool MemoryStorageCache::load_ctnode(
     shared_ptr<Storage> storage,
     CTNodeStored &node)
 {
-    StorageNodeKey key(trie_id, node_id);
-    auto cached_node = node_cache_.get(key);
-    if (cached_node.isNull()) {
-        if (!storage_->load_ctnode(trie_id, node_id, storage, node))
-            return false;
+    StorageNodeKey epochs_key(trie_id, node_id);
+    auto epochs_iter = node_epochs_.find(epochs_key); // Ensure epochs are loaded so we can get the latest version
+    if (epochs_iter == node_epochs_.end() || epochs_iter->second.empty()) {
+        // Seems we don't have anything in our cache, try backing storage
+        if (storage_->load_ctnode(trie_id, node_id, storage, node)) {
+            update_node_epochs_cache(trie_id, node_id, node.epoch());
+            StorageNodeVersionedKey key(trie_id, node_id, node.epoch());
+            node_cache_.add(key, node);
+            return true;
+        }
 
-        node_cache_.add(key, node);
-        return true;
+        return false;
     }
 
-    node = *(cached_node.get());
-    return true;
+    auto max_it = std::max_element(epochs_iter->second.begin(), epochs_iter->second.end());
+    size_t latest_epoch = *max_it;
+
+    return load_ctnode(trie_id, node_id, latest_epoch, storage, node);
 }
 
 bool MemoryStorageCache::load_ctnode(
@@ -41,7 +61,7 @@ bool MemoryStorageCache::load_ctnode(
     shared_ptr<Storage> storage,
     CTNodeStored &node)
 {
-    StorageNodeKey key(trie_id, node_id);
+    StorageNodeVersionedKey key(trie_id, node_id, epoch);
     auto cached_node = node_cache_.get(key);
     if (cached_node.isNull()) {
         if (!storage_->load_ctnode(trie_id, node_id, epoch, storage, node))
@@ -61,7 +81,10 @@ bool MemoryStorageCache::load_ctnode(
 
 void MemoryStorageCache::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
-    StorageNodeKey key(trie_id, node.label());
+    StorageNodeVersionedKey key(trie_id, node.label(), node.epoch());
+
+    update_node_epochs_cache(trie_id, node.label(), node.epoch());
+
     storage_->save_ctnode(trie_id, node);
     node_cache_.update(key, node);
 }
@@ -121,7 +144,9 @@ void MemoryStorageCache::flush(trie_id_type trie_id)
 
 void MemoryStorageCache::add_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
-    StorageNodeKey key(trie_id, node.label());
+    StorageNodeVersionedKey key(trie_id, node.label(), node.epoch());
+
+    update_node_epochs_cache(trie_id, node.label(), node.epoch());
     node_cache_.update(key, node);
 }
 
@@ -165,8 +190,8 @@ void MemoryStorageCache::delete_ozks(trie_id_type trie_id)
 {
     {
         // Look for nodes to delete
-        vector<StorageNodeKey> nodes_to_delete;
-        node_cache_.forEach([&](const StorageNodeKey &key, const CTNode &) {
+        vector<StorageNodeVersionedKey> nodes_to_delete;
+        node_cache_.forEach([&](const StorageNodeVersionedKey &key, const CTNode &) {
             if (key.trie_id() == trie_id) {
                 nodes_to_delete.push_back(key);
             }
@@ -175,6 +200,21 @@ void MemoryStorageCache::delete_ozks(trie_id_type trie_id)
         // Do the deletion
         for (const auto &node : nodes_to_delete) {
             node_cache_.remove(node);
+        }
+    }
+
+    {
+        // Look for node epochs to delete
+        vector<StorageNodeKey> epoch_keys_to_erase;
+        for (const auto &ne : node_epochs_) {
+            if (ne.first.trie_id() == trie_id) {
+                epoch_keys_to_erase.push_back(ne.first);
+            }
+        }
+
+        // Do the deletion
+        for (const auto &ek : epoch_keys_to_erase) {
+            node_epochs_.erase(ek);
         }
     }
 
@@ -200,4 +240,36 @@ void MemoryStorageCache::delete_ozks(trie_id_type trie_id)
 
     // Do the same in backing storage
     storage_->delete_ozks(trie_id);
+}
+
+void MemoryStorageCache::update_node_epochs_cache(
+    trie_id_type trie_id, const PartialLabel &node_id, size_t epoch)
+{
+    StorageNodeKey epochs_key(trie_id, node_id);
+    auto epochs_it = node_epochs_.find(epochs_key);
+
+    if (epochs_it == node_epochs_.end()) {
+        node_epochs_[epochs_key] = vector<size_t>{ epoch };
+    } else {
+        auto &epochs = epochs_it->second;
+        if (std::find(epochs.begin(), epochs.end(), epoch) == epochs.end()) {
+            epochs.push_back(epoch);
+        }
+    }
+}
+
+void MemoryStorageCache::on_node_removed(
+    const void* this_ptr, const StorageNodeVersionedKey &key)
+{
+    // Update epochs cache
+    StorageNodeKey epochs_key(key.trie_id(), key.node_id());
+    auto epochs_it = node_epochs_.find(epochs_key);
+
+    if (epochs_it != node_epochs_.end()) {
+        auto &epochs = epochs_it->second;
+        epochs.erase(std::remove(epochs.begin(), epochs.end(), key.epoch()), epochs.end());
+        if (epochs.empty()) {
+            node_epochs_.erase(epochs_it);
+        }
+    }
 }

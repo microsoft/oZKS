@@ -22,10 +22,7 @@ namespace ozks {
         class MemoryStorageCache : public Storage {
         public:
             MemoryStorageCache(
-                std::shared_ptr<ozks::storage::Storage> backing_storage, std::size_t cache_size)
-                : storage_(backing_storage), node_cache_(cache_size), trie_cache_(cache_size),
-                  store_element_cache_(cache_size)
-            {}
+                std::shared_ptr<ozks::storage::Storage> backing_storage, std::size_t cache_size);
 
             virtual ~MemoryStorageCache();
 
@@ -120,10 +117,25 @@ namespace ozks {
             void delete_ozks(trie_id_type trie_id) override;
 
         private:
+            // Backing storage
             std::shared_ptr<ozks::storage::Storage> storage_;
-            Poco::LRUCache<StorageNodeKey, CTNodeStored> node_cache_;
+
+            // Nodes
+            Poco::LRUCache<StorageNodeVersionedKey, CTNodeStored> node_cache_;
+            // Epochs for nodes in cache
+            std::unordered_map<StorageNodeKey, std::vector<std::size_t>, StorageNodeKeyHasher>
+                node_epochs_;
+
+            // Tries
             Poco::LRUCache<StorageTrieKey, CompressedTrie> trie_cache_;
+
+            // Store elements
             Poco::LRUCache<StorageStoreElementKey, store_value_type> store_element_cache_;
+
+            void update_node_epochs_cache(
+                trie_id_type trie_id, const PartialLabel &node_id, std::size_t epoch);
+
+            void on_node_removed(const void *, const StorageNodeVersionedKey &key);
         };
     } // namespace storage
 } // namespace ozks

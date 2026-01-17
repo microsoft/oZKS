@@ -45,6 +45,39 @@ namespace ozks {
             PartialLabel node_id_;
         };
 
+        class StorageNodeVersionedKey : public StorageNodeKey {
+        public:
+            StorageNodeVersionedKey(trie_id_type trie_id, const PartialLabel &node_id, std::size_t epoch)
+                : StorageNodeKey(trie_id, node_id), epoch_(epoch)
+            {}
+
+            const std::size_t epoch() const
+            {
+                return epoch_;
+            }
+
+            bool operator==(const StorageNodeVersionedKey &other) const
+            {
+                return (trie_id() == other.trie_id() && node_id() == other.node_id() && epoch_ == other.epoch_);
+            }
+
+            bool operator<(const StorageNodeVersionedKey &other) const
+            {
+                if (trie_id() == other.trie_id()) {
+                    if (node_id() == other.node_id()) {
+                        return epoch_ < other.epoch_;
+                    }
+
+                    return node_id() < other.node_id();
+                }
+
+                return trie_id() < other.trie_id();
+            }
+
+        private:
+            std::size_t epoch_;
+        };
+
         class StorageTrieKey {
         public:
             StorageTrieKey(trie_id_type trie_id) : trie_id_(trie_id)

@@ -34,9 +34,9 @@ void CTNodeLinked::save_to_storage(unordered_map<PartialLabel, shared_ptr<CTNode
 
         if (nullptr != updated_nodes) {
             updated_nodes->insert_or_assign(
-                label(), make_shared<CTNodeStored>(trie_, label(), hash_, left_label, right_label));
+                label(), make_shared<CTNodeStored>(trie_, label(), hash_, epoch(), left_label, right_label, left_child_epoch_, right_child_epoch_));
         } else {
-            CTNodeStored node(trie_, label(), hash_, left_label, right_label);
+            CTNodeStored node(trie_, label(), hash_, epoch(), left_label, right_label, left_child_epoch_, right_child_epoch_);
             trie_->storage()->save_ctnode(trie_->id(), node);
         }
 
@@ -82,9 +82,11 @@ void CTNodeLinked::set_left_node(shared_ptr<CTNode> new_left_node)
     set_dirty_bit(true);
 }
 
-void CTNodeLinked::set_left_node(const PartialLabel &, std::size_t)
+void CTNodeLinked::set_left_node(const PartialLabel &, std::size_t epoch)
 {
-    // In this type of node this should do nothing
+    left_child_epoch_ = epoch;
+    epoch_ = trie_->epoch();
+    set_dirty_bit(true);
 }
 
 shared_ptr<CTNode> CTNodeLinked::set_new_left_node(const PartialLabel &label, std::size_t epoch)
@@ -123,9 +125,11 @@ void CTNodeLinked::set_right_node(shared_ptr<CTNode> new_right_node)
     set_dirty_bit(true);
 }
 
-void CTNodeLinked::set_right_node(const PartialLabel &, std::size_t)
+void CTNodeLinked::set_right_node(const PartialLabel &, std::size_t epoch)
 {
-    // In this type of node this should do nothing
+    right_child_epoch_ = epoch;
+    epoch_ = trie_->epoch();
+    set_dirty_bit(true);
 }
 
 shared_ptr<CTNode> CTNodeLinked::set_new_right_node(const PartialLabel &label, std::size_t epoch)

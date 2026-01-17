@@ -135,19 +135,11 @@ namespace ozks {
                 return tries_.size();
             }
 
-            ///**
-            // Get the count of OZKS instances contained in storage
-            //*/
-            // std::size_t ozks_count() const
-            //{
-            //    return ozks_.size();
-            //}
-
         private:
-            std::unordered_map<StorageNodeKey, ozks::CTNodeStored, StorageNodeKeyHasher> nodes_;
+            std::unordered_map<StorageNodeVersionedKey, ozks::CTNodeStored, StorageNodeKeyHasher> nodes_;
+            std::unordered_map<StorageNodeKey, std::vector<std::size_t>, StorageNodeKeyHasher>
+                node_epochs_;
             std::unordered_map<StorageTrieKey, ozks::CompressedTrie, StorageTrieKeyHasher> tries_;
-            //            std::unordered_map<StorageOZKSKey, ozks::OZKS, StorageOZKSKeyHasher>
-            //            ozks_;
             std::unordered_map<
                 StorageStoreElementKey,
                 ozks::store_value_type,

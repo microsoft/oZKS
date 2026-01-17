@@ -1658,6 +1658,105 @@ TEST(CompressedTrieTests, SaveLoadToVectorTest)
     }
 }
 
+TEST(CompressedTrieTests, LinkedSaveStoredQuerySimpleTest)
+{
+    shared_ptr<storage::BatchStorage> storage = make_shared<UpdatedNodesPerEpochStorage>();
+    shared_ptr<storage::Storage> batching_storage =
+        make_shared<storage::MemoryStorageBatchInserter>(storage);
+    shared_ptr<storage::Storage> cache1 =
+        make_shared<storage::MemoryStorageCache>(batching_storage, 100000);
+    shared_ptr<storage::Storage> cache2 = make_shared<storage::MemoryStorageCache>(storage, 100000);
+
+    CompressedTrie trie1(cache1, TrieType::Linked);
+
+    PartialLabel label0000 = PartialLabel({ false, false, false, false }); // 0000
+    PartialLabel label0100 = PartialLabel({ false, true, false, false });  // 0100
+    PartialLabel label1000 = PartialLabel({ true, false, false, false });  // 1000
+    PartialLabel label1100 = PartialLabel({ true, true, false, false });   // 1100
+
+    partial_label_hash_batch_type batch1
+    {
+        pair<PartialLabel, hash_type>{ label0000, make_bytes<hash_type>(0xA0, 0xB0, 0xC0) },
+        pair<PartialLabel, hash_type>{ label0100, make_bytes<hash_type>(0xA1, 0xB1, 0xC1) },
+        pair<PartialLabel, hash_type>{ label1000, make_bytes<hash_type>(0xA2, 0xB2, 0xC2) },
+        pair<PartialLabel, hash_type>{ label1100, make_bytes<hash_type>(0xA3, 0xB3, 0xC3) }
+    };
+
+    append_proof_batch_type append_proofs;
+    trie1.insert(batch1, append_proofs);
+    trie1.storage()->flush(trie1.id());
+
+    for (const auto &pair : batch1) {
+        lookup_path_type lookup_path;
+        bool found = trie1.lookup(pair.first, lookup_path);
+        EXPECT_TRUE(found);
+    }
+
+    auto loaded1 = CompressedTrie::LoadFromStorage(trie1.id(), cache2);
+    EXPECT_TRUE(loaded1.second);
+
+    CompressedTrie &trie2 = *loaded1.first;
+
+    for (const auto &pair : batch1) {
+        lookup_path_type lookup_path;
+        bool found = trie2.lookup(pair.first, lookup_path);
+        EXPECT_TRUE(found);
+    }
+
+    // Second insert should use multi threading
+    PartialLabel label0001 = PartialLabel({ false, false, false, true }); // 0001
+    PartialLabel label0010 = PartialLabel({ false, false, true, false }); // 0010
+    PartialLabel label1001 = PartialLabel({ true, false, false, true });  // 1001
+    PartialLabel label1010 = PartialLabel({ true, false, true, false });  // 1010
+
+    partial_label_hash_batch_type batch2
+    {
+        pair<PartialLabel, hash_type>{ label0001, make_bytes<hash_type>(0xA4, 0xB4, 0xC4) },
+        pair<PartialLabel, hash_type>{ label0010, make_bytes<hash_type>(0xA5, 0xB5, 0xC5) },
+        pair<PartialLabel, hash_type>{ label1001, make_bytes<hash_type>(0xA6, 0xB6, 0xC6) },
+        pair<PartialLabel, hash_type>{ label1010, make_bytes<hash_type>(0xA7, 0xB7, 0xC7) }
+    };
+
+    append_proof_batch_type append_proofs2;
+    trie1.insert(batch2, append_proofs2);
+    trie1.storage()->flush(trie1.id());
+
+    for (const auto &pair : batch1) {
+        lookup_path_type lookup_path;
+        bool found = trie1.lookup(pair.first, lookup_path);
+        EXPECT_TRUE(found);
+    }
+
+    for (const auto &pair : batch2) {
+        lookup_path_type lookup_path;
+        bool found = trie1.lookup(pair.first, lookup_path);
+        EXPECT_TRUE(found);
+    }
+
+    // Update trie2 from storage
+    EXPECT_TRUE(trie1.epoch() == trie2.epoch() + 1);
+    trie2.storage()->load_updated_elements(trie1.epoch(), trie2.id(), trie2.storage());
+
+    // Need to load trie again because trie2 is our local copy that is not updated, storage has the updated version
+    auto loaded2 = CompressedTrie::LoadFromStorage(trie2.id(), cache2);
+    EXPECT_TRUE(loaded2.second);
+
+    CompressedTrie &trie3 = *loaded2.first;
+    EXPECT_EQ(trie1.epoch(), trie3.epoch());
+
+    for (const auto &pair : batch1) {
+        lookup_path_type lookup_path;
+        bool found = trie3.lookup(pair.first, lookup_path);
+        EXPECT_TRUE(found);
+    }
+
+    for (const auto &pair : batch2) {
+        lookup_path_type lookup_path;
+        bool found = trie3.lookup(pair.first, lookup_path);
+        EXPECT_TRUE(found);
+    }
+}
+
 TEST(CompressedTrieTests, LinkedSaveStoredQueryWithUpdatesTest)
 {
     shared_ptr<storage::BatchStorage> storage = make_shared<UpdatedNodesPerEpochStorage>();
@@ -1691,8 +1790,6 @@ TEST(CompressedTrieTests, LinkedSaveStoredQueryWithUpdatesTest)
 
             if (coin > (byte)127 && added_labels < 100) {
                 labels.push_back(batch[idx].first);
-                size_t labels_size = labels.size();
-                EXPECT_TRUE(labels_size < 100);
                 added_labels++;
             }
         }

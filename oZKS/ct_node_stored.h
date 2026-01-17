@@ -37,12 +37,16 @@ namespace ozks {
             const CompressedTrie *trie,
             const PartialLabel &label,
             const hash_type &hash,
+            std::size_t epoch,
             const PartialLabel &left_label,
-            const PartialLabel &right_label)
+            const PartialLabel &right_label,
+            std::size_t left_epoch,
+            std::size_t right_epoch)
             : CTNodeStored(trie, label, hash)
         {
-            set_left_node(left_label, trie->epoch());
-            set_right_node(right_label, trie->epoch());
+            set_left_node(left_label, left_epoch);
+            set_right_node(right_label, right_epoch);
+            epoch_ = epoch;
             set_dirty_bit(false);
         }
 

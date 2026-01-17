@@ -163,7 +163,7 @@ bool CTNode::update_hash(size_t level, size_t root_levels)
     return true;
 }
 
-const PartialLabel &CTNode::insert(
+const std::pair<PartialLabel, std::size_t> CTNode::insert(
     const PartialLabel &insert_label,
     const hash_type &insert_hash,
     size_t epoch,
@@ -185,9 +185,9 @@ const PartialLabel &CTNode::insert(
             hash(); // Need to make a copy because node will become dirty in the process
         if (next_bit == 0) {
             left_node = set_left_node(insert_label, insert_hash, epoch);
-            right_node = set_right_node(label(), node_hash);
+            right_node = set_right_node(label(), node_hash, this->epoch());
         } else {
-            left_node = set_left_node(label(), node_hash);
+            left_node = set_left_node(label(), node_hash, this->epoch());
             right_node = set_right_node(insert_label, insert_hash, epoch);
         }
 
@@ -196,7 +196,7 @@ const PartialLabel &CTNode::insert(
         left_node->save_to_storage(updated_nodes);
         right_node->save_to_storage(updated_nodes);
         save_to_storage(updated_nodes);
-        return label();
+        return make_pair(label(), this->epoch());
     }
 
     // If there is a route to follow, follow it
@@ -207,42 +207,43 @@ const PartialLabel &CTNode::insert(
         PartialLabel old_right = right_node->label();
         size_t old_epoch = right_node->epoch();
 
-        const PartialLabel &new_right =
+        const pair<PartialLabel, size_t> new_right =
             right_node->insert(insert_label, insert_hash, epoch, updated_nodes);
-        if (new_right != old_right) {
-            set_right_node(new_right, epoch);
-        } else if (right_node->epoch() != old_epoch) {
-            // Epoch of child changed, so update ours as well
-            epoch_ = epoch;
-            right_child_epoch_ = right_node->epoch();
+        if (new_right.first != old_right || new_right.second != old_epoch) {
+            set_right_node(new_right.first, new_right.second);
+        //} else if (right_node->epoch() != old_epoch) {
+        //    // Epoch of child changed, so update ours as well
+        //    epoch_ = epoch;
+        //    right_child_epoch_ = right_node->epoch();
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
-        return label();
+        return make_pair(label(), this->epoch());
     }
 
     if (next_bit == 0 && nullptr != left_node && left_node->label()[common.bit_count()] == 0) {
         PartialLabel old_left = left_node->label();
         size_t old_epoch = left_node->epoch();
 
-        const PartialLabel &new_left =
+        const pair<PartialLabel, size_t> new_left =
             left_node->insert(insert_label, insert_hash, epoch, updated_nodes);
-        if (new_left != old_left) {
-            set_left_node(new_left, epoch);
-        } else if (left_node->epoch() != old_epoch) {
-            // Epoch of child changed, so update ours as well
-            epoch_ = epoch;
-            left_child_epoch_ = left_node->epoch();
+        if (new_left.first != old_left || new_left.second != old_epoch) {
+            set_left_node(new_left.first, new_left.second);
+        //} else if (left_node->epoch() != old_epoch) {
+        //    // Epoch of child changed, so update ours as well
+        //    epoch_ = epoch;
+        //    left_child_epoch_ = left_node->epoch();
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
-        return label();
+        return make_pair(label(), this->epoch());
     }
 
     // If there is no route to follow, insert here
     auto current_left_node = left_node;
     auto current_right_node = right_node;
     size_t current_epoch = this->epoch();
+    hash_type current_hash = hash_;
 
     if (next_bit == 1) {
         if (nullptr == current_right_node) {
@@ -251,21 +252,14 @@ const PartialLabel &CTNode::insert(
 
             save_to_storage(updated_nodes);
             right_node->save_to_storage(updated_nodes);
-            return label();
+            return make_pair(label(), this->epoch());
         }
 
         left_node = set_new_left_node(this->label(), current_epoch);
         right_node = set_right_node(insert_label, insert_hash, epoch);
 
-        if (nullptr != current_left_node) {
-            left_node->set_left_node(current_left_node);
-        }
-        if (nullptr != current_right_node) {
-            left_node->set_right_node(current_right_node);
-        }
-
-        // Node has not changed, so keep current epoch. Setting children above will have updated it.
-        left_node->epoch_ = current_epoch;
+        restore_node(
+            *left_node, current_left_node, current_right_node, current_epoch, current_hash);
     } else {
         if (nullptr == current_left_node) {
             left_node = set_left_node(insert_label, insert_hash, epoch);
@@ -273,21 +267,14 @@ const PartialLabel &CTNode::insert(
 
             save_to_storage(updated_nodes);
             left_node->save_to_storage(updated_nodes);
-            return label();
+            return make_pair(label(), this->epoch());
         }
 
         left_node = set_left_node(insert_label, insert_hash, epoch);
         right_node = set_new_right_node(this->label(), current_epoch);
 
-        if (nullptr != current_left_node) {
-            right_node->set_left_node(current_left_node);
-        }
-        if (nullptr != current_right_node) {
-            right_node->set_right_node(current_right_node);
-        }
-
-        // Node has not changed, so keep current epoch. Setting children above will have updated it.
-        right_node->epoch_ = current_epoch;
+        restore_node(
+            *right_node, current_left_node, current_right_node, current_epoch, current_hash);
     }
 
     // No longer needing common in this function
@@ -297,7 +284,7 @@ const PartialLabel &CTNode::insert(
     set_dirty_bit(true);
     save_to_storage(updated_nodes);
 
-    return label();
+    return make_pair(label(), this->epoch());
 }
 
 bool CTNode::lookup(const PartialLabel &lookup_label, lookup_path_type &path, bool include_searched)
@@ -515,4 +502,31 @@ bool CTNode::lookup(
     }
 
     return found;
+}
+
+void CTNode::restore_node(
+    CTNode& node,
+    shared_ptr<CTNode> left_node,
+    shared_ptr<CTNode> right_node,
+    size_t epoch,
+    hash_type& hash)
+{
+    node.hash_ = hash;
+
+    if (nullptr != left_node) {
+        node.set_left_node(left_node);
+    } else {
+        node.set_left_node(nullptr);
+        node.left_child_epoch_ = 0;
+    }
+
+    if (nullptr != right_node) {
+        node.set_right_node(right_node);
+    } else {
+        node.set_right_node(nullptr);
+        node.right_child_epoch_ = 0;
+    }
+
+    node.epoch_ = epoch;
+    node.set_dirty_bit(true);
 }

@@ -63,7 +63,7 @@ namespace ozks {
         /**
         Insert the given label and payload (commitment) under this node.
         */
-        const PartialLabel &insert(
+        const std::pair<PartialLabel, std::size_t> insert(
             const PartialLabel &insert_label,
             const hash_type &insert_hash,
             std::size_t epoch,
@@ -210,6 +210,13 @@ namespace ozks {
             std::size_t level,
             std::size_t root_levels,
             std::unordered_map<PartialLabel, std::shared_ptr<CTNode>> *updated_nodes = nullptr);
+
+        static void restore_node(
+            CTNode &node,
+            std::shared_ptr<CTNode> left_node,
+            std::shared_ptr<CTNode> right_node,
+            std::size_t epoch,
+            hash_type &hash);
 
     protected:
         hash_type hash_ = {};
