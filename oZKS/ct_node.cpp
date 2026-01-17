@@ -211,10 +211,6 @@ const std::pair<PartialLabel, std::size_t> CTNode::insert(
             right_node->insert(insert_label, insert_hash, epoch, updated_nodes);
         if (new_right.first != old_right || new_right.second != old_epoch) {
             set_right_node(new_right.first, new_right.second);
-        //} else if (right_node->epoch() != old_epoch) {
-        //    // Epoch of child changed, so update ours as well
-        //    epoch_ = epoch;
-        //    right_child_epoch_ = right_node->epoch();
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
@@ -229,10 +225,6 @@ const std::pair<PartialLabel, std::size_t> CTNode::insert(
             left_node->insert(insert_label, insert_hash, epoch, updated_nodes);
         if (new_left.first != old_left || new_left.second != old_epoch) {
             set_left_node(new_left.first, new_left.second);
-        //} else if (left_node->epoch() != old_epoch) {
-        //    // Epoch of child changed, so update ours as well
-        //    epoch_ = epoch;
-        //    left_child_epoch_ = left_node->epoch();
         }
         set_dirty_bit(true);
         save_to_storage(updated_nodes);
