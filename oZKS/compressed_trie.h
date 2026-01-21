@@ -178,6 +178,17 @@ namespace ozks {
             id_ = trie_id;
         }
 
+    protected:
+        void set_epoch(std::size_t epoch)
+        {
+            epoch_ = epoch;
+        }
+
+        std::shared_ptr<ozks::CTNode> root()
+        {
+            return root_;
+        }
+
     private:
         std::shared_ptr<CTNode> root_;
 

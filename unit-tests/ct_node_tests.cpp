@@ -21,6 +21,27 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
+namespace {
+    class CompressedTrieForTests : public CompressedTrie {
+    public:
+        CompressedTrieForTests(
+            std::shared_ptr<ozks::storage::Storage> storage,
+            TrieType trie_type)
+            : CompressedTrie(storage, trie_type)
+        {}
+
+        void init_epoch(std::size_t epoch)
+        {
+            set_epoch(epoch);
+        }
+
+        std::shared_ptr<ozks::CTNode> get_root()
+        {
+            return root();
+        }
+    };
+ }
+
 void DoInsertTest(shared_ptr<CTNode> root)
 {
     PartialLabel label1{ true, true, true, true };
@@ -110,11 +131,14 @@ TEST(CTNodeTests, LinkedInsertTest)
     DoInsertTest(root);
 }
 
-void DoUpdateHashTest(shared_ptr<CTNode> root)
+void DoUpdateHashTest(CompressedTrieForTests& trie)
 {
     PartialLabel label = make_bytes<PartialLabel>(0x01);
     hash_type payload = make_bytes<hash_type>(0xF0, 0xF1, 0xF2);
     lookup_path_type lookup_path;
+
+    trie.init_epoch(1);
+    shared_ptr<CTNode> root = trie.get_root();
 
     root->insert(label, payload, /* epoch */ 1);
     root->update_hashes(label);
@@ -137,7 +161,9 @@ void DoUpdateHashTest(shared_ptr<CTNode> root)
     label = make_bytes<PartialLabel>(0x02);
     payload = make_bytes<hash_type>(0xE0, 0xE1, 0xE2);
 
+    root = trie.get_root();
     hash_type hash_root = root->hash();
+    trie.init_epoch(2);
     root->insert(label, payload, 2);
     root->update_hashes(label);
 
@@ -171,18 +197,16 @@ void DoUpdateHashTest(shared_ptr<CTNode> root)
 TEST(CTNodeTests, StoredUpdateHashTest)
 {
     shared_ptr<ozks::storage::Storage> storage = make_shared<ozks::storage::MemoryStorage>();
-    CompressedTrie trie(storage, TrieType::Stored);
-    shared_ptr<CTNode> root = make_shared<CTNodeStored>(&trie);
+    CompressedTrieForTests trie(storage, TrieType::Stored);
 
-    DoUpdateHashTest(root);
+    DoUpdateHashTest(trie);
 }
 
 TEST(CTNodeTests, LinkedUpdateHashTest)
 {
-    CompressedTrie trie;
-    shared_ptr<CTNode> root = make_shared<CTNodeLinked>(&trie);
+    CompressedTrieForTests trie(/* storage */ nullptr, TrieType::Linked);
 
-    DoUpdateHashTest(root);
+    DoUpdateHashTest(trie);
 }
 
 void DoAllNodesHashedTest(shared_ptr<CTNode> root)

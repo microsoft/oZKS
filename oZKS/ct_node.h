@@ -278,16 +278,39 @@ namespace ozks {
         virtual void set_left_node(std::shared_ptr<CTNode> new_left_node) = 0;
         virtual void set_left_node(const PartialLabel &label, std::size_t epoch) = 0;
         virtual std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label, std::size_t epoch) = 0;
+
+        /**
+        Set left node of the current node.
+        This assumes the left node will be a leaf node. The label, payload  and epoch
+        will be used to compute the actual leaf node hash.
+        */
         virtual std::shared_ptr<CTNode> set_left_node(
+            const PartialLabel &label, const hash_type &payload, std::size_t epoch) = 0;
+
+        /**
+        Set left node of the current node.
+        This assumes the left node will be a leaf node. The hash will be set in directly.
+        */
+        virtual std::shared_ptr<CTNode> set_existing_left_node(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch) = 0;
-        virtual std::shared_ptr<CTNode> set_left_node(
-            const PartialLabel &label, const hash_type &hash) = 0;
+
         virtual void set_right_node(std::shared_ptr<CTNode> new_right_node) = 0;
         virtual void set_right_node(const PartialLabel &label, std::size_t epoch) = 0;
         virtual std::shared_ptr<CTNode> set_new_right_node(const PartialLabel &label, std::size_t epoch) = 0;
+
+        /**
+        Set right node of the current node.
+        This assumes the right node will be a leaf node. The label, payload  and epoch
+        will be used to compute the actual leaf node hash.
+        */
         virtual std::shared_ptr<CTNode> set_right_node(
+            const PartialLabel &label, const hash_type &payload, std::size_t epoch) = 0;
+
+        /**
+        Set right node of the current node.
+        This assumes the right node will be a leaf node. The hash will be set in directly.
+        */
+        virtual std::shared_ptr<CTNode> set_existing_right_node(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch) = 0;
-        virtual std::shared_ptr<CTNode> set_right_node(
-            const PartialLabel &label, const hash_type &hash) = 0;
     };
 } // namespace ozks

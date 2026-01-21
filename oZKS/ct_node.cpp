@@ -195,9 +195,9 @@ const std::pair<PartialLabel, std::size_t> CTNode::insert(
             hash(); // Need to make a copy because node will become dirty in the process
         if (next_bit == 0) {
             left_node = set_left_node(insert_label, insert_hash, epoch);
-            right_node = set_right_node(label(), node_hash, this->epoch());
+            right_node = set_existing_right_node(label(), node_hash, this->epoch());
         } else {
-            left_node = set_left_node(label(), node_hash, this->epoch());
+            left_node = set_existing_left_node(label(), node_hash, this->epoch());
             right_node = set_right_node(insert_label, insert_hash, epoch);
         }
 

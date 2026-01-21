@@ -99,19 +99,22 @@ shared_ptr<CTNode> CTNodeLinked::set_new_left_node(const PartialLabel &label, st
 }
 
 shared_ptr<CTNode> CTNodeLinked::set_left_node(
-    const PartialLabel &label, const hash_type &hash, size_t epoch)
+    const PartialLabel &label, const hash_type &payload, size_t epoch)
 {
-    left_ = make_shared<CTNodeLinked>(trie_, label, hash, epoch);
+    left_ = make_shared<CTNodeLinked>(trie_, label, payload, epoch);
     left_child_epoch_ = epoch;
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return left_;
 }
 
-shared_ptr<CTNode> CTNodeLinked::set_left_node(const PartialLabel &label, const hash_type &hash)
+shared_ptr<CTNode> CTNodeLinked::set_existing_left_node(const PartialLabel &label, const hash_type &hash, std::size_t epoch)
 {
-    left_ = make_shared<CTNodeLinked>(trie_, label, hash);
-    left_child_epoch_ = left_->epoch();
+    auto left = make_shared<CTNodeLinked>(trie_, label, hash);
+    left->epoch_ = epoch;
+
+    left_ = left;
+    left_child_epoch_ = epoch;
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return left_;
@@ -142,19 +145,22 @@ shared_ptr<CTNode> CTNodeLinked::set_new_right_node(const PartialLabel &label, s
 }
 
 shared_ptr<CTNode> CTNodeLinked::set_right_node(
-    const PartialLabel &label, const hash_type &hash, size_t epoch)
+    const PartialLabel &label, const hash_type &payload, size_t epoch)
 {
-    right_ = make_shared<CTNodeLinked>(trie_, label, hash, epoch);
+    right_ = make_shared<CTNodeLinked>(trie_, label, payload, epoch);
     right_child_epoch_ = epoch;
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return right_;
 }
 
-shared_ptr<CTNode> CTNodeLinked::set_right_node(const PartialLabel &label, const hash_type &hash)
+shared_ptr<CTNode> CTNodeLinked::set_existing_right_node(const PartialLabel &label, const hash_type &hash, std::size_t epoch)
 {
-    right_ = make_shared<CTNodeLinked>(trie_, label, hash);
-    right_child_epoch_ = right_->epoch();
+    auto right = make_shared<CTNodeLinked>(trie_, label, hash);
+    right->epoch_ = epoch;
+
+    right_ = right;
+    right_child_epoch_ = epoch;
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
     return right_;
