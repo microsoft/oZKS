@@ -1057,11 +1057,8 @@ TEST(CompressedTrieTests, LinkedLookupTest)
     DoLookupTest(trie);
 }
 
-TEST(CompressedTrieTests, ChildrenEpochTest)
+void DoChildrenEpochTest(CompressedTrie &trie, shared_ptr<storage::Storage> storage)
 {
-    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
-    CompressedTrie trie(storage, TrieType::Stored);
-
     // Insert 4 nodes
     partial_label_hash_batch_type batch1
     {
@@ -1358,6 +1355,20 @@ TEST(CompressedTrieTests, ChildrenEpochTest)
     EXPECT_EQ(4, some_node.epoch());
     EXPECT_EQ(0, some_node.left_child_epoch());
     EXPECT_EQ(0, some_node.right_child_epoch());
+}
+
+TEST(CompressedTrieTests, ChildrenEpochLinkedTest)
+{
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Linked);
+    DoChildrenEpochTest(trie, storage);
+}
+
+TEST(CompressedTrieTests, ChildrenEpochStoredTest)
+{
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Stored);
+    DoChildrenEpochTest(trie, storage);
 }
 
 void DoFailedLookupTest(CompressedTrie &trie)

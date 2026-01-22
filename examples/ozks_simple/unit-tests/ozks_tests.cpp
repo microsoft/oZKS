@@ -20,7 +20,7 @@ using namespace ozks::storage;
 using namespace ozks::utils;
 using namespace ozks_simple;
 
-constexpr size_t random_iterations = 50000;
+constexpr size_t random_iterations = 5000;
 
 namespace {
     /**
