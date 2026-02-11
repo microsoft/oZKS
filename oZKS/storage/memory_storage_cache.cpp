@@ -16,9 +16,12 @@ using namespace ozks::storage;
 MemoryStorageCache::MemoryStorageCache(
     shared_ptr<ozks::storage::Storage> backing_storage, size_t cache_size)
     : storage_(backing_storage),
-      node_cache_(static_cast<Poco::UInt32>(cache_size)),
-      trie_cache_(static_cast<Poco::UInt32>(cache_size)),
-      store_element_cache_(static_cast<Poco::UInt32>(cache_size))
+      node_cache_(cache_size > std::numeric_limits<Poco::UInt32>::max() ? 
+                  std::numeric_limits<Poco::UInt32>::max() : static_cast<Poco::UInt32>(cache_size)),
+      trie_cache_(cache_size > std::numeric_limits<Poco::UInt32>::max() ? 
+                  std::numeric_limits<Poco::UInt32>::max() : static_cast<Poco::UInt32>(cache_size)),
+      store_element_cache_(cache_size > std::numeric_limits<Poco::UInt32>::max() ? 
+                           std::numeric_limits<Poco::UInt32>::max() : static_cast<Poco::UInt32>(cache_size))
 {
     node_cache_.Remove += Poco::delegate(this, &MemoryStorageCache::on_node_removed);
 }
