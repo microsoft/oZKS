@@ -8,9 +8,11 @@
 #include <memory>
 #include <optional>
 
+// VRF
+#include <vrf/vrf.h>
+
 // OZKS
 #include "oZKS/defines.h"
-#include "oZKS/vrf.h"
 
 // GSL
 #include "gsl/span"
@@ -28,9 +30,9 @@ namespace ozks {
         VRFCache(const VRFCache &other) : VRFCache(other.size())
         {}
 
-        void add(const hash_type &key_hash, const VRFProof &vrf_proof);
+        void add(const hash_type &key_hash, const std::unique_ptr<vrf::Proof> &vrf_proof);
 
-        std::optional<VRFProof> get(const hash_type &key_hash);
+        std::unique_ptr<vrf::Proof> get(const hash_type &key_hash);
 
         // Return the maximum number of elements the cache can hold
         std::size_t max_size() const noexcept
@@ -74,7 +76,7 @@ namespace ozks {
         }
 
     private:
-        std::unique_ptr<Poco::LRUCache<hash_type, VRFProof>> cache_{ nullptr };
+        std::unique_ptr<Poco::LRUCache<hash_type, std::shared_ptr<vrf::Proof>>> cache_{ nullptr };
 
         std::size_t cache_size_;
 

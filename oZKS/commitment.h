@@ -9,9 +9,12 @@
 #include <utility>
 #include <vector>
 
+// VRF
+#include <vrf/vrf.h>
+
 // OZKS
+#include "oZKS/defines.h"
 #include "oZKS/serialization_helpers.h"
-#include "oZKS/vrf.h"
 
 namespace ozks {
     /**
@@ -27,14 +30,18 @@ namespace ozks {
         /**
         Construct an instance of Commitment
         */
-        Commitment(const VRFPublicKey &public_key, const commitment_type &root_commitment)
-            : public_key_(public_key), root_commitment_(root_commitment)
-        {}
+        Commitment(const std::unique_ptr<vrf::PublicKey> &public_key, const commitment_type &root_commitment)
+            : root_commitment_(root_commitment)
+        {
+            if (nullptr != public_key) {
+                public_key_ = public_key->clone();
+            }
+        }
 
         /**
         VRF public key
         */
-        const VRFPublicKey &public_key() const
+        const std::unique_ptr<vrf::PublicKey> &public_key() const
         {
             return public_key_;
         }
@@ -71,7 +78,7 @@ namespace ozks {
             const std::vector<T> &vec, std::size_t position = 0);
 
     private:
-        VRFPublicKey public_key_;
+        std::unique_ptr<vrf::PublicKey> public_key_;
         commitment_type root_commitment_{};
 
         std::size_t save(SerializationWriter &writer) const;

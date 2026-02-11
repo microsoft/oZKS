@@ -1427,7 +1427,8 @@ void DoFailedLookupTest(CompressedTrie &trie)
                        LabelType::HashedLabels,
                        TrieType::LinkedNoStorage,
                        storage };
-    QueryResult qr(config, {}, {}, result, {}, {});
+    unique_ptr<vrf::Proof> vrf_proof;
+    QueryResult qr(config, {}, {}, result, vrf_proof, {});
     commitment_type commitment = trie.get_commitment();
 
     EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify_lookup_path(commitment));
@@ -1442,7 +1443,7 @@ void DoFailedLookupTest(CompressedTrie &trie)
     key = make_bytes<PartialLabel>(0x11, 0x02);
     EXPECT_EQ(false, trie.lookup(key, result));
 
-    qr = QueryResult(config, {}, {}, result, {}, {});
+    qr = QueryResult(config, {}, {}, result, vrf_proof, {});
 
     EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify_lookup_path(commitment));
     EXPECT_EQ(3, result.size());
@@ -1454,7 +1455,7 @@ void DoFailedLookupTest(CompressedTrie &trie)
     key = make_bytes<PartialLabel>(0x01, 0x00);
     EXPECT_EQ(false, trie.lookup(key, result));
 
-    qr = QueryResult(config, {}, {}, result, {}, {});
+    qr = QueryResult(config, {}, {}, result, vrf_proof, {});
 
     EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify_lookup_path(commitment));
     EXPECT_EQ(3, result.size());

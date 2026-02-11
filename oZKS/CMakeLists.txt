@@ -16,7 +16,6 @@ set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}
     ${CMAKE_CURRENT_LIST_DIR}/serialization_helpers.cpp
     ${CMAKE_CURRENT_LIST_DIR}/utilities.cpp
     ${CMAKE_CURRENT_LIST_DIR}/version.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/vrf.cpp
     ${CMAKE_CURRENT_LIST_DIR}/vrf_cache.cpp
 )
 
@@ -38,7 +37,6 @@ install(
         ${CMAKE_CURRENT_LIST_DIR}/thread_pool.h
         ${CMAKE_CURRENT_LIST_DIR}/utilities.h
         ${CMAKE_CURRENT_LIST_DIR}/version.h
-        ${CMAKE_CURRENT_LIST_DIR}/vrf.h
         ${CMAKE_CURRENT_LIST_DIR}/vrf_cache.h
     DESTINATION
         ${OZKS_INCLUDES_INSTALL_DIR}/oZKS

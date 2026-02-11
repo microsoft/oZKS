@@ -172,6 +172,14 @@ else()
     message(STATUS "Poco: found")
 endif()
 
+# CPPVRF
+find_package(cppvrf 1.2 REQUIRED)
+if (NOT cppvrf_FOUND)
+    message(FATAL_ERROR "cppvrf: not found")
+else()
+    message(STATUS "cppvrf: found")
+endif()
+
 # [Option] OZKS_BUILD_TESTS (default: OFF)
 set(OZKS_BUILD_TESTS_OPTION_STR "Build unit and integration tests for OZKS")
 option(OZKS_BUILD_TESTS ${OZKS_BUILD_TESTS_OPTION_STR} OFF)
@@ -222,7 +230,8 @@ ozks_install_target(ozks OZKSTargets)
 target_link_libraries(ozks
     PUBLIC Microsoft.GSL::GSL
     PRIVATE flatbuffers::flatbuffers
-    PUBLIC Poco::Foundation)
+    PUBLIC Poco::Foundation
+    PUBLIC cppvrf::cppvrf)
 
 if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
     target_link_libraries(ozks

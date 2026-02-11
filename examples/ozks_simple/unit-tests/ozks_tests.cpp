@@ -625,8 +625,8 @@ TEST(OZKSTests, QueryTest)
     EXPECT_EQ(true, query_result.is_member());
     EXPECT_EQ(payload, query_result.payload());
 
-    VRFPublicKey pk = ozks.get_vrf_public_key();
-    EXPECT_EQ(true, pk.verify_vrf_proof(key, query_result.vrf_proof()));
+    auto verif_result = utils::verify_vrf_proof(key, query_result.vrf_proof(), commitment.public_key());
+    EXPECT_EQ(true, verif_result);
 
     key = make_bytes<key_type>(0x01, 0x01, 0x00);
 
@@ -678,8 +678,9 @@ TEST(OZKSTests, MultiInsertQueryTest)
     EXPECT_EQ(true, query_result.is_member());
     EXPECT_EQ(payload, query_result.payload());
 
-    VRFPublicKey pk = ozks.get_vrf_public_key();
-    EXPECT_EQ(true, pk.verify_vrf_proof(key, query_result.vrf_proof()));
+    auto pk = ozks.get_vrf_public_key();
+    auto verif_result = utils::verify_vrf_proof(key, query_result.vrf_proof(), pk);
+    EXPECT_EQ(true, verif_result);
 
     key = make_bytes<key_type>(0x06, 0x07, 0x08);
     payload = make_bytes<payload_type>(0xFA, 0xF9, 0xF8, 0xF7, 0xF6, 0xF5);
@@ -860,12 +861,38 @@ TEST(OZKSTests, RandomInsert10StoredTest)
     RandomInsertCore(ozks, /* iterations */ 10);
 }
 
+TEST(OZKSTests, RandomInsert10StoredVRFSeedTest)
+{
+    auto storage = make_shared<MemoryStorage>();
+    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
+                       LabelType::VRFLabels,
+                       TrieType::Stored,
+                       storage,
+                       vrf_seed };
+    OZKS ozks(config);
+    RandomInsertCore(ozks, /* iterations */ 10);
+}
+
 TEST(OZKSTests, RandomInsert10LinkedTest)
 {
     auto storage = make_shared<MemoryStorage>();
     OZKSConfig config{
         PayloadCommitmentType::CommitedPayload, LabelType::VRFLabels, TrieType::Linked, storage
     };
+    OZKS ozks(config);
+    RandomInsertCore(ozks, /* iterations */ 10);
+}
+
+TEST(OZKSTests, RandomInsert10LinkedVRFSeedTest)
+{
+    auto storage = make_shared<MemoryStorage>();
+    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
+                       LabelType::VRFLabels,
+                       TrieType::Linked,
+                       storage,
+                       vrf_seed };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 10);
 }
@@ -880,12 +907,38 @@ TEST(OZKSTests, RandomInsert100StoredTest)
     RandomInsertCore(ozks, /* iterations */ 100);
 }
 
+TEST(OZKSTests, RandomInsert100StoredVRFSeedTest)
+{
+    auto storage = make_shared<MemoryStorage>();
+    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
+                       LabelType::VRFLabels,
+                       TrieType::Stored,
+                       storage,
+                       vrf_seed };
+    OZKS ozks(config);
+    RandomInsertCore(ozks, /* iterations */ 100);
+}
+
 TEST(OZKSTests, RandomInsert100LinkedTest)
 {
     auto storage = make_shared<MemoryStorage>();
     OZKSConfig config{
         PayloadCommitmentType::CommitedPayload, LabelType::VRFLabels, TrieType::Linked, storage
     };
+    OZKS ozks(config);
+    RandomInsertCore(ozks, /* iterations */ 100);
+}
+
+TEST(OZKSTests, RandomInsert100LinkedVRFSeedTest)
+{
+    auto storage = make_shared<MemoryStorage>();
+    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
+                       LabelType::VRFLabels,
+                       TrieType::Linked,
+                       storage,
+                       vrf_seed };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 100);
 }
@@ -900,12 +953,41 @@ TEST(OZKSTests, RandomInsert1000StoredTest)
     RandomInsertCore(ozks, /* iterations */ 1000);
 }
 
+TEST(OZKSTests, RandomInsert1000StoredVRFSeedTest)
+{
+    auto storage = make_shared<MemoryStorage>();
+    vector<byte> vrf_seed =
+        utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
+                       LabelType::VRFLabels,
+                       TrieType::Stored,
+                       storage,
+                       vrf_seed };
+    OZKS ozks(config);
+    RandomInsertCore(ozks, /* iterations */ 1000);
+}
+
+
 TEST(OZKSTests, RandomInsert1000LinkedTest)
 {
     auto storage = make_shared<MemoryStorage>();
     OZKSConfig config{
         PayloadCommitmentType::CommitedPayload, LabelType::VRFLabels, TrieType::Linked, storage
     };
+    OZKS ozks(config);
+    RandomInsertCore(ozks, /* iterations */ 1000);
+}
+
+TEST(OZKSTests, RandomInsert1000LinkedVRFSeedTest)
+{
+    auto storage = make_shared<MemoryStorage>();
+    vector<byte> vrf_seed =
+        utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
+                       LabelType::VRFLabels,
+                       TrieType::Linked,
+                       storage,
+                       vrf_seed };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 1000);
 }

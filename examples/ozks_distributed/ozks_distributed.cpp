@@ -4,6 +4,9 @@
 // STD
 #include <mutex>
 
+// VRF
+#include <vrf/vrf.h>
+
 // oZKS
 #include "oZKS/ozks_distributed_generated.h"
 #include "oZKS/storage/memory_storage.h"
@@ -42,9 +45,11 @@ void OZKS::initialize_vrf()
     // Set up a new VRF secret key (and public key)
     if (config_.vrf_seed().size() == 0) {
         // No VRF seed
-        vrf_sk_.initialize();
+        vrf_sk_ = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
     } else {
-        vrf_sk_.initialize(config_.vrf_seed());
+        // Initialize VRF from seed
+        // No support at the moment
+        throw logic_error("VRF initialization from seed is not supported yet.");
     }
 }
 
@@ -151,8 +156,8 @@ void OZKS::insert(const key_payload_batch_type &input)
 
 QueryResult OZKS::query(const key_type &key) const
 {
-    // get_node_label below will set this to nullopt if the OZKS is not using VRFs
-    optional<VRFProof> vrf_proof;
+    // get_node_label below will set this to nullptr if the OZKS is not using VRFs
+    unique_ptr<vrf::Proof> vrf_proof;
     hash_type label =
         utils::get_node_label(key, vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
 
@@ -163,7 +168,7 @@ QueryResult OZKS::query(const key_type &key) const
                  key,
                  /* payload */ {},
                  lookup_path,
-                 vrf_proof.value_or(VRFProof{}),
+                 vrf_proof,
                  /* randomness */ {} };
     }
 
@@ -177,13 +182,13 @@ QueryResult OZKS::query(const key_type &key) const
              key,
              element.payload,
              lookup_path,
-             vrf_proof.value_or(VRFProof{}),
+             vrf_proof,
              element.randomness };
 }
 
-VRFPublicKey OZKS::get_vrf_public_key() const
+unique_ptr<vrf::PublicKey> OZKS::get_vrf_public_key() const
 {
-    return vrf_sk_.get_vrf_public_key();
+    return vrf_sk_->get_public_key();
 }
 
 size_t OZKS::get_epoch() const
@@ -228,10 +233,9 @@ size_t OZKS::save(SerializationWriter &writer) const
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> sk_data = 0;
 
     if (config_.label_type() == LabelType::VRFLabels) {
-        vector<byte> sk_saved(VRFSecretKey::save_size);
-        vrf_sk_.save(gsl::span<byte, VRFSecretKey::save_size>(sk_saved));
+        auto sk_saved = vrf_sk_->to_secure_bytes();
         sk_data =
-            fbs_builder.CreateVector(reinterpret_cast<uint8_t *>(sk_saved.data()), sk_saved.size());
+            fbs_builder.CreateVector(reinterpret_cast<uint8_t *>(sk_saved.get()), sk_saved.size());
     }
 
     fbs::OZKSBuilder ozks_builder(fbs_builder);
@@ -297,18 +301,20 @@ pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> s
     ozks.config_ = config_dist;
 
     if (ozks.get_config().label_type() == LabelType::VRFLabels) {
-        if (fbs_ozks->vrf_sk()->size() != VRFSecretKey::save_size) {
-            throw runtime_error("Failed to load OZKS: VRF secret key size does not match");
-        }
+        ozks.vrf_sk_ = vrf::VRF::SecretKeyFromBytes(
+            vrf::Type::EC_VRF_P256_SHA256_TAI,
+            gsl::span<const byte>(
+                reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
+                fbs_ozks->vrf_sk()->size()));
 
-        ozks.vrf_sk_.load(gsl::span<const byte, VRFSecretKey::save_size>(
-            reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
-            fbs_ozks->vrf_sk()->size()));
+        if (ozks.vrf_sk_ == nullptr) {
+            throw runtime_error("Failed to load OZKS: invalid VRF secret key");
+        }
     }
 
     ozks.ozks_id_ = fbs_ozks->trie_id();
 
-    return { ozks, in_data.size() };
+    return { std::move(ozks), in_data.size() };
 }
 
 void OZKS::check_for_update()

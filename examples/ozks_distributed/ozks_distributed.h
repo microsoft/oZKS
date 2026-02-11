@@ -5,13 +5,15 @@
 
 // STD
 
+// VRF
+#include <vrf/vrf.h>
+
 // oZKS
 #include "oZKS/insert_result.h"
 #include "oZKS/providers/query_provider.h"
 #include "oZKS/providers/trie_info_provider.h"
 #include "oZKS/providers/update_provider.h"
 #include "oZKS/query_result.h"
-#include "oZKS/vrf.h"
 #include "oZKS/vrf_cache.h"
 #include "ozks_config_dist.h"
 
@@ -60,7 +62,7 @@ namespace ozks_distributed {
         /**
         Get the VRF public key that can be used to verify VRF proofs
         */
-        ozks::VRFPublicKey get_vrf_public_key() const;
+        std::unique_ptr<vrf::PublicKey> get_vrf_public_key() const;
 
         /**
         Get the current epoch
@@ -122,7 +124,7 @@ namespace ozks_distributed {
 
         OZKSConfigDist config_;
         mutable ozks::VRFCache vrf_cache_;
-        ozks::VRFSecretKey vrf_sk_;
+        std::unique_ptr<vrf::SecretKey> vrf_sk_;
         std::vector<pending_insertion> pending_insertions_;
         std::vector<pending_result> pending_results_;
         std::shared_ptr<ozks::providers::QueryProvider> query_provider_;

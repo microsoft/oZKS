@@ -12,7 +12,7 @@ using namespace ozks;
 VRFCache::VRFCache(size_t vrf_cache_size) : cache_size_(vrf_cache_size)
 {
     if (cache_size_) {
-        cache_ = make_unique<Poco::LRUCache<hash_type, VRFProof>>(cache_size_);
+        cache_ = make_unique<Poco::LRUCache<hash_type, shared_ptr<vrf::Proof>>>(cache_size_);
     }
 }
 
@@ -26,20 +26,24 @@ VRFCache &VRFCache::operator=(const VRFCache &other)
     return *this;
 }
 
-void VRFCache::add(const hash_type &key_hash, const VRFProof &vrf_proof)
+void VRFCache::add(const hash_type &key_hash, const unique_ptr<vrf::Proof> &vrf_proof)
 {
     if (cache_) {
-        cache_->add(key_hash, vrf_proof);
+        shared_ptr<vrf::Proof> shared_proof;
+        unique_ptr<vrf::Proof> vrf_proof_ptr = vrf_proof->clone();
+        shared_proof = std::move(vrf_proof_ptr);
+
+        cache_->add(key_hash, shared_proof);
     }
 }
 
-optional<VRFProof> VRFCache::get(const hash_type &key_hash)
+unique_ptr<vrf::Proof> VRFCache::get(const hash_type &key_hash)
 {
-    optional<VRFProof> ret = nullopt;
+    unique_ptr<vrf::Proof> ret = nullptr;
     if (cache_) {
         auto cache_value = cache_->get(key_hash);
         if (!cache_value.isNull()) {
-            ret = optional<VRFProof>{ *cache_value };
+            ret = (*cache_value)->clone();
             cache_hits_++;
             return ret;
         }

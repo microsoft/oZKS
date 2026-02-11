@@ -9,6 +9,9 @@
 #include <optional>
 #include <unordered_map>
 
+// VRF
+#include <vrf/vrf.h>
+
 // oZKS
 #include "oZKS/commitment.h"
 #include "oZKS/defines.h"
@@ -20,7 +23,6 @@
 #include "oZKS/query_result.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/utilities.h"
-#include "oZKS/vrf.h"
 #include "oZKS/vrf_cache.h"
 
 namespace ozks {
@@ -79,7 +81,7 @@ namespace ozks_simple {
         /**
         Get the VRF public key that can be used to verify VRF proofs
         */
-        ozks::VRFPublicKey get_vrf_public_key() const;
+        std::unique_ptr<vrf::PublicKey> get_vrf_public_key() const;
 
         /**
         Get the current epoch
@@ -141,7 +143,7 @@ namespace ozks_simple {
 
         ozks::OZKSConfig config_;
         mutable ozks::VRFCache vrf_cache_;
-        ozks::VRFSecretKey vrf_sk_;
+        std::unique_ptr<vrf::SecretKey> vrf_sk_;
         std::vector<pending_insertion> pending_insertions_;
         std::vector<pending_result> pending_results_;
         std::shared_ptr<ozks::providers::QueryProvider> query_provider_;
@@ -159,6 +161,8 @@ namespace ozks_simple {
         void do_pending_insertions();
 
         void initialize();
+
+        void initialize_vrf_from_seed();
 
         std::shared_ptr<ozks::storage::Storage> storage() const;
     };

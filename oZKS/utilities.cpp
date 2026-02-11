@@ -140,44 +140,49 @@ void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
 
 hash_type utils::get_node_label(
     const key_type &key,
-    const VRFSecretKey &vrf_sk,
+    const unique_ptr<vrf::SecretKey> &vrf_sk,
     VRFCache &cache,
     LabelType label_type,
-    optional<VRFProof> &proof)
+    std::unique_ptr<vrf::Proof> &proof)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
-    proof = nullopt;
+    proof = nullptr;
 
     if (label_type == LabelType::VRFLabels) {
         // Look up the VRF proof from the cache
-        proof = cache.get(key_hash);
-
-        // Not found? Need to compute the proof and add it to the cache
-        if (!proof.has_value()) {
-            proof = vrf_sk.get_vrf_proof(key_hash);
-            cache.add(key_hash, proof.value());
+        auto cache_value = cache.get(key_hash);
+        if (nullptr != cache_value) {
+            proof = std::move(cache_value);
+        } else {
+            // Not found? Need to compute the proof and add it to the cache
+            auto vrf_proof = vrf_sk->get_vrf_proof(key_hash);
+            proof = std::move(vrf_proof);
+            cache.add(key_hash, proof);
         }
 
         // key_hash needs to be updated to be the VRF value hash.
         // Note that we have not verified the validity of the proof here.
         // We assume it is valid, as it is loaded from the cache and the
         // cache is only populated with valid proofs.
-        key_hash = proof.value().compute_vrf_value();
+        auto vrf_value = proof->get_vrf_value();
+        utils::copy_bytes_to_hash(vrf_value, key_hash);
     }
 
     return key_hash;
 }
 
 hash_type utils::get_node_label(
-    const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type)
+    const key_type &key, const std::unique_ptr<vrf::SecretKey> &vrf_sk, LabelType label_type)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
 
     if (label_type == LabelType::VRFLabels) {
         // If this OZKS uses VRFs, set key_hash instead to the VRF value (hash)
-        key_hash = vrf_sk.get_vrf_value(key_hash);
+        auto proof = vrf_sk->get_vrf_proof(key_hash);
+        auto vrf_value = proof->get_vrf_value();
+        utils::copy_bytes_to_hash(vrf_value, key_hash);
     }
 
     return key_hash;
@@ -198,6 +203,14 @@ void utils::copy_bytes(const void *src, size_t count, void *dst)
         reinterpret_cast<const unsigned char *>(src),
         count,
         reinterpret_cast<unsigned char *>(dst));
+}
+
+void utils::copy_bytes_to_hash(gsl::span<const std::byte> src, hash_type &dst)
+{
+    if (src.size() != hash_size) {
+        throw invalid_argument("cannot copy to hash: source size is incorrect");
+    }
+    copy_bytes(src.data(), hash_size, dst.data());
 }
 
 void utils::read_from_serialization_reader(
@@ -385,6 +398,15 @@ size_t utils::get_log2(size_t n)
 
     return r;
 }
+
+bool utils::verify_vrf_proof(
+    const key_type key, const std::unique_ptr<vrf::Proof>& proof, const std::unique_ptr<vrf::PublicKey> &pk)
+{
+    hash_type hash = utils::compute_key_hash(key);
+    auto verif_result = pk->verify_vrf_proof(hash, proof);
+    return verif_result.first;
+}
+
 
 // Explicit instantiations
 template void utils::compute_hash(

@@ -14,11 +14,10 @@ size_t Commitment::save(SerializationWriter &writer) const
 {
     flatbuffers::FlatBufferBuilder fbs_builder;
 
-    uint8_t pk_bin[VRFPublicKey::save_size];
-    public_key_.save(gsl::span<byte, VRFPublicKey::save_size>(
-        reinterpret_cast<byte *>(pk_bin), VRFPublicKey::save_size));
+    vector<byte> pk_bin = public_key_->to_bytes();
 
-    auto public_key_data = fbs_builder.CreateVector(pk_bin, VRFPublicKey::save_size);
+    auto public_key_data =
+        fbs_builder.CreateVector(reinterpret_cast<uint8_t *>(pk_bin.data()), pk_bin.size());
     auto fbs_pk = fbs::CreatePublicKey(fbs_builder, public_key_data);
 
     fbs::RootCommitment root_commitment_data(flatbuffers::span<const uint8_t, 32>{
@@ -67,14 +66,16 @@ pair<Commitment, size_t> Commitment::Load(SerializationReader &reader)
         throw runtime_error("Failed to load Commitment: unsupported version");
     }
 
-    if (fbs_commitment->public_key()->data()->size() != VRFPublicKey::save_size) {
-        throw runtime_error("VRF public key size does not match.");
-    }
-
     Commitment commitment;
-    commitment.public_key_.load(gsl::span<const byte, VRFPublicKey::save_size>(
+    gsl::span<const byte> pk_span = gsl::span(
         reinterpret_cast<const byte *>(fbs_commitment->public_key()->data()->data()),
-        VRFPublicKey::save_size));
+        fbs_commitment->public_key()->data()->size());
+    commitment.public_key_ =
+        vrf::VRF::PublicKeyFromBytes(vrf::Type::EC_VRF_P256_SHA256_TAI, pk_span);
+
+    if (commitment.public_key_ == nullptr) {
+        throw runtime_error("Failed to load Commitment: invalid public key");
+    }
 
     if (fbs_commitment->root_commitment()->data()->size() != commitment.root_commitment_.size()) {
         throw runtime_error("Serialized commitment size does not match");
@@ -85,7 +86,7 @@ pair<Commitment, size_t> Commitment::Load(SerializationReader &reader)
         fbs_commitment->root_commitment()->data()->size(),
         commitment.root_commitment_.data());
 
-    return { commitment, in_data.size() };
+    return { std::move(commitment), in_data.size() };
 }
 
 pair<Commitment, size_t> Commitment::Load(istream &stream)

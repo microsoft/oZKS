@@ -10,13 +10,17 @@
 #include <string>
 #include <vector>
 
+// VRF
+#include <vrf/vrf.h>
+
 // OZKS
 #include "oZKS/ct_node.h"
 #include "oZKS/defines.h"
 #include "oZKS/partial_label.h"
 #include "oZKS/serialization_helpers.h"
-#include "oZKS/vrf.h"
+#include "oZKS/ozks_config.h"
 #include "oZKS/vrf_cache.h"
+
 
 // GSL
 #include "gsl/span"
@@ -50,6 +54,12 @@ namespace ozks {
         destination is nullptr. The memory ranges are assumed to be non-overlapping.
         */
         void copy_bytes(const void *src, std::size_t count, void *dst);
+
+        /**
+        Copies bytes from source to destination hash. Verifies that source is
+        the correct size for a hash.
+        */
+        void copy_bytes_to_hash(gsl::span<const std::byte> src, hash_type &dst);
 
         /**
         Compute an intermediate hash value for the label value in a Compressed Trie.
@@ -121,17 +131,19 @@ namespace ozks {
         */
         hash_type get_node_label(
             const key_type &key,
-            const VRFSecretKey &vrf_sk,
+            const std::unique_ptr<vrf::SecretKey> &vrf_sk,
             VRFCache &cache,
             LabelType label_type,
-            std::optional<VRFProof> &proof);
+            std::unique_ptr<vrf::Proof> &proof);
 
         /**
         This function computes the label for a given key. In case the VRF proof is not needed,
         this is faster than calling the overload that includes the VRF proof.
         */
         hash_type get_node_label(
-            const key_type &key, const VRFSecretKey &vrf_sk, LabelType label_type);
+            const key_type &key,
+            const std::unique_ptr<vrf::SecretKey> &vrf_sk,
+            LabelType label_type);
 
         /**
         Hasher for a byte vector.
@@ -204,5 +216,14 @@ namespace ozks {
         Get logarithm base 2 of the given number
         */
         std::size_t get_log2(std::size_t n);
+
+        /**
+        Verify a VRF proof for the given key.
+        This method will correctly hash the key.
+        */
+        bool verify_vrf_proof(
+            const key_type key,
+            const std::unique_ptr<vrf::Proof> &proof,
+            const std::unique_ptr<vrf::PublicKey> &pk);
     } // namespace utils
 } // namespace ozks

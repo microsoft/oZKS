@@ -6,6 +6,9 @@
 #include <mutex>
 #include <thread>
 
+// VRF
+#include <vrf/ec/ecvrf.h>
+
 // oZKS
 #include "oZKS/ozks_generated.h"
 #include "oZKS/storage/memory_storage.h"
@@ -16,6 +19,7 @@
 #include "providers/local_query_provider.h"
 #include "providers/local_trie_info_provider.h"
 #include "providers/local_update_provider.h"
+#include <openssl/sha.h>
 
 using namespace std;
 using namespace ozks;
@@ -138,7 +142,7 @@ void OZKS::do_pending_insertions()
 QueryResult OZKS::query(const key_type &key) const
 {
     // get_node_label below will set this to nullopt if the OZKS is not using VRFs
-    optional<VRFProof> vrf_proof;
+    unique_ptr<vrf::Proof> vrf_proof;
     hash_type label =
         utils::get_node_label(key, vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
 
@@ -149,7 +153,7 @@ QueryResult OZKS::query(const key_type &key) const
                  key,
                  /* payload */ {},
                  lookup_path,
-                 vrf_proof.value_or(VRFProof{}),
+                 vrf_proof,
                  /* randomness */ {} };
     }
 
@@ -163,7 +167,7 @@ QueryResult OZKS::query(const key_type &key) const
              key,
              store_element.payload,
              lookup_path,
-             vrf_proof.value_or(VRFProof{}),
+             vrf_proof,
              store_element.randomness };
 }
 
@@ -191,12 +195,12 @@ void OZKS::check_for_update()
     }
 }
 
-VRFPublicKey OZKS::get_vrf_public_key() const
+unique_ptr<vrf::PublicKey> OZKS::get_vrf_public_key() const
 {
     if (config_.label_type() != LabelType::VRFLabels) {
         throw logic_error("VRF public key is not set");
     }
-    return vrf_sk_.get_vrf_public_key();
+    return vrf_sk_->get_public_key();
 }
 
 size_t OZKS::get_epoch() const
@@ -206,7 +210,7 @@ size_t OZKS::get_epoch() const
 
 Commitment OZKS::get_commitment() const
 {
-    VRFPublicKey vrf_public_key;
+    std::unique_ptr<vrf::PublicKey> vrf_public_key;
     if (config_.label_type() == LabelType::VRFLabels) {
         vrf_public_key = get_vrf_public_key();
     }
@@ -227,12 +231,12 @@ void OZKS::clear()
     vrf_cache_.clear();
 
     // Save the VRF secret key and ID so we can replace them
-    VRFSecretKey old_vrf_sk = vrf_sk_;
+    std::unique_ptr<vrf::SecretKey> old_vrf_sk = std::move(vrf_sk_);
     trie_id_type ozks_id = ozks_id_;
 
     // Initialize and replace the old VRF secret key
     initialize();
-    vrf_sk_ = old_vrf_sk;
+    vrf_sk_ = std::move(old_vrf_sk);
     ozks_id_ = ozks_id;
 }
 
@@ -248,10 +252,9 @@ size_t OZKS::save(SerializationWriter &writer) const
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> sk_data = 0;
 
     if (config_.label_type() == LabelType::VRFLabels) {
-        vector<byte> sk_saved(VRFSecretKey::save_size);
-        vrf_sk_.save(gsl::span<byte, VRFSecretKey::save_size>(sk_saved));
+        auto sk_saved = vrf_sk_->to_secure_bytes();
         sk_data =
-            fbs_builder.CreateVector(reinterpret_cast<uint8_t *>(sk_saved.data()), sk_saved.size());
+            fbs_builder.CreateVector(reinterpret_cast<uint8_t *>(sk_saved.get()), sk_saved.size());
     }
 
     fbs::OZKSBuilder ozks_builder(fbs_builder);
@@ -306,18 +309,21 @@ pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> s
     OZKSConfig::Load(ozks.config_, config_vec, storage);
 
     if (ozks.get_config().label_type() == LabelType::VRFLabels) {
-        if (fbs_ozks->vrf_sk()->size() != VRFSecretKey::save_size) {
-            throw runtime_error("Failed to load OZKS: VRF secret key size does not match");
-        }
+        ozks.vrf_sk_ = vrf::VRF::
+            SecretKeyFromBytes(
+            vrf::Type::EC_VRF_P256_SHA256_TAI,
+            gsl::span<const byte>(
+                reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
+                fbs_ozks->vrf_sk()->size()));
 
-        ozks.vrf_sk_.load(gsl::span<const byte, VRFSecretKey::save_size>(
-            reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
-            fbs_ozks->vrf_sk()->size()));
+        if (ozks.vrf_sk_ == nullptr) {
+            throw runtime_error("Failed to load OZKS: invalid VRF secret key");
+        }
     }
 
     ozks.ozks_id_ = fbs_ozks->trie_id();
 
-    return { ozks, in_data.size() };
+    return { std::move(ozks), in_data.size() };
 }
 
 pair<OZKS, size_t> OZKS::Load(shared_ptr<Storage> storage, istream &stream)
@@ -338,10 +344,47 @@ void OZKS::initialize_vrf()
     // Set up a new VRF secret key (and public key)
     if (config_.vrf_seed().size() == 0) {
         // No VRF seed
-        vrf_sk_.initialize();
+        vrf_sk_ = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
     } else {
-        vrf_sk_.initialize(config_.vrf_seed());
+        // No support at the moment
+        initialize_vrf_from_seed();
     }
+}
+
+void OZKS::initialize_vrf_from_seed()
+{
+    if (config_.vrf_seed().size() == 0) {
+        throw logic_error("VRF seed is empty");
+    }
+
+    // 1) Hash seed deterministically
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char *>(config_.vrf_seed().data()), config_.vrf_seed().size(), hash);
+
+    // 2) Build BN from hash
+    vrf::BIGNUM_Guard scalar(BN_bin2bn(hash, SHA256_DIGEST_LENGTH, nullptr), /* owned */ true);
+    if (!scalar.has_value()) {
+        throw runtime_error("Failed to create BIGNUM from hash");
+    }
+
+    // 3) Reduce modulo curve order: scalar = scalar mod n, ensure scalar != 0
+    vrf::EC_GROUP_Guard group(vrf::Curve::PRIME256V1);
+    vrf::BIGNUM_Guard order(BN_new(), /* owned */ true);
+    vrf::BN_CTX_Guard ctx{/* secure */ false};
+    if (!group.has_value() || !order.has_value() || !ctx.has_value()) {
+        throw runtime_error("Failed to create EC_GROUP, BIGNUM, or BN_CTX");
+    }
+
+    EC_GROUP_get_order(group.get(), order.get(), ctx.get());
+    BN_mod(scalar.get(), scalar.get(), order.get(), ctx.get());
+    if (BN_is_zero(scalar.get())) {
+        // Deterministic fixup: add 1 (still < order)
+        BN_add_word(scalar.get(), 1);
+    }
+
+    // 4) Create VRF secret key from scalar
+    vrf::ec::ScalarType ec_scalar(std::move(scalar));
+    vrf_sk_ = std::make_unique<vrf::ec::ECSecretKey>(vrf::Type::EC_VRF_P256_SHA256_TAI, ec_scalar);
 }
 
 void OZKS::initialize()

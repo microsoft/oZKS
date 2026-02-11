@@ -96,7 +96,8 @@ bool QueryResult::is_member_from_path() const noexcept
     hash_type vrf_value = utils::compute_key_hash(key_);
 
     if (use_vrf_) {
-        vrf_value = vrf_proof_.compute_vrf_value();
+        auto vrf_val_vec = vrf_proof_->get_vrf_value();
+        utils::copy_bytes_to_hash(vrf_val_vec, vrf_value);
     }
 
     PartialLabel vrf_label(vrf_value);
@@ -127,10 +128,12 @@ bool QueryResult::is_member_from_path() const noexcept
     return is_member;
 }
 
-bool QueryResult::verify_vrf_proof(const VRFPublicKey &public_key) const
+bool QueryResult::verify_vrf_proof(const unique_ptr<vrf::PublicKey> &public_key) const
 {
+    return utils::verify_vrf_proof(key_, vrf_proof_, public_key);
     hash_type key_hash = utils::compute_key_hash(key_);
-    return public_key.verify_vrf_proof(key_hash, vrf_proof_);
+    auto verif_result = public_key->verify_vrf_proof(key_hash, vrf_proof_);
+    return verif_result.first;
 }
 
 QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
@@ -171,20 +174,7 @@ size_t QueryResult::save(SerializationWriter &writer) const
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> vrf_proof_data = 0;
 
     if (use_vrf_) {
-        vector<byte> vrf_proof_bytes(
-            utils::ECPoint::save_size + utils::ECPoint::order_size + utils::ECPoint::order_size);
-
-        utils::copy_bytes(
-            vrf_proof().gamma.data(), utils::ECPoint::save_size, vrf_proof_bytes.data());
-        utils::copy_bytes(
-            vrf_proof().c.data(),
-            utils::ECPoint::order_size,
-            vrf_proof_bytes.data() + utils::ECPoint::save_size);
-        utils::copy_bytes(
-            vrf_proof().s.data(),
-            utils::ECPoint::order_size,
-            vrf_proof_bytes.data() + utils::ECPoint::save_size + utils::ECPoint::order_size);
-
+        vector<byte> vrf_proof_bytes = vrf_proof_->to_bytes();
         vrf_proof_data = fbs_builder.CreateVector(
             reinterpret_cast<const uint8_t *>(vrf_proof_bytes.data()), vrf_proof_bytes.size());
     }
@@ -250,34 +240,24 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
     query_result.lookup_proof_.resize(fbs_query_result->lookup_proof_count());
 
     if (query_result.use_vrf_) {
-        utils::copy_bytes(
-            fbs_query_result->vrf_proof()->data(),
-            utils::ECPoint::save_size,
-            query_result.vrf_proof_.gamma.data());
-        utils::copy_bytes(
-            fbs_query_result->vrf_proof()->data() + utils::ECPoint::save_size,
-            utils::ECPoint::order_size,
-            query_result.vrf_proof_.c.data());
-        utils::copy_bytes(
-            fbs_query_result->vrf_proof()->data() + utils::ECPoint::save_size +
-                utils::ECPoint::order_size,
-            utils::ECPoint::order_size,
-            query_result.vrf_proof_.s.data());
+        query_result.vrf_proof_ = vrf::VRF::ProofFromBytes(
+            vrf::Type::EC_VRF_P256_SHA256_TAI,
+            gsl::span<const byte>(
+                reinterpret_cast<const byte*>(fbs_query_result->vrf_proof()->data()),
+                fbs_query_result->vrf_proof()->size()));
     } else {
-        memset(query_result.vrf_proof_.gamma.data(), 0, utils::ECPoint::save_size);
-        memset(query_result.vrf_proof_.c.data(), 0, utils::ECPoint::order_size);
-        memset(query_result.vrf_proof_.s.data(), 0, utils::ECPoint::order_size);
+        query_result.vrf_proof_ = nullptr;
     }
 
-    size_t lp_count = fbs_query_result->lookup_proof_count();
-    size_t lp_size = 0;
+    std::size_t lp_count = fbs_query_result->lookup_proof_count();
+    std::size_t lp_size = 0;
 
     for (size_t idx = 0; idx < lp_count; idx++) {
         lp_size += utils::read_path_element(
             reader, query_result.lookup_proof_[idx].first, query_result.lookup_proof_[idx].second);
     }
 
-    return { query_result, in_data.size() + lp_size };
+    return { std::move(query_result), in_data.size() + lp_size };
 }
 
 pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, istream &stream)

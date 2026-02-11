@@ -25,7 +25,9 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     lookup_path_type lookup_proof;
     payload_type payload;
     randomness_type randomness;
-    VRFProof vrf_proof;
+    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    vector<byte> vrf_input = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
+    auto vrf_proof = sk->get_vrf_proof(vrf_input);
 
     key = utils::make_bytes<key_type>(0xFE, 0xEF, 0xCD, 0xDC, 0xAB, 0xBA);
     lookup_proof.resize(3);
@@ -46,15 +48,6 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     randomness[1] = static_cast<byte>(0xDD);
     randomness[2] = static_cast<byte>(0xEE);
     randomness[3] = static_cast<byte>(0xFF);
-    vrf_proof.gamma[0] = static_cast<byte>(0x10);
-    vrf_proof.gamma[1] = static_cast<byte>(0x11);
-    vrf_proof.gamma[2] = static_cast<byte>(0x12);
-    vrf_proof.c[0] = static_cast<byte>(0x21);
-    vrf_proof.c[1] = static_cast<byte>(0x22);
-    vrf_proof.c[2] = static_cast<byte>(0x23);
-    vrf_proof.s[0] = static_cast<byte>(0x31);
-    vrf_proof.s[1] = static_cast<byte>(0x32);
-    vrf_proof.s[2] = static_cast<byte>(0x33);
 
     qr = QueryResult(
         config, key, payload, lookup_proof, vrf_proof, randomness);
@@ -109,25 +102,9 @@ void VerifyLoadedQueryResult(QueryResult &qr, const OZKSConfig &config)
     EXPECT_EQ(static_cast<byte>(0xEB), qr.lookup_proof()[2].second[2]);
 
     if (config.label_type() == LabelType::VRFLabels) {
-        EXPECT_EQ(static_cast<byte>(0x10), qr.vrf_proof().gamma[0]);
-        EXPECT_EQ(static_cast<byte>(0x11), qr.vrf_proof().gamma[1]);
-        EXPECT_EQ(static_cast<byte>(0x12), qr.vrf_proof().gamma[2]);
-        EXPECT_EQ(static_cast<byte>(0x21), qr.vrf_proof().c[0]);
-        EXPECT_EQ(static_cast<byte>(0x22), qr.vrf_proof().c[1]);
-        EXPECT_EQ(static_cast<byte>(0x23), qr.vrf_proof().c[2]);
-        EXPECT_EQ(static_cast<byte>(0x31), qr.vrf_proof().s[0]);
-        EXPECT_EQ(static_cast<byte>(0x32), qr.vrf_proof().s[1]);
-        EXPECT_EQ(static_cast<byte>(0x33), qr.vrf_proof().s[2]);
+        EXPECT_NE(nullptr, qr.vrf_proof());
     } else {
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().gamma[0]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().gamma[1]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().gamma[2]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().c[0]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().c[1]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().c[2]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().s[0]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().s[1]);
-        EXPECT_EQ(static_cast<byte>(0x00), qr.vrf_proof().s[2]);
+        EXPECT_EQ(nullptr, qr.vrf_proof());
     }
 }
 

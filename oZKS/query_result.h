@@ -6,13 +6,15 @@
 // STD
 #include <iostream>
 
+// VRF
+#include <vrf/vrf.h>
+
 // oZKS
 #include "oZKS/commitment.h"
 #include "oZKS/defines.h"
 #include "oZKS/ozks_config.h"
 #include "oZKS/partial_label.h"
 #include "oZKS/serialization_helpers.h"
-#include "oZKS/vrf.h"
 
 namespace ozks {
     /**
@@ -53,15 +55,20 @@ namespace ozks {
         Construct an instance of QueryResult
         */
         QueryResult(
-            const OZKSConfig config,
+            const OZKSConfig &config,
             const key_type &key,
             const payload_type &payload,
             const lookup_path_type &lookup_proof,
-            const VRFProof &vrf_proof,
+            std::unique_ptr<vrf::Proof> &vrf_proof,
             const randomness_type &randomness)
-            : key_(key), payload_(payload), lookup_proof_(lookup_proof), vrf_proof_(vrf_proof),
+            : key_(key), payload_(payload), lookup_proof_(lookup_proof),
               randomness_(randomness), use_vrf_(config.label_type() == LabelType::VRFLabels)
-        {}
+        {
+            if (nullptr != vrf_proof)
+                vrf_proof_ = std::move(vrf_proof);
+            else
+                vrf_proof = nullptr;
+        }
 
         /**
         Whether the query found the key that was searched for
@@ -95,7 +102,7 @@ namespace ozks {
         /**
         VRF proof to validate that the searched key is valid
         */
-        const VRFProof &vrf_proof() const noexcept
+        const std::unique_ptr<vrf::Proof> &vrf_proof() const noexcept
         {
             return vrf_proof_;
         }
@@ -116,7 +123,7 @@ namespace ozks {
         /**
         Verify that the queried key is valid for the VRF proof in this query result
         */
-        bool verify_vrf_proof(const VRFPublicKey &public_key) const;
+        bool verify_vrf_proof(const std::unique_ptr<vrf::PublicKey> &public_key) const;
 
         /**
         Verify that:
@@ -153,7 +160,7 @@ namespace ozks {
         key_type key_{};
         payload_type payload_{};
         lookup_path_type lookup_proof_{};
-        VRFProof vrf_proof_{};
+        std::unique_ptr<vrf::Proof> vrf_proof_{};
         randomness_type randomness_{};
         bool use_vrf_ = false;
 

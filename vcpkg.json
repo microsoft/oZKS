@@ -6,6 +6,7 @@
     "flatbuffers",
     "openssl",
     "poco",
+    "cppvrf",
     "gtest",
     "benchmark"
   ]
