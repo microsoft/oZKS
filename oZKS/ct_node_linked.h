@@ -34,6 +34,10 @@ namespace ozks {
 
         CTNodeLinked(const CompressedTrie *trie, const PartialLabel &label) : CTNode(trie)
         {
+            if (nullptr == trie) {
+                throw std::invalid_argument("Trie cannot be null");
+            }
+            
             init(label, trie->epoch());
         }
 
@@ -110,7 +114,8 @@ namespace ozks {
     protected:
         void set_left_node(std::shared_ptr<CTNode> new_left_node) override;
         void set_left_node(const PartialLabel &label, std::size_t epoch) override;
-        std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label, std::size_t epoch) override;\
+        std::shared_ptr<CTNode> set_new_left_node(const PartialLabel &label, std::size_t epoch) override;
+
         /**
         Set left node of the current node.
         This assumes the left node will be a leaf node. The label, payload  and epoch

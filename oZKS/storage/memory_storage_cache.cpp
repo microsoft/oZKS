@@ -74,10 +74,6 @@ bool MemoryStorageCache::load_ctnode(
         return true;
     }
 
-    if (cached_node->epoch() != epoch) {
-        return false;
-    }
-
     node = *(cached_node.get());
     return true;
 }

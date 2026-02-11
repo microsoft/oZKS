@@ -52,6 +52,10 @@ namespace ozks {
 
         CTNodeStored(const CompressedTrie *trie, const PartialLabel &label) : CTNode(trie)
         {
+            if (nullptr == trie) {
+                throw std::invalid_argument("Trie cannot be null");
+            }
+            
             init(label, trie->epoch());
         }
 
