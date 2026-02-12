@@ -583,9 +583,9 @@ static void OZKSLoad(benchmark::State &state)
 
 static void VRFGetProof(benchmark::State &state)
 {
-    VRFSecretKey sk;
-    sk.initialize();
-    VRFPublicKey pk = sk.get_vrf_public_key();
+    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto pk = sk->get_public_key();
+
     vector<byte> data(32);
 
     for (auto _ : state) {
@@ -593,11 +593,11 @@ static void VRFGetProof(benchmark::State &state)
         utils::random_bytes(data.data(), data.size());
         state.ResumeTiming();
 
-        auto vrf_proof = sk.get_vrf_proof(data);
+        auto vrf_proof = sk->get_vrf_proof(data);
 
         state.PauseTiming();
-        auto verification_result = pk.verify_vrf_proof(data, vrf_proof);
-        if (!verification_result) {
+        auto verification_result = pk->verify_vrf_proof(data, vrf_proof);
+        if (!verification_result.first) {
             state.SkipWithError("Verification should have succeeded");
         }
         state.ResumeTiming();
@@ -606,8 +606,7 @@ static void VRFGetProof(benchmark::State &state)
 
 static void VRFGetValue(benchmark::State &state)
 {
-    VRFSecretKey sk;
-    sk.initialize();
+    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
     vector<byte> data(32);
 
     for (auto _ : state) {
@@ -615,25 +614,26 @@ static void VRFGetValue(benchmark::State &state)
         utils::random_bytes(data.data(), data.size());
         state.ResumeTiming();
 
-        [[maybe_unused]] auto vrf_value = sk.get_vrf_value(data);
+        auto proof = sk->get_vrf_proof(data);
+        [[maybe_unused]] auto vrf_value = proof->get_vrf_value();
     }
 }
 
 static void VRFVerifyProof(benchmark::State &state)
 {
-    VRFSecretKey sk;
-    sk.initialize();
-    VRFPublicKey pk = sk.get_vrf_public_key();
+    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto pk = sk->get_public_key();
+
     vector<byte> data(32);
 
     for (auto _ : state) {
         state.PauseTiming();
         utils::random_bytes(data.data(), data.size());
-        auto proof = sk.get_vrf_proof(data);
+        auto proof = sk->get_vrf_proof(data);
         state.ResumeTiming();
 
-        auto verification_result = pk.verify_vrf_proof(data, proof);
-        if (!verification_result) {
+        auto verification_result = pk->verify_vrf_proof(data, proof);
+        if (!verification_result.first) {
             state.SkipWithError("Verification should have succeeded");
         }
     }
