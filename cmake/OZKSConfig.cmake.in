@@ -58,6 +58,7 @@ if(OZKS_USE_OPENSSL_P256)
     ozks_find_dependency(OpenSSL)
 endif()
 ozks_find_dependency_component(Poco Foundation)
+ozks_find_dependency(cppvrf)
 
 # Add the current directory to the module search path
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
