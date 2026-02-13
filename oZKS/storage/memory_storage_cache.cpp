@@ -39,7 +39,7 @@ bool MemoryStorageCache::load_ctnode(
 {
     StorageNodeKey epochs_key(trie_id, node_id);
     auto epochs_iter = node_epochs_.find(epochs_key); // Ensure epochs are loaded so we can get the latest version
-    if (epochs_iter == node_epochs_.end() || epochs_iter->second.empty()) {
+    if (epochs_iter == node_epochs_.end()) {
         // Seems we don't have anything in our cache, try backing storage
         if (storage_->load_ctnode(trie_id, node_id, storage, node)) {
             update_node_epochs_cache(trie_id, node_id, node.epoch());
@@ -51,9 +51,7 @@ bool MemoryStorageCache::load_ctnode(
         return false;
     }
 
-    auto max_it = std::max_element(epochs_iter->second.begin(), epochs_iter->second.end());
-    size_t latest_epoch = *max_it;
-
+    size_t latest_epoch = epochs_iter->second;
     return load_ctnode(trie_id, node_id, latest_epoch, storage, node);
 }
 
@@ -247,14 +245,15 @@ void MemoryStorageCache::update_node_epochs_cache(
     StorageNodeKey epochs_key(trie_id, node_id);
     auto epochs_it = node_epochs_.find(epochs_key);
 
-    if (epochs_it == node_epochs_.end()) {
-        node_epochs_[epochs_key] = vector<size_t>{ epoch };
-    } else {
-        auto &epochs = epochs_it->second;
-        if (std::find(epochs.begin(), epochs.end(), epoch) == epochs.end()) {
-            epochs.push_back(epoch);
-        }
+    if (epochs_it != node_epochs_.end()) {
+        auto existing_epoch = epochs_it->second;
+
+        // Remove existing node if it exists
+        StorageNodeVersionedKey existing_key{ trie_id, node_id, existing_epoch };
+        node_cache_.remove(existing_key);
     }
+
+    node_epochs_[epochs_key] = epoch;
 }
 
 void MemoryStorageCache::on_node_removed(
@@ -262,13 +261,5 @@ void MemoryStorageCache::on_node_removed(
 {
     // Update epochs cache
     StorageNodeKey epochs_key(key.trie_id(), key.node_id());
-    auto epochs_it = node_epochs_.find(epochs_key);
-
-    if (epochs_it != node_epochs_.end()) {
-        auto &epochs = epochs_it->second;
-        epochs.erase(std::remove(epochs.begin(), epochs.end(), key.epoch()), epochs.end());
-        if (epochs.empty()) {
-            node_epochs_.erase(epochs_it);
-        }
-    }
+    node_epochs_.erase(epochs_key);
 }

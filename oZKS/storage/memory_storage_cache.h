@@ -122,9 +122,9 @@ namespace ozks {
 
             // Nodes
             Poco::LRUCache<StorageNodeVersionedKey, CTNodeStored> node_cache_;
+
             // Epochs for nodes in cache
-            std::unordered_map<StorageNodeKey, std::vector<std::size_t>, StorageNodeKeyHasher>
-                node_epochs_;
+            std::unordered_map<StorageNodeKey, std::size_t, StorageNodeKeyHasher> node_epochs_;
 
             // Tries
             Poco::LRUCache<StorageTrieKey, CompressedTrie> trie_cache_;

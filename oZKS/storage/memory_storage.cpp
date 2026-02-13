@@ -27,11 +27,11 @@ bool MemoryStorage::load_ctnode(
 
     // Get latest stored version
     auto epochs_it = node_epochs_.find(node_key);
-    if (epochs_it == node_epochs_.end() || epochs_it->second.empty()) {
+    if (epochs_it == node_epochs_.end()) {
         return false;
     }
 
-    std::size_t latest_epoch = *(epochs_it->second.rbegin());
+    std::size_t latest_epoch = epochs_it->second;
     return load_ctnode(trie_id, node_id, latest_epoch, storage, node);
 }
 
@@ -57,14 +57,15 @@ void MemoryStorage::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
     // Track epochs for the node
     StorageNodeKey node_key{ trie_id, node.label() };
     auto epochs_it = node_epochs_.find(node_key);
-    if (epochs_it == node_epochs_.end()) {
-        vector<std::size_t> epochs{ node.epoch() };
-        node_epochs_[node_key] = std::move(epochs);
-    } else {
-        epochs_it->second.push_back(node.epoch());
+    if (epochs_it != node_epochs_.end()) {
+        // Remove existing node
+        size_t existing_epoch = epochs_it->second;
+        StorageNodeVersionedKey existing_key{ trie_id, node.label(), existing_epoch };
+        nodes_.erase(existing_key);
     }
 
     StorageNodeVersionedKey key(trie_id, node.label(), node.epoch());
+    node_epochs_[node_key] = node.epoch();
     nodes_[key] = node;
 }
 

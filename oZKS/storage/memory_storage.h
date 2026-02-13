@@ -137,7 +137,7 @@ namespace ozks {
 
         private:
             std::unordered_map<StorageNodeVersionedKey, ozks::CTNodeStored, StorageNodeKeyHasher> nodes_;
-            std::unordered_map<StorageNodeKey, std::vector<std::size_t>, StorageNodeKeyHasher>
+            std::unordered_map<StorageNodeKey, std::size_t, StorageNodeKeyHasher>
                 node_epochs_;
             std::unordered_map<StorageTrieKey, ozks::CompressedTrie, StorageTrieKeyHasher> tries_;
             std::unordered_map<
