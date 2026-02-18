@@ -63,7 +63,7 @@ namespace ozks {
         /**
         Insert the given label and payload (commitment) under this node.
         */
-        const std::pair<PartialLabel, std::size_t> insert(
+        std::pair<PartialLabel, std::size_t> insert(
             const PartialLabel &insert_label,
             const hash_type &insert_hash,
             std::size_t epoch,

@@ -175,7 +175,7 @@ bool CTNode::update_hash(size_t level, size_t root_levels)
     return true;
 }
 
-const std::pair<PartialLabel, std::size_t> CTNode::insert(
+std::pair<PartialLabel, std::size_t> CTNode::insert(
     const PartialLabel &insert_label,
     const hash_type &insert_hash,
     size_t epoch,
