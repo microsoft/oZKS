@@ -48,4 +48,6 @@ namespace ozks {
         payload_type payload;
         randomness_type randomness{};
     };
+
+    constexpr std::size_t invalid_epoch = std::numeric_limits<std::size_t>::max();
 } // namespace ozks

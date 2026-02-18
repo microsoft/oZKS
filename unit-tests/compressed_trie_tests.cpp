@@ -196,7 +196,17 @@ namespace {
             [[maybe_unused]] const vector<pair<vector<byte>, store_value_type>> &store_elements)
             override
         {
-            size_t epoch = get_compressed_trie_epoch(trie_id);
+            size_t epoch = 0;
+            // Epoch can be taken from updated tries
+            auto found = std::find_if(
+                tries.begin(),
+                tries.end(),
+                [trie_id](const CompressedTrie &t) {
+                    return t.id() == trie_id;
+                });
+            if (found != tries.end()) {
+                epoch = found->epoch();
+            }
 
             vector<CTNodeStored> updated_nodes(nodes.size());
             for (size_t idx = 0; idx < nodes.size(); idx++) {
@@ -210,8 +220,8 @@ namespace {
                 backing_->save_compressed_trie(tries[idx]);
             }
 
-            updated_nodes_.insert_or_assign(epoch + 1, std::move(updated_nodes));
-            updated_tries_.insert_or_assign(epoch + 1, std::move(updated_tries));
+            updated_nodes_.insert_or_assign(epoch, std::move(updated_nodes));
+            updated_tries_.insert_or_assign(epoch, std::move(updated_tries));
         }
 
     private:

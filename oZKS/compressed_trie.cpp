@@ -25,21 +25,21 @@ using namespace ozks::storage;
 using namespace ozks::utils;
 
 CompressedTrie::CompressedTrie(shared_ptr<Storage> storage, TrieType trie_type, size_t thread_count)
-    : epoch_(0), storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
+    : storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
 {
     init_random_id();
-    init_empty_root();
+    init_empty_root(/* epoch */ 0);
 }
 
 CompressedTrie::CompressedTrie(
     trie_id_type trie_id, shared_ptr<Storage> storage, TrieType trie_type, size_t epoch, size_t thread_count)
-    : epoch_(epoch), id_(trie_id), storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
+    : id_(trie_id), storage_(storage), thread_count_(thread_count), trie_type_(trie_type)
 {
-    init_empty_root();
+    init_empty_root(epoch);
 }
 
 CompressedTrie::CompressedTrie()
-    : epoch_(0), storage_(nullptr), thread_count_(0), trie_type_(TrieType::Stored)
+    : storage_(nullptr), thread_count_(0), trie_type_(TrieType::Stored)
 {
     init_random_id();
 }
@@ -49,9 +49,10 @@ void CompressedTrie::insert(
 {
     append_proof.clear();
 
-    epoch_++;
+    root_->increase_epoch();
+    size_t epoch = this->epoch();
 
-    root_->insert(label, payload_commit, epoch_);
+    root_->insert(label, payload_commit, epoch);
     root_->update_hashes(label);
 
     // To get the append proof we need to lookup the item we just inserted after hashes have been
@@ -76,7 +77,8 @@ void CompressedTrie::insert(
     vector<vector<pair<const PartialLabel &, const hash_type &>>> batches(thread_count);
 
     append_proofs.resize(label_commit_batch.size());
-    epoch_++;
+    root_->increase_epoch();
+    size_t epoch = this->epoch();
 
     // Reorder label_commit_batch entries according to utils::get_insertion_index
     // for multi-threaded processing.
@@ -90,7 +92,7 @@ void CompressedTrie::insert(
 
     vector<unordered_map<PartialLabel, shared_ptr<CTNode>>> updated_nodes(thread_count);
 
-    auto insertion_lambda = [&batches, &updated_nodes, this](size_t i) {
+    auto insertion_lambda = [&batches, &updated_nodes, epoch, this](size_t i) {
         for (size_t bi = 0; bi < batches[i].size(); bi++) {
             unordered_map<PartialLabel, shared_ptr<CTNode>> *updated_nodes_ptr = nullptr;
             if (this->storage() != nullptr) {
@@ -99,7 +101,7 @@ void CompressedTrie::insert(
             }
 
             pair<PartialLabel, hash_type> entry = batches[i][bi];
-            root_->insert(entry.first, entry.second, epoch_, updated_nodes_ptr);
+            root_->insert(entry.first, entry.second, epoch, updated_nodes_ptr);
         }
     };
 
@@ -251,7 +253,6 @@ size_t CompressedTrie::save(SerializationWriter &writer) const
     flatbuffers::FlatBufferBuilder fbs_builder;
 
     fbs::CompressedTrieBuilder ct_builder(fbs_builder);
-    ct_builder.add_epoch(epoch());
     ct_builder.add_version(ozks_serialization_version);
     ct_builder.add_id(id_);
     ct_builder.add_thread_count(static_cast<uint32_t>(thread_count_));
@@ -293,7 +294,6 @@ pair<shared_ptr<CompressedTrie>, size_t> CompressedTrie::Load(
 
     auto fbs_ct = fbs::GetSizePrefixedCompressedTrie(in_data.data());
     auto ct = make_shared<CompressedTrie>();
-    ct->epoch_ = fbs_ct->epoch();
     ct->thread_count_ = fbs_ct->thread_count();
     ct->id_ = fbs_ct->id();
     ct->trie_type_ = static_cast<TrieType>(fbs_ct->trie_type());
@@ -402,15 +402,15 @@ void CompressedTrie::init(shared_ptr<CTNode> root)
     root_ = std::move(root);
 }
 
-void CompressedTrie::init_empty_root()
+void CompressedTrie::init_empty_root(size_t epoch)
 {
     switch (trie_type_) {
     case TrieType::Linked:
     case TrieType::LinkedNoStorage:
-        root_ = make_shared<CTNodeLinked>(this);
+        root_ = make_shared<CTNodeLinked>(this, epoch);
         break;
     case TrieType::Stored:
-        root_ = make_shared<CTNodeStored>(this);
+        root_ = make_shared<CTNodeStored>(this, epoch);
         break;
     default:
         throw invalid_argument("Invalid trie type");

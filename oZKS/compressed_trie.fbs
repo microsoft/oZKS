@@ -5,7 +5,6 @@ namespace ozks.fbs;
 
 table CompressedTrie {
     version:uint32;
-    epoch:uint64;
     id:uint64;
     thread_count:uint32;
     trie_type:uint8;

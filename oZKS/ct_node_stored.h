@@ -14,7 +14,7 @@ class CTNodeTests_StoredSaveLoadToVectorTest_Test;
 namespace ozks {
     class CTNodeStored : public CTNode {
     public:
-        CTNodeStored(const CompressedTrie *trie = nullptr) : CTNode(trie)
+        CTNodeStored(const CompressedTrie *trie = nullptr, std::size_t epoch = invalid_epoch) : CTNode(trie, epoch)
         {}
 
         CTNodeStored(

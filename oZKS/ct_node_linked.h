@@ -13,7 +13,7 @@
 namespace ozks {
     class CTNodeLinked : public CTNode {
     public:
-        CTNodeLinked(const CompressedTrie *trie = nullptr) : CTNode(trie)
+        CTNodeLinked(const CompressedTrie *trie = nullptr, std::size_t epoch = invalid_epoch) : CTNode(trie, epoch)
         {}
 
         CTNodeLinked(

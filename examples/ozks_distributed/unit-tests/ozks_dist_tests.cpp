@@ -150,9 +150,15 @@ namespace {
             // const vector<OZKS> &ozks,
             const vector<pair<vector<byte>, store_value_type>> &store_elements) override
         {
-            CompressedTrie t;
-            storage_.load_compressed_trie(trie_id, t);
-            size_t updated_epoch = t.epoch() + 1;
+            size_t updated_epoch = 0;
+
+            auto updated_trie =
+                std::find_if(tries.begin(), tries.end(), [trie_id](const CompressedTrie &t) {
+                    return t.id() == trie_id;
+                });
+            if (updated_trie != tries.end()) {
+                updated_epoch = updated_trie->epoch();
+            }
 
             vector<CompressedTrie> existing_updated_tries;
             auto itt = updated_tries_.find(updated_epoch);
@@ -435,15 +441,15 @@ TEST(OZKSDistTests, UpdatedNodesTest)
         {});
 
     // Generate 3 epochs
-    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
     RandomInsertTestCore(ozks, 50);
-    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
 
     RandomInsertTestCore(ozks, 50);
-    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
 
     RandomInsertTestCore(ozks, 50);
-    EXPECT_EQ(1, backing_storage->updated_nodes_count());
+    EXPECT_EQ(2, backing_storage->updated_nodes_count());
 }
 
 TEST(OZKSDistTests, UpdaterTest)
@@ -505,15 +511,15 @@ TEST(OZKSDistTests, BatchInserterCallbackTest)
     size_t epoch = ozks2.get_epoch();
 
     // Generate 3 epochs
-    EXPECT_EQ(1, backing_storage->updated_nodes_count());
-    RandomInsertTestCore(ozks, 50);
     EXPECT_EQ(2, backing_storage->updated_nodes_count());
-
     RandomInsertTestCore(ozks, 50);
     EXPECT_EQ(3, backing_storage->updated_nodes_count());
 
     RandomInsertTestCore(ozks, 50);
     EXPECT_EQ(4, backing_storage->updated_nodes_count());
+
+    RandomInsertTestCore(ozks, 50);
+    EXPECT_EQ(5, backing_storage->updated_nodes_count());
 
     epoch = ozks2.get_epoch();
     EXPECT_EQ(0, epoch); // Since we get it from the cache
@@ -525,7 +531,7 @@ TEST(OZKSDistTests, BatchInserterCallbackTest)
     epoch = ozks2.get_epoch();
     EXPECT_EQ(0, epoch);
     EXPECT_EQ(
-        4, backing_storage->updated_nodes_count()); // Updated nodes should have been retrieved
+        5, backing_storage->updated_nodes_count()); // Updated nodes should have been retrieved
     EXPECT_EQ(cached_storage->added_nodes_count(), 0);
     EXPECT_EQ(cached_storage->added_tries_count(), 0);
 }

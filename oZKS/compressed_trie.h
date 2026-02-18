@@ -82,7 +82,11 @@ namespace ozks {
         */
         std::size_t epoch() const
         {
-            return epoch_;
+            if (nullptr == root_) {
+                return 0;
+            }
+
+            return root_->epoch();
         }
 
         /**
@@ -179,10 +183,10 @@ namespace ozks {
         }
 
     protected:
-        void set_epoch(std::size_t epoch)
-        {
-            epoch_ = epoch;
-        }
+        //void set_epoch(std::size_t epoch)
+        //{
+        //    epoch_ = epoch;
+        //}
 
         std::shared_ptr<ozks::CTNode> root()
         {
@@ -192,7 +196,6 @@ namespace ozks {
     private:
         std::shared_ptr<CTNode> root_;
 
-        std::size_t epoch_;
         trie_id_type id_;
         std::shared_ptr<ozks::storage::Storage> storage_;
         std::size_t thread_count_;
@@ -203,7 +206,7 @@ namespace ozks {
         void init_random_id();
 
         void init(std::shared_ptr<CTNode> root);
-        void init_empty_root();
+        void init_empty_root(std::size_t epoch);
 
         std::size_t save(SerializationWriter &writer) const;
         static std::pair<std::shared_ptr<CompressedTrie>, std::size_t> Load(

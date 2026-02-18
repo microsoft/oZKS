@@ -30,10 +30,10 @@ namespace {
             : CompressedTrie(storage, trie_type)
         {}
 
-        void init_epoch(std::size_t epoch)
-        {
-            set_epoch(epoch);
-        }
+        //void init_epoch(std::size_t epoch)
+        //{
+        //    set_epoch(epoch);
+        //}
 
         std::shared_ptr<ozks::CTNode> get_root()
         {
@@ -137,7 +137,7 @@ void DoUpdateHashTest(CompressedTrieForTests& trie)
     hash_type payload = make_bytes<hash_type>(0xF0, 0xF1, 0xF2);
     lookup_path_type lookup_path;
 
-    trie.init_epoch(1);
+    //trie.init_epoch(1);
     shared_ptr<CTNode> root = trie.get_root();
 
     root->insert(label, payload, /* epoch */ 1);
@@ -163,7 +163,7 @@ void DoUpdateHashTest(CompressedTrieForTests& trie)
 
     root = trie.get_root();
     hash_type hash_root = root->hash();
-    trie.init_epoch(2);
+    //trie.init_epoch(2);
     root->insert(label, payload, 2);
     root->update_hashes(label);
 

@@ -26,7 +26,7 @@ namespace ozks {
         /**
         Constuctor
         */
-        CTNode(const CompressedTrie *trie = nullptr);
+        CTNode(const CompressedTrie *trie = nullptr, std::size_t epoch = invalid_epoch);
 
         /**
         Constructor
@@ -198,6 +198,7 @@ namespace ozks {
         }
 
         friend class ::Utilities_InsertionThreadLimitTest_Test;
+        friend class CompressedTrie;
 
     private:
         PartialLabel label_ = {};
@@ -257,6 +258,15 @@ namespace ozks {
         Payload is cleared. Hash is updated.
         */
         void init(const PartialLabel &init_label, std::size_t epoch);
+
+        /**
+        Increase the epoch of this node
+        */
+        inline void increase_epoch()
+        {
+            epoch_++;
+            set_dirty_bit(true);
+        }
 
         /**
         Return whether the node is marked as dirty.

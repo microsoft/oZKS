@@ -16,11 +16,13 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
 
-CTNode::CTNode(const CompressedTrie *trie)
+CTNode::CTNode(const CompressedTrie *trie, size_t epoch)
     : trie_(trie), left_child_epoch_(0), right_child_epoch_(0)
 {
-    if (nullptr != trie_) {
+    if (nullptr != trie_ && epoch == invalid_epoch) {
         epoch_ = trie_->epoch();
+    } else if (epoch != invalid_epoch) {
+        epoch_ = epoch;
     } else {
         epoch_ = 0;
     }
