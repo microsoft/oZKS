@@ -285,7 +285,6 @@ const std::pair<PartialLabel, std::size_t> CTNode::insert(
     init(common, epoch);
     left_node->save_to_storage(updated_nodes);
     right_node->save_to_storage(updated_nodes);
-    set_dirty_bit(true);
     save_to_storage(updated_nodes);
 
     return make_pair(label(), this->epoch());
