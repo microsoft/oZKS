@@ -8,7 +8,6 @@ set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES}
     ${CMAKE_CURRENT_LIST_DIR}/ct_node.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ct_node_linked.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ct_node_stored.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ecpoint.cpp
     ${CMAKE_CURRENT_LIST_DIR}/insert_result.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ozks_config.cpp
     ${CMAKE_CURRENT_LIST_DIR}/partial_label.cpp
@@ -28,7 +27,6 @@ install(
         ${CMAKE_CURRENT_LIST_DIR}/ct_node_linked.h
         ${CMAKE_CURRENT_LIST_DIR}/ct_node_stored.h
         ${CMAKE_CURRENT_LIST_DIR}/defines.h
-        ${CMAKE_CURRENT_LIST_DIR}/ecpoint.h
         ${CMAKE_CURRENT_LIST_DIR}/insert_result.h
         ${CMAKE_CURRENT_LIST_DIR}/ozks_config.h
         ${CMAKE_CURRENT_LIST_DIR}/partial_label.h
@@ -42,9 +40,9 @@ install(
         ${OZKS_INCLUDES_INSTALL_DIR}/oZKS
 )
 
-add_subdirectory(fourq)
 add_subdirectory(hash)
 add_subdirectory(providers)
 add_subdirectory(storage)
+add_subdirectory(utils)
 
 set(OZKS_SOURCE_FILES ${OZKS_SOURCE_FILES} PARENT_SCOPE)

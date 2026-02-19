@@ -6,7 +6,7 @@
  * Abstract: pseudo-random function
  ************************************************************************************/
 
-#include "oZKS/fourq/random.h"
+#include "oZKS/utils/random.h"
 #include "oZKS/config.h"
 #include <stdbool.h>
 #include <stdlib.h>

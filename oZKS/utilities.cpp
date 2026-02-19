@@ -10,7 +10,7 @@
 
 // OZKS
 #include "oZKS/core_types_generated.h"
-#include "oZKS/fourq/random.h"
+#include "oZKS/utils/random.h"
 #include "oZKS/hash/hash.h"
 #include "oZKS/path_element_generated.h"
 #include "oZKS/utilities.h"

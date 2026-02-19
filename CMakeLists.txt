@@ -47,12 +47,6 @@ set(OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR "Compile oZKS with support for the MSV
 option(OZKS_MSVC_PROFILER_SUPPORT ${OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR} OFF)
 message(STATUS "${OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR}: ${OZKS_MSVC_PROFILER_SUPPORT}")
 
-# [option] OZKS_USE_OPENSSL_P256 (default: OFF)
-# Compile OZKS library using NIST-P256 (OpenSSL) for VRF implementation
-set(OZKS_USE_OPENSSL_P256_OPTION_STR "Compile oZKS using NIST-P256 (OpenSSL) for VRF implementation")
-option(OZKS_USE_OPENSSL_P256 ${OZKS_USE_OPENSSL_P256_OPTION_STR} OFF)
-message(STATUS "${OZKS_USE_OPENSSL_P256_OPTION_STR}: ${OZKS_USE_OPENSSL_P256}")
-
 # [option] OZKS_USE_OPENSSL_SHA2 (default: OFF)
 # Compile OZKS library using SHA2 (OpenSSL)
 set(OZKS_USE_OPENSSL_SHA2_OPTION_STR "Compile oZKS using SHA2 (OpenSSL)")
@@ -155,7 +149,7 @@ else()
 endif()
 
 # OpenSSL/libcrypto
-if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
+if(OZKS_USE_OPENSSL_SHA2)
     find_package(OpenSSL REQUIRED)
     if (NOT OpenSSL_FOUND)
         message(FATAL_ERROR "OpenSSL: not found")
@@ -233,7 +227,7 @@ target_link_libraries(ozks
     PUBLIC Poco::Foundation
     PUBLIC cppvrf::cppvrf)
 
-if(OZKS_USE_OPENSSL_P256 OR OZKS_USE_OPENSSL_SHA2)
+if(OZKS_USE_OPENSSL_SHA2)
     target_link_libraries(ozks
         PRIVATE OpenSSL::Crypto)
 endif()
@@ -259,71 +253,12 @@ if(OZKS_ARCH_AMD64 OR OZKS_ARCH_ARM64)
     check_for_avx(ozks)
 endif()
 
-# Configurations for FourQlib: system, arch, SIMD, and assembler
-
-# Set system flag; this is needed even if we use OpenSSL/P256 for VRF,
-# because in any case we use FourQlib random.c
-unset(OZKS_FOURQ_SYSTEM)
+# Set system flag
+unset(OZKS_SYSTEM)
 if(MSVC)
-    set(OZKS_FOURQ_SYSTEM __WINDOWS__)
+    set(OZKS_SYSTEM __WINDOWS__)
 elseif(UNIX)
-    set(OZKS_FOURQ_SYSTEM __LINUX__)
-endif()
-
-# The rest are needed only when we use FourQlib for VRF
-if(NOT OZKS_USE_OPENSSL_P256)
-    # Set architecture
-    if(OZKS_ARCH_AMD64)
-        set(OZKS_FOURQ_ARCH _AMD64_)
-        message(STATUS "FourQlib optimization: arch=AMD64")
-    elseif(OZKS_ARCH_ARM64)
-        set(OZKS_FOURQ_ARCH _ARM64_)
-        message(STATUS "FourQlib optimization: arch=ARM64")
-    else()
-        set(OZKS_FOURQ_ARCH _GENERIC_)
-        message(STATUS "FourQlib optimization: arch=GENERIC")
-    endif()
-
-    # Enable AVX or AVX2 support
-    set(OZKS_FOURQ_USE_AVX_OPTION_STR "Use AVX extensions for FourQlib")
-    cmake_dependent_option(OZKS_FOURQ_USE_AVX ${OZKS_FOURQ_USE_AVX_OPTION_STR} ON "NOT OZKS_USE_OPENSSL_P256" OFF)
-    mark_as_advanced(OZKS_FOURQ_USE_AVX)
-
-    set(OZKS_FOURQ_USE_AVX2_OPTION_STR "Use AVX2 extensions for FourQlib")
-    cmake_dependent_option(OZKS_FOURQ_USE_AVX2 ${OZKS_FOURQ_USE_AVX2_OPTION_STR} ON "NOT OZKS_USE_OPENSSL_P256" OFF)
-    mark_as_advanced(OZKS_FOURQ_USE_AVX2)
-
-    if(HAVE_AVX2_EXTENSIONS)
-        set(OZKS_FOURQ_USE_AVX OFF CACHE BOOL ${OZKS_FOURQ_USE_AVX_OPTION_STR} FORCE)
-        message(STATUS "FourQlib optimization: simd=AVX2")
-    elseif(HAVE_AVX_EXTENSIONS)
-        set(OZKS_FOURQ_USE_AVX2 OFF CACHE BOOL ${OZKS_FOURQ_USE_AVX2_OPTION_STR} FORCE)
-        message(STATUS "FourQlib optimization: simd=AVX")
-    else()
-        set(OZKS_FOURQ_USE_AVX OFF CACHE BOOL ${OZKS_FOURQ_USE_AVX_OPTION_STR} FORCE)
-        set(OZKS_FOURQ_USE_AVX2 OFF CACHE BOOL ${OZKS_FOURQ_USE_AVX2_OPTION_STR} FORCE)
-        message(STATUS "FourQlib optimization: simd=OFF")
-    endif()
-
-    # Use optimized assembly on Linux (non-AVX or AVX2)
-    set(OZKS_FOURQ_USE_ASM_OPTION_STR "Use ASM implementation for FourQlib")
-    cmake_dependent_option(OZKS_FOURQ_USE_ASM ${OZKS_FOURQ_USE_AVX2_OPTION_STR} ON "NOT OZKS_USE_OPENSSL_P256" OFF)
-    mark_as_advanced(OZKS_FOURQ_USE_ASM)
-
-    if(UNIX AND NOT APPLE AND NOT CYGWIN AND NOT MINGW AND NOT OZKS_OPENENCLAVE)
-        check_language(ASM)
-        if(CMAKE_ASM_COMPILER)
-            enable_language(ASM)
-            message(STATUS "FourQlib optimization: asm=ON")
-        else()
-            set(OZKS_FOURQ_USE_ASM OFF CACHE BOOL ${OZKS_FOURQ_USE_ASM_OPTION_STR} FORCE)
-        endif()
-    else()
-        set(OZKS_FOURQ_USE_ASM OFF CACHE BOOL ${OZKS_FOURQ_USE_ASM_OPTION_STR} FORCE)
-    endif()
-
-    # Use endomorphisms for better performance
-    set(OZKS_FOURQ_USE_ENDO 1)
+    set(OZKS_SYSTEM __LINUX__)
 endif()
 
 # Create the config file
@@ -360,11 +295,6 @@ if(OZKS_OPENENCLAVE)
         PUBLIC Microsoft.GSL::GSL
         PRIVATE flatbuffers::flatbuffers
         PUBLIC Poco::Foundation)
-
-    if(OZKS_USE_OPENSSL_P256)
-        target_link_libraries(ozks.enclave
-            PRIVATE OpenSSL::Crypto)
-    endif()
 
     # Cannot use ASM
     set(OZKS_FOURQ_USE_ASM OFF CACHE BOOL ${OZKS_FOURQ_USE_ASM_OPTION_STR} FORCE)
