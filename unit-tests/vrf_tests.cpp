@@ -18,7 +18,7 @@ using namespace ozks;
 
 void DoProofTest(vector<byte> &input)
 {
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     EXPECT_TRUE(sk->is_initialized());
     auto pk = sk->get_public_key();
     auto pk_clone = pk->clone();
@@ -49,7 +49,7 @@ TEST(VRFTests, VRFCacheTest)
 {
     VRFCache cache(10);
 
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     EXPECT_TRUE(sk->is_initialized());
 
     vector<hash_type> inputs(10);

@@ -128,18 +128,15 @@ bool QueryResult::is_member_from_path() const noexcept
     return is_member;
 }
 
-bool QueryResult::verify_vrf_proof(vrf::PublicKey *public_key) const
+bool QueryResult::verify_vrf_proof(vrf::PublicKey &public_key) const
 {
-    return utils::verify_vrf_proof(key_, vrf_proof_, public_key);
-    hash_type key_hash = utils::compute_key_hash(key_);
-    auto verif_result = public_key->verify_vrf_proof(key_hash, vrf_proof_);
-    return verif_result.first;
+    return utils::verify_vrf_proof(key_, *vrf_proof_, public_key);
 }
 
 QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
 {
     if (use_vrf_) {
-        if (!verify_vrf_proof(commitment.public_key().get())) {
+        if (!verify_vrf_proof(*commitment.public_key())) {
             return QueryVerificationResult::NotValid;
         }
     }
@@ -241,7 +238,7 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
 
     if (query_result.use_vrf_) {
         query_result.vrf_proof_ = vrf::VRF::ProofFromBytes(
-            vrf::Type::EC_VRF_P256_SHA256_TAI,
+            vrf::Type::ec_vrf_p256_sha256_tai,
             gsl::span<const byte>(
                 reinterpret_cast<const byte*>(fbs_query_result->vrf_proof()->data()),
                 fbs_query_result->vrf_proof()->size()));

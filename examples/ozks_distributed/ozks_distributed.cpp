@@ -6,6 +6,7 @@
 
 // VRF
 #include <vrf/vrf.h>
+#include <vrf/ec/ecvrf.h>
 
 // oZKS
 #include "oZKS/ozks_distributed_generated.h"
@@ -45,11 +46,11 @@ void OZKS::initialize_vrf()
     // Set up a new VRF secret key (and public key)
     if (config_.vrf_seed().size() == 0) {
         // No VRF seed
-        vrf_sk_ = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+        vrf_sk_ = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     } else {
         // Initialize VRF from seed
-        // No support at the moment
-        throw logic_error("VRF initialization from seed is not supported yet.");
+        vrf::ec::ScalarType sk_scalar = utils::get_seeded_scalar(config_.vrf_seed());
+        vrf_sk_ = std::make_unique<vrf::ec::ECSecretKey>(vrf::Type::ec_vrf_p256_sha256_tai, sk_scalar);
     }
 }
 
@@ -302,7 +303,7 @@ pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> s
 
     if (ozks.get_config().label_type() == LabelType::VRFLabels) {
         ozks.vrf_sk_ = vrf::VRF::SecretKeyFromBytes(
-            vrf::Type::EC_VRF_P256_SHA256_TAI,
+            vrf::Type::ec_vrf_p256_sha256_tai,
             gsl::span<const byte>(
                 reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
                 fbs_ozks->vrf_sk()->size()));

@@ -18,7 +18,7 @@ using namespace ozks::utils;
 
 TEST(CommitmentTests, SerializeTest)
 {
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     EXPECT_TRUE(sk->is_initialized());
 
     auto pk = sk->get_public_key();
@@ -49,7 +49,7 @@ TEST(CommitmentTests, SerializeTest)
 
 TEST(CommitmentTests, SerializeToVectorTest)
 {
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     EXPECT_TRUE(sk->is_initialized());
 
     auto pk = sk->get_public_key();

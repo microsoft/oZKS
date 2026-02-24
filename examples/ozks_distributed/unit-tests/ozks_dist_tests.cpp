@@ -594,3 +594,106 @@ TEST(OZKSDistTests, BatchInserterCallbackTest)
     EXPECT_EQ(cached_storage->added_nodes_count(), 0);
     EXPECT_EQ(cached_storage->added_tries_count(), 0);
 }
+
+TEST(OZKSDistTests, SeededSecretKeyTest)
+{
+    // Two instances created with the same seed must produce:
+    //   1. The same VRF public key
+    //   2. Identical query results for the same inserted keys
+
+    vector<byte> seed = { byte{ 0x01 }, byte{ 0x02 }, byte{ 0x03 }, byte{ 0x04 },
+                          byte{ 0x05 }, byte{ 0x06 }, byte{ 0x07 }, byte{ 0x08 } };
+    gsl::span<const byte> seed_span(seed.data(), seed.size());
+
+    // --- First instance ---
+    shared_ptr<TestBackingStorage> backing1 = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch1 =
+        make_shared<storage::MemoryStorageBatchInserter>(backing1);
+
+    OZKSConfigDist config1(
+        PayloadCommitmentType::CommitedPayload,
+        LabelType::VRFLabels,
+        TrieType::Stored,
+        batch1,
+        {},
+        seed_span);
+    OZKS ozks1(config1);
+
+    // --- Second instance with the same seed ---
+    shared_ptr<TestBackingStorage> backing2 = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch2 =
+        make_shared<storage::MemoryStorageBatchInserter>(backing2);
+
+    OZKSConfigDist config2(
+        PayloadCommitmentType::CommitedPayload,
+        LabelType::VRFLabels,
+        TrieType::Stored,
+        batch2,
+        {},
+        seed_span);
+    OZKS ozks2(config2);
+
+    // Public keys must be identical
+    auto pk1 = ozks1.get_vrf_public_key();
+    auto pk2 = ozks2.get_vrf_public_key();
+    ASSERT_NE(nullptr, pk1);
+    ASSERT_NE(nullptr, pk2);
+    EXPECT_EQ(pk1->to_bytes(), pk2->to_bytes());
+
+    // Insert the same keys/payloads into both instances
+    key_type key(16);
+    payload_type payload(40);
+    constexpr size_t insert_count = 10;
+
+    vector<key_type> keys;
+    vector<payload_type> payloads;
+    for (size_t i = 0; i < insert_count; i++) {
+        get_random_bytes(key.data(), key.size());
+        get_random_bytes(payload.data(), payload.size());
+        keys.push_back(key);
+        payloads.push_back(payload);
+    }
+
+    for (size_t i = 0; i < insert_count; i++) {
+        ozks1.insert(keys[i], payloads[i]);
+        ozks2.insert(keys[i], payloads[i]);
+    }
+
+    // Wait for async updaters to complete
+    this_thread::sleep_for(chrono::seconds(10));
+    ozks1.check_for_update();
+    ozks2.check_for_update();
+
+    // Both instances must agree on membership and payload for every key
+    for (size_t i = 0; i < insert_count; i++) {
+        auto result1 = ozks1.query(keys[i]);
+        auto result2 = ozks2.query(keys[i]);
+
+        EXPECT_TRUE(result1.is_member());
+        EXPECT_TRUE(result2.is_member());
+        EXPECT_EQ(result1.payload(), result2.payload());
+        EXPECT_EQ(payloads[i], result1.payload());
+    }
+
+    // --- Third instance with a *different* seed ---
+    vector<byte> other_seed = { byte{ 0xFF }, byte{ 0xFE }, byte{ 0xFD }, byte{ 0xFC } };
+    gsl::span<const byte> other_seed_span(other_seed.data(), other_seed.size());
+
+    shared_ptr<TestBackingStorage> backing3 = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch3 =
+        make_shared<storage::MemoryStorageBatchInserter>(backing3);
+
+    OZKSConfigDist config3(
+        PayloadCommitmentType::CommitedPayload,
+        LabelType::VRFLabels,
+        TrieType::Stored,
+        batch3,
+        {},
+        other_seed_span);
+    OZKS ozks3(config3);
+
+    // A different seed must produce a different public key
+    auto pk3 = ozks3.get_vrf_public_key();
+    ASSERT_NE(nullptr, pk3);
+    EXPECT_NE(pk1->to_bytes(), pk3->to_bytes());
+}

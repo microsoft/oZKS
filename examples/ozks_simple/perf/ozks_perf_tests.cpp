@@ -583,7 +583,7 @@ static void OZKSLoad(benchmark::State &state)
 
 static void VRFGetProof(benchmark::State &state)
 {
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     auto pk = sk->get_public_key();
 
     vector<byte> data(32);
@@ -596,7 +596,7 @@ static void VRFGetProof(benchmark::State &state)
         auto vrf_proof = sk->get_vrf_proof(data);
 
         state.PauseTiming();
-        auto verification_result = pk->verify_vrf_proof(data, vrf_proof);
+        auto verification_result = pk->verify_vrf_proof(data, *vrf_proof);
         if (!verification_result.first) {
             state.SkipWithError("Verification should have succeeded");
         }
@@ -606,7 +606,7 @@ static void VRFGetProof(benchmark::State &state)
 
 static void VRFGetValue(benchmark::State &state)
 {
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     vector<byte> data(32);
 
     for (auto _ : state) {
@@ -621,7 +621,7 @@ static void VRFGetValue(benchmark::State &state)
 
 static void VRFVerifyProof(benchmark::State &state)
 {
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     auto pk = sk->get_public_key();
 
     vector<byte> data(32);
@@ -632,7 +632,7 @@ static void VRFVerifyProof(benchmark::State &state)
         auto proof = sk->get_vrf_proof(data);
         state.ResumeTiming();
 
-        auto verification_result = pk->verify_vrf_proof(data, proof);
+        auto verification_result = pk->verify_vrf_proof(data, *proof);
         if (!verification_result.first) {
             state.SkipWithError("Verification should have succeeded");
         }

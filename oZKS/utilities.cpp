@@ -8,6 +8,9 @@
 #include <sstream>
 #include <thread>
 
+// VRF
+#include <vrf/ec/ecvrf.h>
+
 // OZKS
 #include "oZKS/core_types_generated.h"
 #include "oZKS/utils/random.h"
@@ -401,18 +404,35 @@ size_t utils::get_log2(size_t n)
 
 bool utils::verify_vrf_proof(
     const key_type &key,
-    const std::unique_ptr<vrf::Proof> &proof,
-    vrf::PublicKey *pk)
+    const vrf::Proof &proof,
+    vrf::PublicKey &pk)
 {
-    if (nullptr == pk) {
-       throw invalid_argument("Public key cannot be null");
-    }
-
     hash_type hash = utils::compute_key_hash(key);
-    auto verif_result = pk->verify_vrf_proof(hash, proof);
+    auto verif_result = pk.verify_vrf_proof(hash, proof);
     return verif_result.first;
 }
 
+vrf::ec::ScalarType utils::get_seeded_scalar(const gsl::span<const std::byte> seed)
+{
+    // Hash the seed bytes with a domain separator to 512 bits to avoid modular bias
+    constexpr size_t wide_hash_size = 64;
+    std::array<byte, wide_hash_size> wide_hash{};
+    compute_hash<wide_hash_size>(seed, "random_scalar", wide_hash);
+
+    // Interpret the hash as a big-endian integer
+    vrf::BIGNUM_Guard bn = vrf::bytes_to_int_big_endian(
+        std::span<const std::byte>(wide_hash.data(), wide_hash.size()), /* secure */ false);
+
+    // Build a ScalarType from the BIGNUM and reduce modulo the curve order
+    vrf::ec::ScalarType scalar(std::move(bn));
+    vrf::EC_GROUP_Guard group(vrf::Curve::PRIME256V1);
+    vrf::BN_CTX_Guard ctx(false);
+    if (!scalar.reduce_mod_order(group, ctx)) {
+        throw runtime_error("Failed to reduce scalar modulo curve order");
+    }
+
+    return scalar;
+}
 
 // Explicit instantiations
 template void utils::compute_hash(

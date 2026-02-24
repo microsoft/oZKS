@@ -311,7 +311,7 @@ pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> s
     if (ozks.get_config().label_type() == LabelType::VRFLabels) {
         ozks.vrf_sk_ = vrf::VRF::
             SecretKeyFromBytes(
-            vrf::Type::EC_VRF_P256_SHA256_TAI,
+            vrf::Type::ec_vrf_p256_sha256_tai,
             gsl::span<const byte>(
                 reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
                 fbs_ozks->vrf_sk()->size()));
@@ -344,7 +344,7 @@ void OZKS::initialize_vrf()
     // Set up a new VRF secret key (and public key)
     if (config_.vrf_seed().size() == 0) {
         // No VRF seed
-        vrf_sk_ = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+        vrf_sk_ = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     } else {
         // No support at the moment
         initialize_vrf_from_seed();
@@ -357,34 +357,9 @@ void OZKS::initialize_vrf_from_seed()
         throw logic_error("VRF seed is empty");
     }
 
-    // 1) Hash seed deterministically
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char *>(config_.vrf_seed().data()), config_.vrf_seed().size(), hash);
-
-    // 2) Build BN from hash
-    vrf::BIGNUM_Guard scalar(BN_bin2bn(hash, SHA256_DIGEST_LENGTH, nullptr), /* owned */ true);
-    if (!scalar.has_value()) {
-        throw runtime_error("Failed to create BIGNUM from hash");
-    }
-
-    // 3) Reduce modulo curve order: scalar = scalar mod n, ensure scalar != 0
-    vrf::EC_GROUP_Guard group(vrf::Curve::PRIME256V1);
-    vrf::BIGNUM_Guard order(BN_new(), /* owned */ true);
-    vrf::BN_CTX_Guard ctx{/* secure */ false};
-    if (!group.has_value() || !order.has_value() || !ctx.has_value()) {
-        throw runtime_error("Failed to create EC_GROUP, BIGNUM, or BN_CTX");
-    }
-
-    EC_GROUP_get_order(group.get(), order.get(), ctx.get());
-    BN_mod(scalar.get(), scalar.get(), order.get(), ctx.get());
-    if (BN_is_zero(scalar.get())) {
-        // Deterministic fixup: add 1 (still < order)
-        BN_add_word(scalar.get(), 1);
-    }
-
-    // 4) Create VRF secret key from scalar
-    vrf::ec::ScalarType ec_scalar(std::move(scalar));
-    vrf_sk_ = std::make_unique<vrf::ec::ECSecretKey>(vrf::Type::EC_VRF_P256_SHA256_TAI, ec_scalar);
+    // Create VRF secret key from scalar
+    vrf::ec::ScalarType ec_scalar = utils::get_seeded_scalar(config_.vrf_seed());
+    vrf_sk_ = std::make_unique<vrf::ec::ECSecretKey>(vrf::Type::ec_vrf_p256_sha256_tai, ec_scalar);
 }
 
 void OZKS::initialize()

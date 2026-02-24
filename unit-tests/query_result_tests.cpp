@@ -25,7 +25,7 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     lookup_path_type lookup_proof;
     payload_type payload;
     randomness_type randomness;
-    auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     vector<byte> vrf_input = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
     auto vrf_proof = sk->get_vrf_proof(vrf_input);
 
