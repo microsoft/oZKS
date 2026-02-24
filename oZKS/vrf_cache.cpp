@@ -26,9 +26,13 @@ VRFCache &VRFCache::operator=(const VRFCache &other)
     return *this;
 }
 
-void VRFCache::add(const hash_type &key_hash, const unique_ptr<vrf::Proof> &vrf_proof)
+void VRFCache::add(const hash_type &key_hash, const vrf::Proof *vrf_proof)
 {
     if (cache_) {
+        if (nullptr == vrf_proof) {
+            throw invalid_argument("VRF proof cannot be null");
+        }
+
         shared_ptr<vrf::Proof> shared_proof;
         unique_ptr<vrf::Proof> vrf_proof_ptr = vrf_proof->clone();
         shared_proof = std::move(vrf_proof_ptr);

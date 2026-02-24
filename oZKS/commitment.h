@@ -30,7 +30,7 @@ namespace ozks {
         /**
         Construct an instance of Commitment
         */
-        Commitment(const std::unique_ptr<vrf::PublicKey> &public_key, const commitment_type &root_commitment)
+        Commitment(const vrf::PublicKey *public_key, const commitment_type &root_commitment)
             : root_commitment_(root_commitment)
         {
             if (nullptr != public_key) {

@@ -17,7 +17,7 @@ size_t Commitment::save(SerializationWriter &writer) const
     vector<byte> pk_bin = public_key_->to_bytes();
 
     auto public_key_data =
-        fbs_builder.CreateVector(reinterpret_cast<uint8_t *>(pk_bin.data()), pk_bin.size());
+        fbs_builder.CreateVector(reinterpret_cast<const uint8_t *>(pk_bin.data()), pk_bin.size());
     auto fbs_pk = fbs::CreatePublicKey(fbs_builder, public_key_data);
 
     fbs::RootCommitment root_commitment_data(flatbuffers::span<const uint8_t, 32>{

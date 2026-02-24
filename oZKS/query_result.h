@@ -123,7 +123,7 @@ namespace ozks {
         /**
         Verify that the queried key is valid for the VRF proof in this query result
         */
-        bool verify_vrf_proof(const std::unique_ptr<vrf::PublicKey> &public_key) const;
+        bool verify_vrf_proof(vrf::PublicKey *public_key) const;
 
         /**
         Verify that:

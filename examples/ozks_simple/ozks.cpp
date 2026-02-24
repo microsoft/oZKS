@@ -92,7 +92,7 @@ void OZKS::do_pending_insertions()
             for (size_t j = begin_idx; j < end_idx; j++) {
                 const auto &key_payload = pending_insertions_[j];
                 hash_type label =
-                    utils::get_node_label(key_payload.first, vrf_sk_, config_.label_type());
+                    utils::get_node_label(key_payload.first, vrf_sk_.get(), config_.label_type());
                 auto payload_commit =
                     utils::commit_payload(key_payload.second, config_.payload_commitment());
                 label_commit_batch[j] = { label, payload_commit.first };
@@ -144,7 +144,7 @@ QueryResult OZKS::query(const key_type &key) const
     // get_node_label below will set this to nullopt if the OZKS is not using VRFs
     unique_ptr<vrf::Proof> vrf_proof;
     hash_type label =
-        utils::get_node_label(key, vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
+        utils::get_node_label(key, vrf_sk_.get(), vrf_cache_, config_.label_type(), vrf_proof);
 
     append_proof_type lookup_path;
     if (!query_provider_->query(id(), label, lookup_path)) {
@@ -214,7 +214,7 @@ Commitment OZKS::get_commitment() const
     if (config_.label_type() == LabelType::VRFLabels) {
         vrf_public_key = get_vrf_public_key();
     }
-    return { vrf_public_key, trie_info_provider_->get_root_hash(id()) };
+    return { vrf_public_key.get(), trie_info_provider_->get_root_hash(id()) };
 }
 
 const OZKSConfig &OZKS::get_config() const

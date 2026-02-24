@@ -128,7 +128,7 @@ bool QueryResult::is_member_from_path() const noexcept
     return is_member;
 }
 
-bool QueryResult::verify_vrf_proof(const unique_ptr<vrf::PublicKey> &public_key) const
+bool QueryResult::verify_vrf_proof(vrf::PublicKey *public_key) const
 {
     return utils::verify_vrf_proof(key_, vrf_proof_, public_key);
     hash_type key_hash = utils::compute_key_hash(key_);
@@ -139,7 +139,7 @@ bool QueryResult::verify_vrf_proof(const unique_ptr<vrf::PublicKey> &public_key)
 QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
 {
     if (use_vrf_) {
-        if (!verify_vrf_proof(commitment.public_key())) {
+        if (!verify_vrf_proof(commitment.public_key().get())) {
             return QueryVerificationResult::NotValid;
         }
     }

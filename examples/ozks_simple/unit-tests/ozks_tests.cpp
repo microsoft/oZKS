@@ -625,7 +625,7 @@ TEST(OZKSTests, QueryTest)
     EXPECT_EQ(true, query_result.is_member());
     EXPECT_EQ(payload, query_result.payload());
 
-    auto verif_result = utils::verify_vrf_proof(key, query_result.vrf_proof(), commitment.public_key());
+    auto verif_result = utils::verify_vrf_proof(key, query_result.vrf_proof(), commitment.public_key().get());
     EXPECT_EQ(true, verif_result);
 
     key = make_bytes<key_type>(0x01, 0x01, 0x00);
@@ -679,7 +679,7 @@ TEST(OZKSTests, MultiInsertQueryTest)
     EXPECT_EQ(payload, query_result.payload());
 
     auto pk = ozks.get_vrf_public_key();
-    auto verif_result = utils::verify_vrf_proof(key, query_result.vrf_proof(), pk);
+    auto verif_result = utils::verify_vrf_proof(key, query_result.vrf_proof(), pk.get());
     EXPECT_EQ(true, verif_result);
 
     key = make_bytes<key_type>(0x06, 0x07, 0x08);

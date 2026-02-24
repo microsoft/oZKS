@@ -64,7 +64,7 @@ TEST(VRFTests, VRFCacheTest)
         auto proof = sk->get_vrf_proof(key_hash);
         proofs[i] = std::move(proof);
 
-        cache.add(key_hash, proofs[i]);
+        cache.add(key_hash, proofs[i].get());
     }
 
     auto pk = sk->get_public_key();

@@ -29,7 +29,7 @@ TEST(CommitmentTests, SerializeTest)
     root_c[1] = static_cast<byte>(0x02);
     root_c[2] = static_cast<byte>(0x03);
 
-    Commitment commitment{ pk, root_c };
+    Commitment commitment{ pk.get(), root_c };
 
     stringstream ss;
     size_t size = commitment.save(ss);
@@ -59,7 +59,7 @@ TEST(CommitmentTests, SerializeToVectorTest)
     root_c[0] = static_cast<byte>(0x01);
     root_c[1] = static_cast<byte>(0x02);
     root_c[2] = static_cast<byte>(0x03);
-    Commitment commitment{ pk, root_c };
+    Commitment commitment{ pk.get(), root_c };
 
     vector<byte> vec;
     size_t size = commitment.save(vec);

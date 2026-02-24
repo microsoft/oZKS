@@ -140,7 +140,7 @@ void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
 
 hash_type utils::get_node_label(
     const key_type &key,
-    const unique_ptr<vrf::SecretKey> &vrf_sk,
+    vrf::SecretKey *vrf_sk,
     VRFCache &cache,
     LabelType label_type,
     std::unique_ptr<vrf::Proof> &proof)
@@ -158,7 +158,7 @@ hash_type utils::get_node_label(
             // Not found? Need to compute the proof and add it to the cache
             auto vrf_proof = vrf_sk->get_vrf_proof(key_hash);
             proof = std::move(vrf_proof);
-            cache.add(key_hash, proof);
+            cache.add(key_hash, proof.get());
         }
 
         // key_hash needs to be updated to be the VRF value hash.
@@ -173,7 +173,7 @@ hash_type utils::get_node_label(
 }
 
 hash_type utils::get_node_label(
-    const key_type &key, const std::unique_ptr<vrf::SecretKey> &vrf_sk, LabelType label_type)
+    const key_type &key, vrf::SecretKey *vrf_sk, LabelType label_type)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
@@ -400,8 +400,14 @@ size_t utils::get_log2(size_t n)
 }
 
 bool utils::verify_vrf_proof(
-    const key_type key, const std::unique_ptr<vrf::Proof>& proof, const std::unique_ptr<vrf::PublicKey> &pk)
+    const key_type &key,
+    const std::unique_ptr<vrf::Proof> &proof,
+    vrf::PublicKey *pk)
 {
+    if (nullptr == pk) {
+       throw invalid_argument("Public key cannot be null");
+    }
+
     hash_type hash = utils::compute_key_hash(key);
     auto verif_result = pk->verify_vrf_proof(hash, proof);
     return verif_result.first;
