@@ -35,12 +35,6 @@ include(CheckLanguage)
 # Extra modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
-# [option] OZKS_OPENENCLAVE (default: OFF)
-# Compile OZKS library for Open Enclave
-set(OZKS_OPENENCLAVE_OPTION_STR "Compile oZKS for Open Enclave")
-option(OZKS_OPENENCLAVE ${OZKS_OPENENCLAVE_OPTION_STR} OFF)
-message(STATUS "${OZKS_OPENENCLAVE_OPTION_STR}: ${OZKS_OPENENCLAVE}")
-
 # [option] OZKS_MSVC_PROFILER_SUPPORT (default: OFF)
 # Compile OZKS library with support for the MSVC profiler (use linker flag /PROFILE)
 set(OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR "Compile oZKS with support for the MSVC profiler")
@@ -110,12 +104,6 @@ set(OZKS_CONFIG_H_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/oZKS/config.h)
 # Install
 set(OZKS_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/OZKS-${OZKS_VERSION_MAJOR}.${OZKS_VERSION_MINOR})
 set(OZKS_INCLUDES_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR}/OZKS-${OZKS_VERSION_MAJOR}.${OZKS_VERSION_MINOR})
-
-# Use this if you want to compile with OpenEnclave SDK
-if(OZKS_OPENENCLAVE)
-    list(APPEND COMPILE_LIBCXX -stdlib=libc++)
-    list(APPEND LINK_LIBCXX -lc++ -lc++abi -stdlib=libc++)
-endif()
 
 #########################
 # External Dependencies #
@@ -187,12 +175,6 @@ option(OZKS_BUILD_BENCH ${OZKS_BUILD_BENCH_OPTION_STR} OFF)
 set(OZKS_BUILD_EXAMPLES_OPTION_STR "Build oZKS examples")
 option(OZKS_BUILD_EXAMPLES ${OZKS_BUILD_EXAMPLES_OPTION_STR} OFF)
 
-if(OZKS_OPENENCLAVE)
-    # OpenEnclave
-    find_package(OpenEnclave 0.18 CONFIG REQUIRED)
-    set(OE_TARGET_ENCLAVE_AND_STD openenclave::oeenclave openenclave::oelibcxx openenclave::oelibc)
-endif()
-
 ####################
 # oZKS C++ library #
 ####################
@@ -232,11 +214,6 @@ if(MSVC)
     endif()
 endif()
 
-if(OZKS_OPENENCLAVE)
-    target_compile_options(ozks PRIVATE ${COMPILE_LIBCXX})
-    target_link_options(ozks PRIVATE ${LINK_LIBCXX})
-endif()
-
 # Detect AVX and AVX2 if not on generic architecture
 if(OZKS_ARCH_AMD64 OR OZKS_ARCH_ARM64)
     include(FindAVX)
@@ -260,39 +237,6 @@ set(OZKS_SOURCE_FILES "")
 add_subdirectory(oZKS)
 
 target_sources(ozks PRIVATE ${OZKS_SOURCE_FILES})
-
-####################################
-# oZKS C++ library for OpenEnclave #
-####################################
-
-if(OZKS_OPENENCLAVE)
-    if(NOT OZKS_ARCH_AMD64)
-        message(FATAL_ERROR "OZKS_OPENENCLAVE=ON is supported only on AMD64 platform")
-    endif()
-
-    add_library(ozks.enclave STATIC ${OZKS_SOURCE_FILES})
-
-    ozks_set_version_filename(ozks.enclave)
-    ozks_set_language(ozks.enclave)
-    ozks_set_include_directories(ozks.enclave)
-    ozks_set_version(ozks.enclave)
-    ozks_install_target(ozks.enclave OZKSTargets)
-
-    target_compile_options(ozks.enclave PUBLIC -nostdinc -nostdinc++)
-    target_link_libraries(ozks.enclave PUBLIC ${OE_TARGET_ENCLAVE_AND_STD})
-
-    target_link_libraries(ozks.enclave
-        PUBLIC Microsoft.GSL::GSL
-        PRIVATE flatbuffers::flatbuffers
-        PUBLIC Poco::Foundation)
-
-    # Cannot use ASM
-    set(OZKS_FOURQ_USE_ASM OFF CACHE BOOL ${OZKS_FOURQ_USE_ASM_OPTION_STR} FORCE)
-    message(STATUS "FourQlib optimization: arch=AMD64")
-
-    # Add source files to library
-    target_sources(ozks.enclave PRIVATE ${OZKS_SOURCE_FILES})
-endif()
 
 #################################
 # Installation and CMake config #
@@ -338,11 +282,6 @@ if(OZKS_BUILD_TESTS)
     add_executable(unit_tests)
     add_subdirectory(unit-tests)
     target_link_libraries(unit_tests PRIVATE ozks GTest::gtest)
-
-    if(OZKS_OPENENCLAVE)
-        target_compile_options(unit_tests PRIVATE ${COMPILE_LIBCXX})
-        target_link_options(unit_tests PRIVATE ${LINK_LIBCXX})
-    endif()
 endif()
 
 if(OZKS_BUILD_EXAMPLES)
