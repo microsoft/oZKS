@@ -10,17 +10,40 @@
 
 // OZKS
 #include "oZKS/core_types_generated.h"
-#include "oZKS/hash/hash.h"
 #include "oZKS/path_element_generated.h"
 #include "oZKS/utilities.h"
 
 // OpenSSL
 #include <openssl/rand.h>
+#include <openssl/sha.h>
 
 using namespace std;
 using namespace ozks;
 
 namespace {
+    template <std::size_t sz>
+    void hash_bytes(const std::byte *data, std::size_t size, std::byte *hash_out);
+
+    template <>
+    void hash_bytes<SHA256_DIGEST_LENGTH>(
+        const std::byte *data, std::size_t size, std::byte *hash_out)
+    {
+        SHA256(
+            reinterpret_cast<const unsigned char *>(data),
+            size,
+            reinterpret_cast<unsigned char *>(hash_out));
+    }
+
+    template <>
+    void hash_bytes<SHA512_DIGEST_LENGTH>(
+        const std::byte *data, std::size_t size, std::byte *hash_out)
+    {
+        SHA512(
+            reinterpret_cast<const unsigned char *>(data),
+            size,
+            reinterpret_cast<unsigned char *>(hash_out));
+    }
+
     hash_type clear_lsb(hash_type hash)
     {
         hash[0] &= std::byte{ 0xFE };
@@ -125,7 +148,7 @@ void utils::compute_hash(
     utils::copy_bytes(domain_str.c_str(), domain_str.size(), hash_in.data());
     utils::copy_bytes(in.data(), in.size(), hash_in.data() + domain_str.size());
 
-    hash::hash<sz>(hash_in.data(), hash_in.size(), out.data());
+    hash_bytes<sz>(hash_in.data(), hash_in.size(), out.data());
 }
 
 hash_type utils::compute_hash(gsl::span<const byte> in)
@@ -138,7 +161,7 @@ hash_type utils::compute_hash(gsl::span<const byte> in)
 template <size_t sz>
 void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
 {
-    hash::hash<sz>(in.data(), in.size(), out.data());
+    hash_bytes<sz>(in.data(), in.size(), out.data());
 }
 
 hash_type utils::get_node_label(

@@ -40,7 +40,6 @@ install(
         ${OZKS_INCLUDES_INSTALL_DIR}/oZKS
 )
 
-add_subdirectory(hash)
 add_subdirectory(providers)
 add_subdirectory(storage)
 
