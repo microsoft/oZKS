@@ -27,7 +27,7 @@ namespace ozks {
             LabelType label_type,
             TrieType trie_type,
             std::shared_ptr<storage::Storage> storage,
-            const gsl::span<const std::byte> vrf_seed = gsl::span<std::byte>(nullptr, nullptr),
+            const gsl::span<const std::byte> vrf_secret_key = gsl::span<std::byte>(nullptr, nullptr),
             std::size_t vrf_cache_size = 0,
             std::size_t thread_count = 0);
 
@@ -69,13 +69,13 @@ namespace ozks {
         }
 
         /**
-        Get a byte span that will be used as a seed for generating VRF keys.
+        Get a byte span containing a serialized VRF secret key.
         This parameter will only be used if the label type to use is VRF.
-        If the span is empty, a random seed will be used instead.
+        If the span is empty, a random key will be generated instead.
         */
-        gsl::span<const std::byte> vrf_seed() const
+        gsl::span<const std::byte> vrf_secret_key() const
         {
-            return gsl::span<const std::byte>(vrf_seed_.data(), vrf_seed_.size());
+            return gsl::span<const std::byte>(vrf_secret_key_.data(), vrf_secret_key_.size());
         }
 
         /**
@@ -116,7 +116,7 @@ namespace ozks {
         LabelType label_type_;
         TrieType trie_type_;
         std::shared_ptr<storage::Storage> storage_;
-        std::vector<std::byte> vrf_seed_;
+        std::vector<std::byte> vrf_secret_key_;
         std::size_t vrf_cache_size_;
         std::size_t thread_count_;
 

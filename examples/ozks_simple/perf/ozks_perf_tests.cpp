@@ -201,12 +201,12 @@ static void DoBatchInsertFlushReport(
 static void OZKSInsertStored(benchmark::State &state)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::UncommitedPayload,
                           LabelType::HashedLabels,
                           TrieType::Stored,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           /* vrf_cache_size */ 0,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -217,12 +217,12 @@ static void OZKSInsertStored(benchmark::State &state)
 static void OZKSInsertFlushStored(benchmark::State &state)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::UncommitedPayload,
                           LabelType::HashedLabels,
                           TrieType::Stored,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           /* vrf_cache_size */ 0,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -233,12 +233,12 @@ static void OZKSInsertFlushStored(benchmark::State &state)
 static void OZKSInsertStoredVRF(benchmark::State &state, size_t vrf_cache_size)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::Stored,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           vrf_cache_size,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -249,12 +249,12 @@ static void OZKSInsertStoredVRF(benchmark::State &state, size_t vrf_cache_size)
 static void OZKSInsertFlushStoredVRF(benchmark::State &state, size_t vrf_cache_size)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::Stored,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           vrf_cache_size,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -268,12 +268,12 @@ static void OZKSBatchInsertFlushStoredVRF(
     keys_.clear();
 
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::Stored,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           vrf_cache_size,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -284,12 +284,12 @@ static void OZKSBatchInsertFlushStoredVRF(
 static void OZKSInsertLinked(benchmark::State &state)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::UncommitedPayload,
                           LabelType::HashedLabels,
                           TrieType::Linked,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           /* vrf_cache_size */ 0,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -300,12 +300,12 @@ static void OZKSInsertLinked(benchmark::State &state)
 static void OZKSInsertFlushLinked(benchmark::State &state)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::UncommitedPayload,
                           LabelType::HashedLabels,
                           TrieType::Linked,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           /* vrf_cache_size */ 0,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -316,12 +316,12 @@ static void OZKSInsertFlushLinked(benchmark::State &state)
 static void OZKSInsertLinkedVRF(benchmark::State &state, size_t vrf_cache_size)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::Linked,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           vrf_cache_size,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -332,12 +332,12 @@ static void OZKSInsertLinkedVRF(benchmark::State &state, size_t vrf_cache_size)
 static void OZKSInsertFlushLinkedVRF(benchmark::State &state, size_t vrf_cache_size)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::Linked,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           vrf_cache_size,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -348,12 +348,12 @@ static void OZKSInsertFlushLinkedVRF(benchmark::State &state, size_t vrf_cache_s
 static void OZKSInsertFlushLinkedNoStorage(benchmark::State &state)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::UncommitedPayload,
                           LabelType::HashedLabels,
                           TrieType::LinkedNoStorage,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           /* vrf_cache_size */ 0,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -364,12 +364,12 @@ static void OZKSInsertFlushLinkedNoStorage(benchmark::State &state)
 static void OZKSInsertFlushLinkedVRFNoStorage(benchmark::State &state, size_t vrf_cache_size)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::LinkedNoStorage,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           vrf_cache_size,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);
@@ -383,12 +383,12 @@ static void OZKSBatchInsertFlushLinkedVRFNoStorage(
     keys_.clear();
 
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed;
+    vector<byte> vrf_secret_key;
     OZKSConfig config = { PayloadCommitmentType::CommitedPayload,
                           LabelType::VRFLabels,
                           TrieType::LinkedNoStorage,
                           storage,
-                          vrf_seed,
+                          vrf_secret_key,
                           /* vrf_cache_size */ 0,
                           thread_count_ };
     ozks_ = make_shared<OZKS>(config);

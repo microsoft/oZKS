@@ -6,7 +6,6 @@
 
 // VRF
 #include <vrf/vrf.h>
-#include <vrf/ec/ecvrf.h>
 
 // oZKS
 #include "oZKS/ozks_distributed_generated.h"
@@ -44,13 +43,16 @@ OZKS::OZKS()
 void OZKS::initialize_vrf()
 {
     // Set up a new VRF secret key (and public key)
-    if (config_.vrf_seed().size() == 0) {
-        // No VRF seed
+    if (config_.vrf_secret_key().size() == 0) {
+        // No serialized secret key provided; generate a random one
         vrf_sk_ = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     } else {
-        // Initialize VRF from seed
-        vrf::ec::ScalarType sk_scalar = utils::get_seeded_scalar(config_.vrf_seed());
-        vrf_sk_ = std::make_unique<vrf::ec::ECSecretKey>(vrf::Type::ec_vrf_p256_sha256_tai, sk_scalar);
+        // Deserialize VRF secret key from bytes
+        vrf_sk_ = vrf::VRF::SecretKeyFromBytes(
+            vrf::Type::ec_vrf_p256_sha256_tai, config_.vrf_secret_key());
+        if (vrf_sk_ == nullptr) {
+            throw runtime_error("Failed to deserialize VRF secret key");
+        }
     }
 }
 
@@ -296,7 +298,7 @@ pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> s
         config.trie_type(),
         storage,
         {},
-        config.vrf_seed(),
+        config.vrf_secret_key(),
         config.vrf_cache_size(),
         config.thread_count());
     ozks.config_ = config_dist;

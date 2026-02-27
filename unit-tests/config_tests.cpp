@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
+// VRF
+#include <vrf/vrf.h>
+
 // OZKS
 #include "oZKS/ozks_config.h"
 #include "oZKS/storage/memory_storage.h"
@@ -20,59 +23,67 @@ TEST(ConfigTests, DefaultConstructorTest)
     EXPECT_EQ(PayloadCommitmentType::CommitedPayload, config.payload_commitment());
     EXPECT_EQ(LabelType::VRFLabels, config.label_type());
     EXPECT_EQ(TrieType::Stored, config.trie_type());
-    EXPECT_EQ(0, config.vrf_seed().size());
+    EXPECT_EQ(0, config.vrf_secret_key().size());
     EXPECT_NE(nullptr, config.storage().get());
     EXPECT_EQ(0, config.vrf_cache_size());
     EXPECT_EQ(0, config.thread_count());
 }
 
-TEST(ConfigTests, VRFSeedTest)
+TEST(ConfigTests, VRFSecretKeyTest)
 {
-    // Empty VRF seed
+    // Empty VRF secret key
     {
         auto storage = make_shared<MemoryStorage>();
-        vector<byte> empty_vrf_seed;
+        vector<byte> empty_vrf_secret_key;
         OZKSConfig config(
             PayloadCommitmentType::UncommitedPayload,
             LabelType::VRFLabels,
             TrieType::Stored,
             storage,
-            empty_vrf_seed);
+            empty_vrf_secret_key);
 
         EXPECT_EQ(PayloadCommitmentType::UncommitedPayload, config.payload_commitment());
         EXPECT_EQ(LabelType::VRFLabels, config.label_type());
         EXPECT_EQ(TrieType::Stored, config.trie_type());
         EXPECT_NE(nullptr, config.storage().get());
-        EXPECT_EQ(0, config.vrf_seed().size());
-        EXPECT_EQ(nullptr, config.vrf_seed().data());
+        EXPECT_EQ(0, config.vrf_secret_key().size());
+        EXPECT_EQ(nullptr, config.vrf_secret_key().data());
     }
 
-    // Non-empty VRF seed
+    // Non-empty VRF secret key (generated and serialized)
     {
         auto storage = make_shared<MemoryStorage>();
-        auto vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05);
+        auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+        auto sk_bytes = sk->to_secure_bytes();
+        vector<byte> vrf_secret_key(
+            reinterpret_cast<const byte *>(sk_bytes.get()),
+            reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
         OZKSConfig config(
             PayloadCommitmentType::UncommitedPayload,
             LabelType::VRFLabels,
             TrieType::Stored,
             storage,
-            vrf_seed);
+            vrf_secret_key);
 
         EXPECT_NE(nullptr, config.storage().get());
-        EXPECT_EQ(5, config.vrf_seed().size());
+        EXPECT_EQ(vrf_secret_key.size(), config.vrf_secret_key().size());
     }
 
-    // Non-empty VRF seed with VRF labels disabled
+    // Non-empty VRF secret key with VRF labels disabled
     {
         auto storage = make_shared<MemoryStorage>();
-        auto vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05);
+        auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+        auto sk_bytes = sk->to_secure_bytes();
+        vector<byte> vrf_secret_key(
+            reinterpret_cast<const byte *>(sk_bytes.get()),
+            reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
         EXPECT_THROW(
             OZKSConfig config(
                 PayloadCommitmentType::UncommitedPayload,
                 LabelType::HashedLabels,
                 TrieType::Stored,
                 storage,
-                vrf_seed),
+                vrf_secret_key),
             invalid_argument);
     }
 }

@@ -13,11 +13,11 @@ OZKSConfig::OZKSConfig(
     LabelType label_type,
     TrieType trie_type,
     shared_ptr<storage::Storage> storage,
-    const gsl::span<const byte> vrf_seed,
+    const gsl::span<const byte> vrf_secret_key,
     size_t vrf_cache_size,
     size_t thread_count)
     : commitment_type_(commitment_type), label_type_(label_type), trie_type_(trie_type),
-      storage_(storage), vrf_seed_(vrf_seed.size()),
+      storage_(storage), vrf_secret_key_(vrf_secret_key.size()),
       vrf_cache_size_(label_type == LabelType::VRFLabels ? vrf_cache_size : 0),
       thread_count_(thread_count)
 {
@@ -26,13 +26,13 @@ OZKSConfig::OZKSConfig(
         throw invalid_argument("storage is null");
     }
 
-    // Should not specify VRF seed if we are not using VRF labels
-    if (label_type_ != LabelType::VRFLabels && vrf_seed.size() > 0) {
-        throw invalid_argument("Should not specify VRF seed if not using VRF labels");
+    // Should not specify VRF secret key if we are not using VRF labels
+    if (label_type_ != LabelType::VRFLabels && vrf_secret_key.size() > 0) {
+        throw invalid_argument("Should not specify VRF secret key if not using VRF labels");
     }
 
-    if (vrf_seed.size() > 0) {
-        utils::copy_bytes(vrf_seed.data(), vrf_seed.size(), vrf_seed_.data());
+    if (vrf_secret_key.size() > 0) {
+        utils::copy_bytes(vrf_secret_key.data(), vrf_secret_key.size(), vrf_secret_key_.data());
     }
 }
 
@@ -53,7 +53,7 @@ size_t OZKSConfig::save(SerializationWriter &writer) const
     uint8_t label_type8 = static_cast<uint8_t>(label_type_);
     uint8_t trie_type8 = static_cast<uint8_t>(trie_type_);
     uint8_t use_storage8 = (storage_ != nullptr);
-    uint32_t vrf_seed_size = static_cast<uint32_t>(vrf_seed_.size());
+    uint32_t vrf_secret_key_size = static_cast<uint32_t>(vrf_secret_key_.size());
     uint64_t vrf_cache_size64 = vrf_cache_size_;
     uint64_t thread_count64 = thread_count_;
 
@@ -61,8 +61,8 @@ size_t OZKSConfig::save(SerializationWriter &writer) const
     writer.write(reinterpret_cast<const uint8_t *>(&label_type8), sizeof(uint8_t));
     writer.write(reinterpret_cast<const uint8_t *>(&trie_type8), sizeof(uint8_t));
     writer.write(reinterpret_cast<const uint8_t *>(&use_storage8), sizeof(uint8_t));
-    writer.write(reinterpret_cast<const uint8_t *>(&vrf_seed_size), sizeof(uint32_t));
-    writer.write(reinterpret_cast<const uint8_t *>(vrf_seed_.data()), vrf_seed_size);
+    writer.write(reinterpret_cast<const uint8_t *>(&vrf_secret_key_size), sizeof(uint32_t));
+    writer.write(reinterpret_cast<const uint8_t *>(vrf_secret_key_.data()), vrf_secret_key_size);
     writer.write(reinterpret_cast<const uint8_t *>(&vrf_cache_size64), sizeof(uint64_t));
     writer.write(reinterpret_cast<const uint8_t *>(&thread_count64), sizeof(uint64_t));
 
@@ -84,7 +84,7 @@ size_t OZKSConfig::Load(
     uint8_t label_type8 = 0;
     uint8_t trie_type8 = 0;
     uint8_t use_storage8 = 0;
-    uint32_t vrf_seed_size = 0;
+    uint32_t vrf_secret_key_size = 0;
     uint64_t vrf_cache_size64 = 0;
     uint64_t thread_count64 = 0;
 
@@ -92,9 +92,9 @@ size_t OZKSConfig::Load(
     reader.read(reinterpret_cast<uint8_t *>(&label_type8), sizeof(uint8_t));
     reader.read(reinterpret_cast<uint8_t *>(&trie_type8), sizeof(uint8_t));
     reader.read(reinterpret_cast<uint8_t *>(&use_storage8), sizeof(uint8_t));
-    reader.read(reinterpret_cast<uint8_t *>(&vrf_seed_size), sizeof(uint32_t));
-    vector<byte> vrf_seed(vrf_seed_size);
-    reader.read(reinterpret_cast<uint8_t *>(vrf_seed.data()), vrf_seed_size);
+    reader.read(reinterpret_cast<uint8_t *>(&vrf_secret_key_size), sizeof(uint32_t));
+    vector<byte> vrf_secret_key(vrf_secret_key_size);
+    reader.read(reinterpret_cast<uint8_t *>(vrf_secret_key.data()), vrf_secret_key_size);
     reader.read(reinterpret_cast<uint8_t *>(&vrf_cache_size64), sizeof(uint64_t));
     reader.read(reinterpret_cast<uint8_t *>(&thread_count64), sizeof(uint64_t));
 
@@ -107,7 +107,7 @@ size_t OZKSConfig::Load(
         static_cast<LabelType>(label_type8),
         static_cast<TrieType>(trie_type8),
         storage,
-        vrf_seed,
+        vrf_secret_key,
         static_cast<size_t>(vrf_cache_size64),
         static_cast<size_t>(thread_count64));
     swap(config, loaded_ozks_config);

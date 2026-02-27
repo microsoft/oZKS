@@ -17,11 +17,11 @@ OZKSConfigDist::OZKSConfigDist(
     TrieType trie_type,
     shared_ptr<Storage> storage,
     shared_ptr<Storage> storage_querier,
-    const gsl::span<const byte> vrf_seed,
+    const gsl::span<const byte> vrf_secret_key,
     size_t vrf_cache_size,
     size_t thread_count)
     : OZKSConfig(
-          commitment_type, label_type, trie_type, storage, vrf_seed, vrf_cache_size, thread_count),
+          commitment_type, label_type, trie_type, storage, vrf_secret_key, vrf_cache_size, thread_count),
       storage_querier_(storage_querier)
 {}
 

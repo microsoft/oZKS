@@ -162,7 +162,7 @@ namespace ozks_simple {
 
         void initialize();
 
-        void initialize_vrf_from_seed();
+        void initialize_vrf_from_secret_key();
 
         std::shared_ptr<ozks::storage::Storage> storage() const;
     };

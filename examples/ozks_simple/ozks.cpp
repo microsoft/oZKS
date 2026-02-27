@@ -6,9 +6,6 @@
 #include <mutex>
 #include <thread>
 
-// VRF
-#include <vrf/ec/ecvrf.h>
-
 // oZKS
 #include "oZKS/ozks_generated.h"
 #include "oZKS/storage/memory_storage.h"
@@ -342,24 +339,26 @@ pair<OZKS, size_t> OZKS::Load(shared_ptr<Storage> storage, const vector<T> &vec,
 void OZKS::initialize_vrf()
 {
     // Set up a new VRF secret key (and public key)
-    if (config_.vrf_seed().size() == 0) {
-        // No VRF seed
+    if (config_.vrf_secret_key().size() == 0) {
+        // No serialized secret key provided; generate a random one
         vrf_sk_ = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     } else {
-        // No support at the moment
-        initialize_vrf_from_seed();
+        initialize_vrf_from_secret_key();
     }
 }
 
-void OZKS::initialize_vrf_from_seed()
+void OZKS::initialize_vrf_from_secret_key()
 {
-    if (config_.vrf_seed().size() == 0) {
-        throw logic_error("VRF seed is empty");
+    if (config_.vrf_secret_key().size() == 0) {
+        throw logic_error("VRF secret key is empty");
     }
 
-    // Create VRF secret key from scalar
-    vrf::ec::ScalarType ec_scalar = utils::get_seeded_scalar(config_.vrf_seed());
-    vrf_sk_ = std::make_unique<vrf::ec::ECSecretKey>(vrf::Type::ec_vrf_p256_sha256_tai, ec_scalar);
+    // Deserialize VRF secret key from bytes
+    vrf_sk_ = vrf::VRF::SecretKeyFromBytes(
+        vrf::Type::ec_vrf_p256_sha256_tai, config_.vrf_secret_key());
+    if (vrf_sk_ == nullptr) {
+        throw runtime_error("Failed to deserialize VRF secret key");
+    }
 }
 
 void OZKS::initialize()

@@ -11,7 +11,6 @@
 #include <vector>
 
 // VRF
-#include <vrf/ec/ecpoint.h>
 #include <vrf/vrf.h>
 
 // OZKS
@@ -227,11 +226,5 @@ namespace ozks {
             const vrf::Proof &proof,
             vrf::PublicKey &pk);
 
-        /**
-        Create a deterministic EC scalar from a seed.
-        The seed is hashed and the result is interpreted as a big-endian
-        integer reduced modulo the curve order.
-        */
-        vrf::ec::ScalarType get_seeded_scalar(const gsl::span<const std::byte> seed);
     } // namespace utils
 } // namespace ozks

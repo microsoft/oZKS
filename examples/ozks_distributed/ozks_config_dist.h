@@ -20,7 +20,7 @@ namespace ozks_distributed {
             ozks::TrieType trie_type,
             std::shared_ptr<ozks::storage::Storage> storage,
             std::shared_ptr<ozks::storage::Storage> storage_querier,
-            const gsl::span<const std::byte> vrf_seed = gsl::span<std::byte>(nullptr, nullptr),
+            const gsl::span<const std::byte> vrf_secret_key = gsl::span<std::byte>(nullptr, nullptr),
             std::size_t vrf_cache_size = 0,
             std::size_t thread_count = 0);
 

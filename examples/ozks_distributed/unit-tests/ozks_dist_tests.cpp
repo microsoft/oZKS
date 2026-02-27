@@ -3,6 +3,9 @@
 
 // STD
 
+// VRF
+#include <vrf/vrf.h>
+
 // OZKS
 #include "oZKS/compressed_trie.h"
 #include "oZKS/storage/batch_storage.h"
@@ -586,15 +589,19 @@ TEST(OZKSDistTests, BatchInserterCallbackTest)
     EXPECT_EQ(cached_storage->added_tries_count(), 0);
 }
 
-TEST(OZKSDistTests, SeededSecretKeyTest)
+TEST(OZKSDistTests, SharedSecretKeyTest)
 {
-    // Two instances created with the same seed must produce:
+    // Two instances created with the same serialized secret key must produce:
     //   1. The same VRF public key
     //   2. Identical query results for the same inserted keys
 
-    vector<byte> seed = { byte{ 0x01 }, byte{ 0x02 }, byte{ 0x03 }, byte{ 0x04 },
-                          byte{ 0x05 }, byte{ 0x06 }, byte{ 0x07 }, byte{ 0x08 } };
-    gsl::span<const byte> seed_span(seed.data(), seed.size());
+    // Generate a random VRF key and serialize it
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
+    gsl::span<const byte> sk_span(vrf_secret_key.data(), vrf_secret_key.size());
 
     // --- First instance ---
     shared_ptr<TestBackingStorage> backing1 = make_shared<TestBackingStorage>();
@@ -607,10 +614,10 @@ TEST(OZKSDistTests, SeededSecretKeyTest)
         TrieType::Stored,
         batch1,
         {},
-        seed_span);
+        sk_span);
     OZKS ozks1(config1);
 
-    // --- Second instance with the same seed ---
+    // --- Second instance with the same serialized secret key ---
     shared_ptr<TestBackingStorage> backing2 = make_shared<TestBackingStorage>();
     shared_ptr<storage::MemoryStorageBatchInserter> batch2 =
         make_shared<storage::MemoryStorageBatchInserter>(backing2);
@@ -621,7 +628,7 @@ TEST(OZKSDistTests, SeededSecretKeyTest)
         TrieType::Stored,
         batch2,
         {},
-        seed_span);
+        sk_span);
     OZKS ozks2(config2);
 
     // Public keys must be identical
@@ -666,9 +673,13 @@ TEST(OZKSDistTests, SeededSecretKeyTest)
         EXPECT_EQ(payloads[i], result1.payload());
     }
 
-    // --- Third instance with a *different* seed ---
-    vector<byte> other_seed = { byte{ 0xFF }, byte{ 0xFE }, byte{ 0xFD }, byte{ 0xFC } };
-    gsl::span<const byte> other_seed_span(other_seed.data(), other_seed.size());
+    // --- Third instance with a *different* secret key ---
+    auto other_sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto other_sk_bytes = other_sk->to_secure_bytes();
+    vector<byte> other_vrf_secret_key(
+        reinterpret_cast<const byte *>(other_sk_bytes.get()),
+        reinterpret_cast<const byte *>(other_sk_bytes.get()) + other_sk_bytes.size());
+    gsl::span<const byte> other_sk_span(other_vrf_secret_key.data(), other_vrf_secret_key.size());
 
     shared_ptr<TestBackingStorage> backing3 = make_shared<TestBackingStorage>();
     shared_ptr<storage::MemoryStorageBatchInserter> batch3 =
@@ -680,10 +691,10 @@ TEST(OZKSDistTests, SeededSecretKeyTest)
         TrieType::Stored,
         batch3,
         {},
-        other_seed_span);
+        other_sk_span);
     OZKS ozks3(config3);
 
-    // A different seed must produce a different public key
+    // A different secret key must produce a different public key
     auto pk3 = ozks3.get_vrf_public_key();
     ASSERT_NE(nullptr, pk3);
     EXPECT_NE(pk1->to_bytes(), pk3->to_bytes());

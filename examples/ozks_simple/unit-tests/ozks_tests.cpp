@@ -3,6 +3,9 @@
 
 // STD
 
+// VRF
+#include <vrf/vrf.h>
+
 // OZKS
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage.h"
@@ -852,15 +855,19 @@ TEST(OZKSTests, RandomInsert10StoredTest)
     RandomInsertCore(ozks, /* iterations */ 10);
 }
 
-TEST(OZKSTests, RandomInsert10StoredVRFSeedTest)
+TEST(OZKSTests, RandomInsert10StoredVRFSecretKeyTest)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
     OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
                        LabelType::VRFLabels,
                        TrieType::Stored,
                        storage,
-                       vrf_seed };
+                       vrf_secret_key };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 10);
 }
@@ -875,15 +882,19 @@ TEST(OZKSTests, RandomInsert10LinkedTest)
     RandomInsertCore(ozks, /* iterations */ 10);
 }
 
-TEST(OZKSTests, RandomInsert10LinkedVRFSeedTest)
+TEST(OZKSTests, RandomInsert10LinkedVRFSecretKeyTest)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
     OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
                        LabelType::VRFLabels,
                        TrieType::Linked,
                        storage,
-                       vrf_seed };
+                       vrf_secret_key };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 10);
 }
@@ -898,15 +909,19 @@ TEST(OZKSTests, RandomInsert100StoredTest)
     RandomInsertCore(ozks, /* iterations */ 100);
 }
 
-TEST(OZKSTests, RandomInsert100StoredVRFSeedTest)
+TEST(OZKSTests, RandomInsert100StoredVRFSecretKeyTest)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
     OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
                        LabelType::VRFLabels,
                        TrieType::Stored,
                        storage,
-                       vrf_seed };
+                       vrf_secret_key };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 100);
 }
@@ -921,15 +936,19 @@ TEST(OZKSTests, RandomInsert100LinkedTest)
     RandomInsertCore(ozks, /* iterations */ 100);
 }
 
-TEST(OZKSTests, RandomInsert100LinkedVRFSeedTest)
+TEST(OZKSTests, RandomInsert100LinkedVRFSecretKeyTest)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
     OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
                        LabelType::VRFLabels,
                        TrieType::Linked,
                        storage,
-                       vrf_seed };
+                       vrf_secret_key };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 100);
 }
@@ -944,16 +963,19 @@ TEST(OZKSTests, RandomInsert1000StoredTest)
     RandomInsertCore(ozks, /* iterations */ 1000);
 }
 
-TEST(OZKSTests, RandomInsert1000StoredVRFSeedTest)
+TEST(OZKSTests, RandomInsert1000StoredVRFSecretKeyTest)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed =
-        utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
     OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
                        LabelType::VRFLabels,
                        TrieType::Stored,
                        storage,
-                       vrf_seed };
+                       vrf_secret_key };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 1000);
 }
@@ -969,16 +991,19 @@ TEST(OZKSTests, RandomInsert1000LinkedTest)
     RandomInsertCore(ozks, /* iterations */ 1000);
 }
 
-TEST(OZKSTests, RandomInsert1000LinkedVRFSeedTest)
+TEST(OZKSTests, RandomInsert1000LinkedVRFSecretKeyTest)
 {
     auto storage = make_shared<MemoryStorage>();
-    vector<byte> vrf_seed =
-        utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10);
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto sk_bytes = sk->to_secure_bytes();
+    vector<byte> vrf_secret_key(
+        reinterpret_cast<const byte *>(sk_bytes.get()),
+        reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
     OZKSConfig config{ PayloadCommitmentType::CommitedPayload,
                        LabelType::VRFLabels,
                        TrieType::Linked,
                        storage,
-                       vrf_seed };
+                       vrf_secret_key };
     OZKS ozks(config);
     RandomInsertCore(ozks, /* iterations */ 1000);
 }
