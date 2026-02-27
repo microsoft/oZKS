@@ -47,12 +47,6 @@ set(OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR "Compile oZKS with support for the MSV
 option(OZKS_MSVC_PROFILER_SUPPORT ${OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR} OFF)
 message(STATUS "${OZKS_MSVC_PROFILER_SUPPORT_OPTION_STR}: ${OZKS_MSVC_PROFILER_SUPPORT}")
 
-# [option] OZKS_USE_OPENSSL_SHA2 (default: OFF)
-# Compile OZKS library using SHA2 (OpenSSL)
-set(OZKS_USE_OPENSSL_SHA2_OPTION_STR "Compile oZKS using SHA2 (OpenSSL)")
-option(OZKS_USE_OPENSSL_SHA2 ${OZKS_USE_OPENSSL_SHA2_OPTION_STR} OFF)
-message(STATUS "${OZKS_USE_OPENSSL_SHA2_OPTION_STR}: ${OZKS_USE_OPENSSL_SHA2}")
-
 # [option] OZKS_USE_INTRIN (default: OFF)
 # Compile OZKS library using intrinsics
 set(OZKS_USE_INTRIN_OPTION_STR "Compile oZKS using intrinsics")
@@ -149,13 +143,11 @@ else()
 endif()
 
 # OpenSSL/libcrypto
-if(OZKS_USE_OPENSSL_SHA2)
-    find_package(OpenSSL REQUIRED)
-    if (NOT OpenSSL_FOUND)
-        message(FATAL_ERROR "OpenSSL: not found")
-    else()
-        message(STATUS "OpenSSL: found")
-    endif()
+find_package(OpenSSL REQUIRED)
+if (NOT OpenSSL_FOUND)
+    message(FATAL_ERROR "OpenSSL: not found")
+else()
+    message(STATUS "OpenSSL: found")
 endif()
 
 # Poco
@@ -227,10 +219,8 @@ target_link_libraries(ozks
     PUBLIC Poco::Foundation
     PUBLIC cppvrf::cppvrf)
 
-if(OZKS_USE_OPENSSL_SHA2)
-    target_link_libraries(ozks
-        PRIVATE OpenSSL::Crypto)
-endif()
+target_link_libraries(ozks
+    PRIVATE OpenSSL::Crypto)
 
 if(MSVC)
     # Ensure PDB is generated even in Release mode

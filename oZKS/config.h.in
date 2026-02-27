@@ -10,8 +10,6 @@
 
 #define @OZKS_SYSTEM@
 
-#cmakedefine OZKS_USE_OPENSSL_SHA2
-
 // Intrinsics
 #cmakedefine OZKS_USE_INTRIN
 #cmakedefine OZKS_ARCH_ARM64

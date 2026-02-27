@@ -71,7 +71,7 @@ namespace ozks {
 
         /**
         Compute the hash of a leaf node in a Compressed Trie.
-        The hash is computed by using BLAKE2 on the concatenation of:
+        The hash is computed by using SHA2 on the concatenation of:
         - partial label
         - payload
         - epoch
@@ -81,7 +81,7 @@ namespace ozks {
 
         /**
         Compute the hash of a non-leaf node in a Compressed Trie.
-        The hash is computed by using BLAKE2 on the concatenation of:
+        The hash is computed by using SHA2 on the concatenation of:
         - partial label of left node
         - hash of left node
         - partial label of right node

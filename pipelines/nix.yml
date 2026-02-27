@@ -12,36 +12,20 @@ steps:
     failOnStderr: false
 
 - task: CMake@1
-  displayName: 'CMake oZKS for FourQlib'
+  displayName: 'CMake oZKS'
   inputs:
     workingDirectory: '$(Build.SourcesDirectory)'
-    cmakeArgs: '-S . -B buildf -DCMAKE_BUILD_TYPE=${{ parameters.configuration }} -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)/vcpkg/scripts/buildsystems/vcpkg.cmake .'
-
-- task: CMake@1
-  displayName: 'CMake oZKS for OpenSSL'
-  inputs:
-    workingDirectory: '$(Build.SourcesDirectory)'
-    cmakeArgs: '-S . -B buildo -DCMAKE_BUILD_TYPE=${{ parameters.configuration }} -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DOZKS_USE_OPENSSL_SHA2=ON -DOZKS_USE_OPENSSL_P256=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)/vcpkg/scripts/buildsystems/vcpkg.cmake .'
+    cmakeArgs: '-S . -B build -DCMAKE_BUILD_TYPE=${{ parameters.configuration }} -DOZKS_BUILD_TESTS=ON -DOZKS_BUILD_BENCH=ON -DCMAKE_TOOLCHAIN_FILE=$(Build.SourcesDirectory)/vcpkg/scripts/buildsystems/vcpkg.cmake .'
 
 - script: |
-      cd $BUILD_SOURCESDIRECTORY/buildf
+      cd $BUILD_SOURCESDIRECTORY/build
       make
-  displayName: 'Build oZKS for FourQlib'
-
-- script: |
-      cd $BUILD_SOURCESDIRECTORY/buildo
-      make
-  displayName: 'Build oZKS for OpenSSL'
+  displayName: 'Build oZKS'
 
 - script: |
       cd $BUILD_SOURCESDIRECTORY
-      ./buildf/bin/unit_tests
-  displayName: 'Run unit tests - FourQlib'
-
-- script: |
-      cd $BUILD_SOURCESDIRECTORY
-      ./buildo/bin/unit_tests
-  displayName: 'Run unit tests - OpenSSL'
+      ./build/bin/unit_tests
+  displayName: 'Run unit tests'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
