@@ -32,14 +32,6 @@ namespace {
 
     string save_file_;
 
-    /**
-    Get random bytes and throw if unsuccessful
-    */
-    void get_random_bytes(byte *dest, size_t size)
-    {
-        if (!utils::random_bytes(dest, size))
-            throw runtime_error("Failed to get random bytes");
-    }
 } // namespace
 
 static double DoInsert(benchmark::State &state, OZKS &ozks, bool do_flush)
@@ -54,8 +46,8 @@ static double DoInsert(benchmark::State &state, OZKS &ozks, bool do_flush)
     // Insertion
     for (auto _ : state) {
         state.PauseTiming();
-        get_random_bytes(key.data(), key.size());
-        get_random_bytes(payload.data(), payload.size());
+        utils::random_bytes(key);
+        utils::random_bytes(payload);
         state.ResumeTiming();
 
         auto insert_result = ozks.insert(key, payload);
@@ -143,8 +135,8 @@ static double DoBatchInsertFlush(
         key_payload_batch_type batch;
         batch.reserve(count);
         for (size_t i = 0; i < batch_size; ++i) {
-            get_random_bytes(key.data(), key.size());
-            get_random_bytes(payload.data(), payload.size());
+            utils::random_bytes(key);
+            utils::random_bytes(payload);
             batch.emplace_back(key, payload);
         }
 
@@ -481,7 +473,7 @@ static void OZKSFailedLookup(benchmark::State &state, vrf_cache_behavior behavio
 
     for (auto _ : state) {
         state.PauseTiming();
-        get_random_bytes(key.data(), key.size());
+        utils::random_bytes(key);
         if (behavior == vrf_cache_behavior::ensure_hit) {
             ozks_->query(key);
         }
@@ -542,7 +534,7 @@ static void OZKSVerifyFailedQuery(benchmark::State &state)
 
     for (auto _ : state) {
         state.PauseTiming();
-        get_random_bytes(key.data(), key.size());
+        utils::random_bytes(key);
         auto query_result = ozks_->query(key);
         state.ResumeTiming();
 
@@ -590,7 +582,7 @@ static void VRFGetProof(benchmark::State &state)
 
     for (auto _ : state) {
         state.PauseTiming();
-        utils::random_bytes(data.data(), data.size());
+        utils::random_bytes(data);
         state.ResumeTiming();
 
         auto vrf_proof = sk->get_vrf_proof(data);
@@ -611,7 +603,7 @@ static void VRFGetValue(benchmark::State &state)
 
     for (auto _ : state) {
         state.PauseTiming();
-        utils::random_bytes(data.data(), data.size());
+        utils::random_bytes(data);
         state.ResumeTiming();
 
         auto proof = sk->get_vrf_proof(data);
@@ -628,7 +620,7 @@ static void VRFVerifyProof(benchmark::State &state)
 
     for (auto _ : state) {
         state.PauseTiming();
-        utils::random_bytes(data.data(), data.size());
+        utils::random_bytes(data);
         auto proof = sk->get_vrf_proof(data);
         state.ResumeTiming();
 

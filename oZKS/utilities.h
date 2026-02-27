@@ -29,7 +29,7 @@
 namespace ozks {
     namespace utils {
         // Generate random bytes and output the result to random_array
-        int random_bytes(std::byte *random_array, std::size_t nbytes);
+        void random_bytes(gsl::span<std::byte> random_array);
 
         /**
         Convert the given partial label to a hexadecimal string

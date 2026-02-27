@@ -46,7 +46,7 @@ namespace {
         }
 
         byte coin;
-        utils::random_bytes(&coin, /* nbytes */ 1);
+        utils::random_bytes(gsl::span<byte>(&coin, 1));
 
         size_t querier_idx = static_cast<size_t>(coin) % 4;
         return queriers->second[querier_idx];

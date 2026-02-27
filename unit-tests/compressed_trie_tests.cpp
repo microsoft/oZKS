@@ -20,15 +20,6 @@ using namespace utils;
 
 namespace {
     /**
-    Get random bytes and throw if unsuccessful
-    */
-    void get_random_bytes(byte *dest, size_t size)
-    {
-        if (!utils::random_bytes(dest, size))
-            throw runtime_error("Failed to get random bytes");
-    }
-
-    /**
     A storage that will keep track of which nodes and tries where updated in a given epoch
     */
     class UpdatedNodesPerEpochStorage : public storage::BatchStorage {
@@ -650,11 +641,11 @@ TEST(CompressedTrieTests, LinkedMultiThreadedBatchTest)
     batch.resize(20000);
     for (size_t idx = 1; idx <= batch.size(); idx++) {
         array<byte, PartialLabel::ByteCount> key_bytes{};
-        get_random_bytes(key_bytes.data(), 8);
+        utils::random_bytes(gsl::span<byte>(key_bytes.data(), 8));
         PartialLabel key(key_bytes);
 
         hash_type payload{};
-        get_random_bytes(payload.data(), 5);
+        utils::random_bytes(gsl::span<byte>(payload.data(), 5));
 
         batch[idx - 1] = { key, payload };
     }
@@ -669,11 +660,11 @@ TEST(CompressedTrieTests, LinkedMultiThreadedBatchTest)
     batch.resize(20000);
     for (size_t idx = 1; idx <= batch.size(); idx++) {
         array<byte, PartialLabel::ByteCount> key_bytes{};
-        get_random_bytes(key_bytes.data(), 8);
+        utils::random_bytes(gsl::span<byte>(key_bytes.data(), 8));
         PartialLabel key(key_bytes);
 
         hash_type payload{};
-        get_random_bytes(payload.data(), 6);
+        utils::random_bytes(gsl::span<byte>(payload.data(), 6));
 
         batch[idx - 1] = { key, payload };
     }
@@ -748,11 +739,11 @@ TEST(CompressedTrieTests, VerifyUpdatedNodesInStorage)
     batch.resize(20000);
     for (size_t idx = 1; idx <= batch.size(); idx++) {
         array<byte, PartialLabel::ByteCount> key_bytes{};
-        get_random_bytes(key_bytes.data(), 8);
+        utils::random_bytes(gsl::span<byte>(key_bytes.data(), 8));
         PartialLabel key(key_bytes);
 
         hash_type payload{};
-        get_random_bytes(payload.data(), 5);
+        utils::random_bytes(gsl::span<byte>(payload.data(), 5));
 
         batch[idx - 1] = { key, payload };
     }
@@ -1613,8 +1604,8 @@ TEST(CompressedTrieTests, SaveLoadTest3)
         PartialLabel label{};
         hash_type payload{};
 
-        get_random_bytes(label_data.data(), label_data.size());
-        get_random_bytes(payload.data(), payload.size());
+        utils::random_bytes(label_data);
+        utils::random_bytes(payload);
         label = PartialLabel(utils::compute_key_hash(label_data));
 
         trie1.insert(label, payload, append_proof);
@@ -1653,8 +1644,8 @@ TEST(CompressedTrieTests, SaveLoadToVectorTest)
         PartialLabel label{};
         hash_type payload{};
 
-        get_random_bytes(label_data.data(), label_data.size());
-        get_random_bytes(payload.data(), payload.size());
+        utils::random_bytes(label_data);
+        utils::random_bytes(payload);
         label = PartialLabel(utils::compute_key_hash(label_data));
 
         trie1.insert(label, payload, append_proof);
@@ -1830,15 +1821,15 @@ TEST(CompressedTrieTests, LinkedSaveStoredQueryWithUpdatesTest)
             PartialLabel label{};
             hash_type payload{};
 
-            get_random_bytes(label_data.data(), label_data.size());
-            get_random_bytes(payload.data(), 10);
+            utils::random_bytes(label_data);
+            utils::random_bytes(gsl::span<byte>(payload.data(), 10));
             label = PartialLabel(utils::compute_key_hash(label_data));
 
             batch[idx].first = label;
             batch[idx].second = payload;
 
             byte coin;
-            get_random_bytes(&coin, sizeof(unsigned char));
+            utils::random_bytes(gsl::span<byte>(&coin, 1));
 
             if (coin > (byte)127 && added_labels < 100) {
                 labels.push_back(batch[idx].first);

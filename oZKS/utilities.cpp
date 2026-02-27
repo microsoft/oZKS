@@ -13,10 +13,12 @@
 
 // OZKS
 #include "oZKS/core_types_generated.h"
-#include "oZKS/utils/random.h"
 #include "oZKS/hash/hash.h"
 #include "oZKS/path_element_generated.h"
 #include "oZKS/utilities.h"
+
+// OpenSSL
+#include <openssl/rand.h>
 
 using namespace std;
 using namespace ozks;
@@ -29,10 +31,13 @@ namespace {
     }
 } // namespace
 
-int utils::random_bytes(byte *random_array, size_t nbytes)
+void utils::random_bytes(gsl::span<byte> random_array)
 {
-    return ::random_bytes(
-        reinterpret_cast<unsigned char *>(random_array), static_cast<unsigned int>(nbytes));
+    if (!RAND_bytes(
+            reinterpret_cast<unsigned char *>(random_array.data()),
+            static_cast<int>(random_array.size()))) {
+        throw runtime_error("Failed to get random bytes");
+    }
 }
 
 string utils::to_string(const PartialLabel &label)
@@ -98,9 +103,7 @@ hash_type utils::compute_node_hash(
 
 hash_type utils::compute_randomness_hash(gsl::span<const byte> buffer, randomness_type &randomness)
 {
-    if (!random_bytes(randomness.data(), randomness.size())) {
-        throw runtime_error("Failed to get random bytes");
-    }
+    random_bytes(randomness);
 
     vector<byte> hash_buffer(randomness.size() + buffer.size());
     utils::copy_bytes(buffer.data(), buffer.size(), hash_buffer.data());

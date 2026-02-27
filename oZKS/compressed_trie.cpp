@@ -394,7 +394,7 @@ void CompressedTrie::init(shared_ptr<storage::Storage> storage)
 
 void CompressedTrie::init_random_id()
 {
-    utils::random_bytes(reinterpret_cast<byte *>(&id_), sizeof(trie_id_type));
+    utils::random_bytes(gsl::span<byte>(reinterpret_cast<byte *>(&id_), sizeof(trie_id_type)));
 }
 
 void CompressedTrie::init(shared_ptr<CTNode> root)

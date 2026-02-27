@@ -375,7 +375,7 @@ void OZKS::initialize()
     }
 
     // Random ID
-    utils::random_bytes(reinterpret_cast<byte *>(&ozks_id_), sizeof(trie_id_type));
+    utils::random_bytes(gsl::span<byte>(reinterpret_cast<byte *>(&ozks_id_), sizeof(trie_id_type)));
 
     query_provider_ = make_shared<LocalQueryProvider>(config_);
     trie_info_provider_ = make_shared<LocalTrieInfoProvider>(config_);

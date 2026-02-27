@@ -351,15 +351,6 @@ namespace {
         vector<CompressedTrie> added_tries_;
     };
 
-    /**
-    Get random bytes and throw if unsuccessful
-    */
-    void get_random_bytes(byte *dest, size_t size)
-    {
-        if (!utils::random_bytes(dest, size))
-            throw runtime_error("Failed to get random bytes");
-    }
-
     vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations)
     {
         key_type key(16);
@@ -371,14 +362,14 @@ namespace {
         ozks.check_for_update();
 
         for (size_t i = 0; i < iterations; i++) {
-            get_random_bytes(key.data(), key.size());
-            get_random_bytes(payload.data(), payload.size());
+            utils::random_bytes(key);
+            utils::random_bytes(payload);
 
             ozks.insert(key, payload);
 
             // Add some keys at random to check later (up to 100)
             byte b;
-            get_random_bytes(&b, 1);
+            utils::random_bytes(gsl::span<byte>(&b, 1));
             if (valid_keys.size() < 100 && static_cast<int>(b) > 128) {
                 valid_keys.push_back(key);
                 valid_payloads.push_back(payload);
@@ -400,7 +391,7 @@ namespace {
 
         // Check that invalid keys are not found and that their path is verified correctly
         for (size_t i = 0; i < 1000; i++) {
-            get_random_bytes(key.data(), key.size());
+            utils::random_bytes(key);
 
             auto result = ozks.query(key);
             EXPECT_FALSE(result.is_member());
@@ -648,8 +639,8 @@ TEST(OZKSDistTests, SeededSecretKeyTest)
     vector<key_type> keys;
     vector<payload_type> payloads;
     for (size_t i = 0; i < insert_count; i++) {
-        get_random_bytes(key.data(), key.size());
-        get_random_bytes(payload.data(), payload.size());
+        utils::random_bytes(key);
+        utils::random_bytes(payload);
         keys.push_back(key);
         payloads.push_back(payload);
     }
