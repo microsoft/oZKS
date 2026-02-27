@@ -49,20 +49,13 @@ Abstracting the storage this way allows using different storage implementations 
 
 The abstract storage concept is also used to speed-up database operations. Imagine that you have a database storage implementation. Inserting values into a dictionary backed by a database storage would be very slow, as each node update would require a round-trip to the database. Updates to a database are more efficient when applied in a batch. oZKS provides a [batch insert](oZKS/storage/memory_storage_batch_inserter.h) storage implementation, which holds updated elements in memory until a 'flush' command is received. When the command is received, all updated elements are then sent to the backing storage.
 
-### Choice of Elliptic Curve implementations
+### Elliptic Curve
 
-oZKS uses a Verifiable Random Function (VRF) to map the actual key value to a random position in the trie, to provide zero-knowledge. The VRF is implemented using elliptic curves, and two different implementations are provided:
-
-| Curve                                            | Description                                          |
-|--------------------------------------------------|------------------------------------------------------|
-| [FourQ](https://github.com/microsoft/FourQlib)   | Fast implementation of FourQ elliptic curve          |
-| [NIST P-256](https://github.com/openssl/openssl) | OpenSSL implementation of NIST P-256                 |
-
-By default oZKS will use FourQ. A CMake option can be specified to use NIST P-256 instead.
+oZKS uses a Verifiable Random Function (VRF) to map the actual key value to a random position in the trie, to provide zero-knowledge. The VRF is implemented using the [OpenSSL](https://github.com/openssl/openssl) NIST P-256 elliptic curve.
 
 ## Getting Started
 
-The OZKS class (defined in `examples/oskz_simple/ozks.h`) provides an example of the main API for use of the library. It provides the following functionality:
+The OZKS class (defined in [`examples/ozks_simple/ozks.h`](examples/ozks_simple/ozks.h)) provides an example of the main API for use of the library. It provides the following functionality:
 
 ### Insertion
 
@@ -94,7 +87,7 @@ QueryResult OZKS::query(const key_type &key) const;
 
 Verify that the `QueryResult` returned by a `query` has a correct proof:
 ```C++
-bool QueryResult::verify(const Commitment &commitment) const;
+QueryVerificationResult QueryResult::verify(const Commitment &commitment) const;
 ```
 
 The `Commitment` received by the method as parameter should be built from the information that was published publicly, as specified in the SEEMless protocol.
@@ -119,11 +112,10 @@ The CMake build system can then automatically find these pre-installed packages,
 | [FlatBuffers](https://github.com/google/flatbuffers)      | `flatbuffers`                                        |
 | [GSL](https://github.com/microsoft/GSL/)                  | `ms-gsl`                                             |
 | [OpenSSL](https://github.com/openssl/openssl)             | `openssl`                                            |
+| [C++ VRF](https://github.com/microsoft/cppvrf)            | `cppvrf`                                             |
 | [POCO](https://github.com/pocoproject/poco)               | `poco`                                               |
 | [Google Test](https://github.com/google/googletest)       | `gtest` (needed only for building tests)             |
 | [Google Benchmark](https://github.com/google/benchmark)   | `benchmark` (needed only for building benchmarks)    |
-
-To use the OpenSSL implementation of the NIST P-256 elliptic curve, set the CMake option `OZKS_USE_OPENSSL_P256` to `ON`.
 
 To build the examples, set the CMake options `OZKS_BUILD_EXAMPLES` to `ON`.
 
