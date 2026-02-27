@@ -734,7 +734,7 @@ TEST(OZKSTests, FailedQueryTest)
     qr = ozks.query(key);
 
     EXPECT_FALSE(qr.is_member());
-    EXPECT_EQ(3, qr.lookup_proof().size());
+    EXPECT_EQ(4, qr.lookup_proof().size());
     EXPECT_EQ(QueryVerificationResult::ValidNotMember, qr.verify(commitment));
 }
 
