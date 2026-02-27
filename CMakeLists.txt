@@ -15,7 +15,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
-project(OZKS VERSION 1.7.0 LANGUAGES CXX C)
+project(OZKS VERSION 1.8.0 LANGUAGES CXX C)
 
 # This policy was introduced in CMake 3.13; OLD by default until CMake 3.21
 cmake_policy(SET CMP0077 NEW)
