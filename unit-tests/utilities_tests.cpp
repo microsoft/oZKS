@@ -469,6 +469,48 @@ TEST(Utilities, InsertionThreadLimitTest)
         limit = get_insertion_thread_limit(root, /* max_threads */ 100);
         EXPECT_EQ(4, limit);
     }
+
+    {
+        // Mirror case: LEFT subtree is deeper, RIGHT subtree has leaves at level 2:
+        //
+        //            root ("")
+        //           /         \
+        //        (0)           (1)
+        //        / \           / \
+        //     (00) (01)     (10)  (11)      <-- (10) and (11) are leaves
+        //     / \   / \
+        // (000)(001)(010)(011)
+        //
+        // The correct thread limit is 4 because level [(00),(01),(10),(11)]
+        // is not fully expandable -- (10) and (11) have no children.
+
+        CompressedTrie trie;
+        shared_ptr<CTNode> root = make_shared<CTNodeLinked>(&trie, PartialLabel{});
+
+        // Build complete level 1
+        root->set_new_left_node({ 0 }, trie.epoch());
+        root->set_new_right_node({ 1 }, trie.epoch());
+
+        // Build complete level 2
+        root->left()->set_new_left_node({ 0, 0 }, trie.epoch());
+        root->left()->set_new_right_node({ 0, 1 }, trie.epoch());
+        root->right()->set_new_left_node({ 1, 0 }, trie.epoch());
+        root->right()->set_new_right_node({ 1, 1 }, trie.epoch());
+
+        size_t limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(4, limit);
+
+        // Only expand the LEFT subtree at level 3; leave (10) and (11) as leaves
+        root->left()->left()->set_new_left_node({ 0, 0, 0 }, trie.epoch());
+        root->left()->left()->set_new_right_node({ 0, 0, 1 }, trie.epoch());
+        root->left()->right()->set_new_left_node({ 0, 1, 0 }, trie.epoch());
+        root->left()->right()->set_new_right_node({ 0, 1, 1 }, trie.epoch());
+
+        // Level 2 is not fully expandable: (10) and (11) are leaves.
+        // Correct answer is 4, not 8.
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(4, limit);
+    }
 }
 
 TEST(Utilities, InsertionIndexTest)
