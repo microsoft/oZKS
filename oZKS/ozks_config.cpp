@@ -67,7 +67,7 @@ size_t OZKSConfig::save(SerializationWriter &writer) const
     writer.write(reinterpret_cast<const uint8_t *>(&thread_count64), sizeof(uint64_t));
 
     return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) +
-           sizeof(uint64_t) + sizeof(uint64_t);
+           sizeof(uint32_t) + vrf_secret_key_size + sizeof(uint64_t) + sizeof(uint64_t);
 }
 
 template <typename T>
@@ -113,7 +113,7 @@ size_t OZKSConfig::Load(
     swap(config, loaded_ozks_config);
 
     return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) +
-           sizeof(uint64_t) + sizeof(uint64_t);
+           sizeof(uint32_t) + vrf_secret_key_size + sizeof(uint64_t) + sizeof(uint64_t);
 }
 
 template <typename T>

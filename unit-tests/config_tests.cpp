@@ -87,3 +87,62 @@ TEST(ConfigTests, VRFSecretKeyTest)
             invalid_argument);
     }
 }
+
+TEST(ConfigTests, SerializationSizeTest)
+{
+    // With empty VRF secret key
+    {
+        auto storage = make_shared<MemoryStorage>();
+        OZKSConfig config(
+            PayloadCommitmentType::CommitedPayload,
+            LabelType::HashedLabels,
+            TrieType::Stored,
+            storage);
+
+        vector<byte> buffer;
+        size_t save_size = config.save(buffer);
+
+        EXPECT_EQ(buffer.size(), save_size);
+
+        OZKSConfig loaded;
+        size_t load_size = OZKSConfig::Load(loaded, buffer, storage);
+
+        EXPECT_EQ(save_size, load_size);
+    }
+
+    // With non-empty VRF secret key
+    {
+        auto storage = make_shared<MemoryStorage>();
+        auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+        auto sk_bytes = sk->to_secure_bytes();
+        vector<byte> vrf_secret_key(
+            reinterpret_cast<const byte *>(sk_bytes.get()),
+            reinterpret_cast<const byte *>(sk_bytes.get()) + sk_bytes.size());
+        OZKSConfig config(
+            PayloadCommitmentType::UncommitedPayload,
+            LabelType::VRFLabels,
+            TrieType::Stored,
+            storage,
+            vrf_secret_key,
+            /* vrf_cache_size */ 100,
+            /* thread_count */ 4);
+
+        vector<byte> buffer;
+        size_t save_size = config.save(buffer);
+
+        EXPECT_EQ(buffer.size(), save_size);
+
+        OZKSConfig loaded;
+        size_t load_size = OZKSConfig::Load(loaded, buffer, storage);
+
+        EXPECT_EQ(save_size, load_size);
+
+        // Verify round-trip preserves values
+        EXPECT_EQ(config.payload_commitment(), loaded.payload_commitment());
+        EXPECT_EQ(config.label_type(), loaded.label_type());
+        EXPECT_EQ(config.trie_type(), loaded.trie_type());
+        EXPECT_EQ(config.vrf_cache_size(), loaded.vrf_cache_size());
+        EXPECT_EQ(config.thread_count(), loaded.thread_count());
+        EXPECT_EQ(config.vrf_secret_key().size(), loaded.vrf_secret_key().size());
+    }
+}
