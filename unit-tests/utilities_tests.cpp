@@ -371,60 +371,104 @@ TEST(Utilities, CommonPrefixTest)
 
 TEST(Utilities, InsertionThreadLimitTest)
 {
-    CompressedTrie trie;
-    shared_ptr<CTNode> root = make_shared<CTNodeLinked>(&trie, PartialLabel{});
+    {
+        CompressedTrie trie;
+        shared_ptr<CTNode> root = make_shared<CTNodeLinked>(&trie, PartialLabel{});
 
-    size_t limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(1, limit);
+        size_t limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(1, limit);
 
-    root->set_new_right_node({ 1 }, trie.epoch());
+        root->set_new_right_node({ 1 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(1, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(1, limit);
 
-    root->set_new_left_node({ 0 }, trie.epoch());
+        root->set_new_left_node({ 0 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(2, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(2, limit);
 
-    root->right()->set_new_right_node({ 1, 1 }, trie.epoch());
+        root->right()->set_new_right_node({ 1, 1 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(2, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(2, limit);
 
-    root->right()->set_new_left_node({ 1, 0 }, trie.epoch());
+        root->right()->set_new_left_node({ 1, 0 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(2, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(2, limit);
 
-    root->left()->set_new_left_node({ 0, 0 }, trie.epoch());
+        root->left()->set_new_left_node({ 0, 0 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(2, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(2, limit);
 
-    root->left()->set_new_right_node({ 0, 1 }, trie.epoch());
+        root->left()->set_new_right_node({ 0, 1 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(4, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(4, limit);
 
-    root->left()->left()->set_new_left_node({ 0, 0, 0 }, trie.epoch());
-    root->left()->left()->set_new_right_node({ 0, 0, 1 }, trie.epoch());
-    root->left()->right()->set_new_left_node({ 0, 1, 0 }, trie.epoch());
-    root->left()->right()->set_new_right_node({ 0, 1, 1 }, trie.epoch());
-    root->right()->left()->set_new_left_node({ 1, 0, 0 }, trie.epoch());
-    root->right()->left()->set_new_right_node({ 1, 0, 1 }, trie.epoch());
-    root->right()->right()->set_new_right_node({ 1, 1, 1 }, trie.epoch());
+        root->left()->left()->set_new_left_node({ 0, 0, 0 }, trie.epoch());
+        root->left()->left()->set_new_right_node({ 0, 0, 1 }, trie.epoch());
+        root->left()->right()->set_new_left_node({ 0, 1, 0 }, trie.epoch());
+        root->left()->right()->set_new_right_node({ 0, 1, 1 }, trie.epoch());
+        root->right()->left()->set_new_left_node({ 1, 0, 0 }, trie.epoch());
+        root->right()->left()->set_new_right_node({ 1, 0, 1 }, trie.epoch());
+        root->right()->right()->set_new_right_node({ 1, 1, 1 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(4, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(4, limit);
 
-    root->right()->right()->set_new_left_node({ 1, 1, 0 }, trie.epoch());
+        root->right()->right()->set_new_left_node({ 1, 1, 0 }, trie.epoch());
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 100);
-    EXPECT_EQ(8, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(8, limit);
 
-    limit = get_insertion_thread_limit(root, /* max_threads */ 3);
-    EXPECT_EQ(2, limit);
+        limit = get_insertion_thread_limit(root, /* max_threads */ 3);
+        EXPECT_EQ(2, limit);
+    }
+
+    {
+        // Build a tree where left subtree is shallower than right subtree at depth 2:
+        //
+        //            root ("")
+        //           /         \
+        //        (0)           (1)
+        //        / \           / \
+        //     (00) (01)     (10)  (11)      <-- (00) and (01) are leaves
+        //                   /  \   /  \
+        //               (100)(101)(110)(111)
+        //
+        // The correct thread limit is 4 because level [(00),(01),(10),(11)]
+        // is not fully expandable -- (00) and (01) have no children.
+
+        CompressedTrie trie;
+        shared_ptr<CTNode> root = make_shared<CTNodeLinked>(&trie, PartialLabel{});
+
+        // Build complete level 1
+        root->set_new_left_node({ 0 }, trie.epoch());
+        root->set_new_right_node({ 1 }, trie.epoch());
+
+        // Build complete level 2
+        root->left()->set_new_left_node({ 0, 0 }, trie.epoch());
+        root->left()->set_new_right_node({ 0, 1 }, trie.epoch());
+        root->right()->set_new_left_node({ 1, 0 }, trie.epoch());
+        root->right()->set_new_right_node({ 1, 1 }, trie.epoch());
+
+        size_t limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(4, limit);
+
+        // Only expand the RIGHT subtree at level 3; leave (00) and (01) as leaves
+        root->right()->left()->set_new_left_node({ 1, 0, 0 }, trie.epoch());
+        root->right()->left()->set_new_right_node({ 1, 0, 1 }, trie.epoch());
+        root->right()->right()->set_new_left_node({ 1, 1, 0 }, trie.epoch());
+        root->right()->right()->set_new_right_node({ 1, 1, 1 }, trie.epoch());
+
+        // Level 2 is not fully expandable: (00) and (01) are leaves.
+        // Correct answer is 4, not 8.
+        limit = get_insertion_thread_limit(root, /* max_threads */ 100);
+        EXPECT_EQ(4, limit);
+    }
 }
 
 TEST(Utilities, InsertionIndexTest)

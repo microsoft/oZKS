@@ -350,18 +350,17 @@ size_t utils::get_insertion_thread_limit(shared_ptr<CTNode> node, size_t max_thr
             if (!check_node(level[idx + 1], next_level)) {
                 return curr_limit;
             }
-
-            curr_limit *= 2;
-            if (curr_limit == max_limit) {
-                return curr_limit;
-            }
-            if (curr_limit > max_limit) {
-                return curr_limit /= 2;
-            }
-
-            level.swap(next_level);
-            next_level.clear();
         }
+
+        curr_limit *= 2;
+        if (curr_limit == max_limit) {
+            return curr_limit;
+        }
+        if (curr_limit > max_limit) {
+            return curr_limit /= 2;
+        }
+
+        level.swap(next_level);
     }
 }
 
