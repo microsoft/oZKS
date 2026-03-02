@@ -452,6 +452,65 @@ TEST(OZKSDistTests, UpdatedNodesTest)
     EXPECT_EQ(2, backing_storage->updated_nodes_count());
 }
 
+TEST(OZKSDistTests, BatchInsertTest)
+{
+    shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+
+    OZKSConfigDist config(
+        PayloadCommitmentType::CommitedPayload,
+        LabelType::VRFLabels,
+        TrieType::Stored,
+        batch_inserter,
+        {});
+    OZKS ozks(config);
+
+    // Build a batch of key/payload pairs
+    constexpr size_t batch_count = 50;
+    key_payload_batch_type batch;
+    vector<key_type> keys;
+    vector<payload_type> payloads;
+
+    for (size_t i = 0; i < batch_count; i++) {
+        key_type key(16);
+        payload_type payload(40);
+        get_random_bytes(key.data(), key.size());
+        get_random_bytes(payload.data(), payload.size());
+
+        batch.emplace_back(key, payload);
+        keys.push_back(key);
+        payloads.push_back(payload);
+    }
+
+    // Use the batch insert overload
+    ozks.insert(batch);
+
+    // Wait for the async updater to finish
+    this_thread::sleep_for(chrono::seconds(10));
+    ozks.check_for_update();
+
+    // Every inserted key must be found and verify correctly
+    for (size_t i = 0; i < keys.size(); i++) {
+        auto result = ozks.query(keys[i]);
+        EXPECT_TRUE(result.is_member());
+        EXPECT_NE(0, result.payload().size());
+        EXPECT_EQ(QueryVerificationResult::ValidIsMember, result.verify(ozks.get_commitment()));
+        EXPECT_EQ(payloads[i], result.payload());
+    }
+
+    // A random key that was never inserted must not be found
+    for (size_t i = 0; i < 100; i++) {
+        key_type random_key(16);
+        get_random_bytes(random_key.data(), random_key.size());
+
+        auto result = ozks.query(random_key);
+        EXPECT_FALSE(result.is_member());
+        EXPECT_EQ(0, result.payload().size());
+        EXPECT_EQ(QueryVerificationResult::ValidNotMember, result.verify(ozks.get_commitment()));
+    }
+}
+
 TEST(OZKSDistTests, UpdaterTest)
 {
     shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();

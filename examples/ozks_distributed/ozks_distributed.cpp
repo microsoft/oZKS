@@ -98,20 +98,24 @@ void OZKS::insert(const key_payload_batch_type &input)
 {
     label_hash_batch_type label_commit_batch(input.size());
 
+    if (input.empty()) {
+        return;
+    }
+
     size_t thread_count = utils::get_insertion_thread_limit(nullptr, config_.thread_count());
-    thread_count = std::min<size_t>(thread_count, pending_insertions_.size());
-    size_t batch_size = (pending_insertions_.size() + thread_count - 1) / thread_count;
+    thread_count = std::min<size_t>(thread_count, input.size());
+    size_t batch_size = (input.size() + thread_count - 1) / thread_count;
     ThreadPool tp(thread_count);
 
     // Protects the storage_ from concurrent access
     mutex storage_mutex;
 
     auto labels_and_hashes_lambda =
-        [batch_size, &label_commit_batch, &storage_mutex, this](size_t i) {
+        [batch_size, &label_commit_batch, &input, &storage_mutex, this](size_t i) {
             size_t begin_idx = i * batch_size;
-            size_t end_idx = std::min((i + 1) * batch_size, pending_insertions_.size());
+            size_t end_idx = std::min((i + 1) * batch_size, input.size());
             for (size_t j = begin_idx; j < end_idx; j++) {
-                const auto &key_payload = pending_insertions_[j];
+                const auto &key_payload = input[j];
                 hash_type label =
                     utils::get_node_label(key_payload.first, vrf_sk_, config_.label_type());
                 auto payload_commit =
