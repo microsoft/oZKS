@@ -181,24 +181,36 @@ void PartialLabel::clear()
     bit_count_ = 0;
 }
 
+void PartialLabel::save(gsl::span<uint8_t, SaveSize> buffer) const
+{
+    memcpy(buffer.data(), label_.data(), ByteCount);
+    memcpy(buffer.data() + ByteCount, &bit_count_, sizeof(bit_count_));
+}
+
+void PartialLabel::load(gsl::span<const uint8_t, SaveSize> buffer)
+{
+    memcpy(label_.data(), buffer.data(), ByteCount);
+    memcpy(&bit_count_, buffer.data() + ByteCount, sizeof(bit_count_));
+
+    if (bit_count_ > MaxBitCount) {
+        throw logic_error("Cannot have label bigger than MaxBitCount");
+    }
+
+    zero_trailing_bits();
+}
+
 void PartialLabel::init(gsl::span<const byte> bytes, uint32_t bit_count)
 {
     uint32_t byte_size = (bit_count + 7) / 8;
-    uint32_t mask_size = bit_count % 8;
 
-    memset(label_.data(), 0, ByteCount);
     utils::copy_bytes(bytes.data(), byte_size, label_.data());
-
-    if (mask_size > 0) {
-        byte mask = byte{ 0xFF };
-        mask <<= (8 - mask_size);
-        reinterpret_cast<byte *>(label_.data())[byte_size - 1] &= mask;
-    }
 
     for (auto &lbl : label_) {
         byte *pbytes = reinterpret_cast<byte *>(&lbl);
         reverse(pbytes, pbytes + sizeof(uint64_t));
     }
+
+    zero_trailing_bits();
 }
 
 void PartialLabel::set_bit(uint32_t bit_index, bool value)
@@ -221,6 +233,21 @@ void PartialLabel::set_bit(uint32_t bit_index, bool value)
     } else {
         mask = ~mask;
         pbyte[byte_idx] &= mask;
+    }
+}
+
+void PartialLabel::zero_trailing_bits()
+{
+    size_t full_words = bit_count_ / 64;
+    size_t remaining_bits = bit_count_ % 64;
+
+    if (remaining_bits > 0) {
+        label_[full_words] &= ~(0xFFFFFFFFFFFFFFFFULL >> remaining_bits);
+        full_words++;
+    }
+
+    for (size_t i = full_words; i < WordCount; i++) {
+        label_[i] = 0;
     }
 }
 

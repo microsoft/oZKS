@@ -156,26 +156,12 @@ namespace ozks {
         /**
         Save the PartialLabel to a buffer
         */
-        template <typename T, typename = std::enable_if_t<sizeof(T) == 1>>
-        void save(gsl::span<T, SaveSize> buffer) const
-        {
-            std::memcpy(buffer.data(), label_.data(), ByteCount);
-            std::memcpy(buffer.data() + ByteCount, &bit_count_, sizeof(bit_count_));
-        }
+        void save(gsl::span<std::uint8_t, SaveSize> buffer) const;
 
         /**
         Load a PartialLabel from a buffer.
         */
-        template <typename T, typename = std::enable_if_t<sizeof(T) == 1>>
-        void load(gsl::span<T, SaveSize> buffer)
-        {
-            std::memcpy(label_.data(), buffer.data(), ByteCount);
-            std::memcpy(&bit_count_, buffer.data() + ByteCount, sizeof(bit_count_));
-
-            if (bit_count_ > MaxBitCount) {
-                throw std::logic_error("Cannot have label bigger than MaxBitCount");
-            }
-        }
+        void load(gsl::span<const std::uint8_t, SaveSize> buffer);
 
     private:
         constexpr static std::size_t WordCount = 4;
@@ -185,6 +171,7 @@ namespace ozks {
 
         void init(gsl::span<const std::byte> bytes, std::uint32_t bit_count);
         void set_bit(std::uint32_t bit_idx, bool value);
+        void zero_trailing_bits();
 
         static std::uint16_t get_msb(std::uint64_t value);
         static bool bit(std::size_t bit_idx, std::uint64_t value);
