@@ -27,7 +27,7 @@ namespace {
     }
 }
 
-bool QueryResult::is_member() const noexcept
+bool QueryResult::is_member() const
 {
     return is_member_from_path();
 }
@@ -86,7 +86,7 @@ QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &c
     return determine_query_result(is_member(), is_valid);
 }
 
-bool QueryResult::is_member_from_path() const noexcept
+bool QueryResult::is_member_from_path() const
 {
     if (lookup_proof().size() == 0) {
         return false;

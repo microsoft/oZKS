@@ -79,7 +79,7 @@ namespace ozks {
         /**
         Whether the query found the key that was searched for
         */
-        bool is_member() const noexcept;
+        bool is_member() const;
 
         /**
         The key that was looked up
@@ -174,6 +174,6 @@ namespace ozks {
         static std::pair<QueryResult, std::size_t> Load(
             const OZKSConfig &config, SerializationReader &reader);
 
-        bool is_member_from_path() const noexcept;
+        bool is_member_from_path() const;
     };
 } // namespace ozks
