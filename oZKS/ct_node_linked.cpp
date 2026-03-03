@@ -77,7 +77,7 @@ void CTNodeLinked::load_from_storage(
 void CTNodeLinked::set_left_node(shared_ptr<CTNode> new_left_node)
 {
     left_ = new_left_node;
-    left_child_epoch_ = new_left_node->epoch();
+    left_child_epoch_ = new_left_node ? new_left_node->epoch() : 0;
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
 }
@@ -123,7 +123,7 @@ shared_ptr<CTNode> CTNodeLinked::set_existing_left_node(const PartialLabel &labe
 void CTNodeLinked::set_right_node(shared_ptr<CTNode> new_right_node)
 {
     right_ = new_right_node;
-    right_child_epoch_ = new_right_node->epoch();
+    right_child_epoch_ = new_right_node ? new_right_node->epoch() : 0;
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
 }

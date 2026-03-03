@@ -83,8 +83,13 @@ CTNodeStored &CTNodeStored::operator=(const CTNodeStored &node)
 
 void CTNodeStored::set_left_node(shared_ptr<CTNode> new_left_node)
 {
-    left_ = new_left_node->label();
-    left_child_epoch_ = new_left_node->epoch();
+    if (new_left_node) {
+        left_ = new_left_node->label();
+        left_child_epoch_ = new_left_node->epoch();
+    } else {
+        left_ = PartialLabel{};
+        left_child_epoch_ = 0;
+    }
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
 }
@@ -130,8 +135,13 @@ shared_ptr<CTNode> CTNodeStored::set_new_left_node(const PartialLabel &label, st
 
 void CTNodeStored::set_right_node(shared_ptr<CTNode> new_right_node)
 {
-    right_ = new_right_node->label();
-    right_child_epoch_ = new_right_node->epoch();
+    if (new_right_node) {
+        right_ = new_right_node->label();
+        right_child_epoch_ = new_right_node->epoch();
+    } else {
+        right_ = PartialLabel{};
+        right_child_epoch_ = 0;
+    }
     epoch_ = trie_->epoch();
     set_dirty_bit(true);
 }

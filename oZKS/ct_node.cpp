@@ -516,19 +516,8 @@ void CTNode::restore_node(
 {
     node.hash_ = hash;
 
-    if (nullptr != left_node) {
-        node.set_left_node(left_node);
-    } else {
-        node.set_left_node(nullptr);
-        node.left_child_epoch_ = 0;
-    }
-
-    if (nullptr != right_node) {
-        node.set_right_node(right_node);
-    } else {
-        node.set_right_node(nullptr);
-        node.right_child_epoch_ = 0;
-    }
+    node.set_left_node(left_node);
+    node.set_right_node(right_node);
 
     node.epoch_ = epoch;
     node.set_dirty_bit(true);
