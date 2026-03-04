@@ -113,7 +113,7 @@ TEST(ConfigTests, SerializationSizeTest)
     // With non-empty VRF secret key
     {
         auto storage = make_shared<MemoryStorage>();
-        auto sk = vrf::VRF::Create(vrf::Type::EC_VRF_P256_SHA256_TAI);
+        auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
         auto sk_bytes = sk->to_secure_bytes();
         vector<byte> vrf_secret_key(
             reinterpret_cast<const byte *>(sk_bytes.get()),

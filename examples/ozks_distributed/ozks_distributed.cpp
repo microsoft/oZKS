@@ -48,8 +48,7 @@ void OZKS::initialize_vrf()
         vrf_sk_ = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     } else {
         // Deserialize VRF secret key from bytes
-        vrf_sk_ = vrf::VRF::SecretKeyFromBytes(
-            vrf::Type::ec_vrf_p256_sha256_tai, config_.vrf_secret_key());
+        vrf_sk_ = vrf::VRF::SecretKeyFromBytes(config_.vrf_secret_key());
         if (vrf_sk_ == nullptr) {
             throw runtime_error("Failed to deserialize VRF secret key");
         }
@@ -304,11 +303,9 @@ pair<OZKS, size_t> OZKS::Load(SerializationReader &reader, shared_ptr<Storage> s
     ozks.config_ = config_dist;
 
     if (ozks.get_config().label_type() == LabelType::VRFLabels) {
-        ozks.vrf_sk_ = vrf::VRF::SecretKeyFromBytes(
-            vrf::Type::ec_vrf_p256_sha256_tai,
-            gsl::span<const byte>(
-                reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
-                fbs_ozks->vrf_sk()->size()));
+        ozks.vrf_sk_ = vrf::VRF::SecretKeyFromBytes(gsl::span<const byte>(
+            reinterpret_cast<const byte *>(fbs_ozks->vrf_sk()->data()),
+            fbs_ozks->vrf_sk()->size()));
 
         if (ozks.vrf_sk_ == nullptr) {
             throw runtime_error("Failed to load OZKS: invalid VRF secret key");

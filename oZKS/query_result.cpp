@@ -237,11 +237,9 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
     query_result.lookup_proof_.resize(fbs_query_result->lookup_proof_count());
 
     if (query_result.use_vrf_) {
-        query_result.vrf_proof_ = vrf::VRF::ProofFromBytes(
-            vrf::Type::ec_vrf_p256_sha256_tai,
-            gsl::span<const byte>(
-                reinterpret_cast<const byte*>(fbs_query_result->vrf_proof()->data()),
-                fbs_query_result->vrf_proof()->size()));
+        query_result.vrf_proof_ = vrf::VRF::ProofFromBytes(gsl::span<const byte>(
+            reinterpret_cast<const byte *>(fbs_query_result->vrf_proof()->data()),
+            fbs_query_result->vrf_proof()->size()));
     } else {
         query_result.vrf_proof_ = nullptr;
     }

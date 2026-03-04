@@ -147,7 +147,7 @@ else()
 endif()
 
 # CPPVRF
-find_package(cppvrf 1.2 REQUIRED)
+find_package(cppvrf 1.4 REQUIRED)
 if (NOT cppvrf_FOUND)
     message(FATAL_ERROR "cppvrf: not found")
 else()

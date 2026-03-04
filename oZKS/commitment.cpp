@@ -70,8 +70,7 @@ pair<Commitment, size_t> Commitment::Load(SerializationReader &reader)
     gsl::span<const byte> pk_span = gsl::span(
         reinterpret_cast<const byte *>(fbs_commitment->public_key()->data()->data()),
         fbs_commitment->public_key()->data()->size());
-    commitment.public_key_ =
-        vrf::VRF::PublicKeyFromBytes(vrf::Type::ec_vrf_p256_sha256_tai, pk_span);
+    commitment.public_key_ = vrf::VRF::PublicKeyFromBytes(pk_span);
 
     if (commitment.public_key_ == nullptr) {
         throw runtime_error("Failed to load Commitment: invalid public key");
