@@ -181,13 +181,13 @@ void PartialLabel::clear()
     bit_count_ = 0;
 }
 
-void PartialLabel::save(gsl::span<uint8_t, SaveSize> buffer) const
+void PartialLabel::save(gsl::span<byte, SaveSize> buffer) const
 {
     memcpy(buffer.data(), label_.data(), ByteCount);
     memcpy(buffer.data() + ByteCount, &bit_count_, sizeof(bit_count_));
 }
 
-void PartialLabel::load(gsl::span<const uint8_t, SaveSize> buffer)
+void PartialLabel::load(gsl::span<const byte, SaveSize> buffer)
 {
     memcpy(label_.data(), buffer.data(), ByteCount);
     memcpy(&bit_count_, buffer.data() + ByteCount, sizeof(bit_count_));

@@ -283,7 +283,8 @@ size_t utils::write_path_element(
     flatbuffers::FlatBufferBuilder f_builder;
 
     array<uint8_t, PartialLabel::SaveSize> label_data{};
-    label.save(gsl::span<uint8_t, PartialLabel::SaveSize>(label_data));
+    label.save(gsl::span<byte, PartialLabel::SaveSize>(
+        reinterpret_cast<byte *>(label_data.data()), label_data.size()));
     fbs::PathElementData pe_data(
         flatbuffers::span<const uint8_t, hash_size>{ reinterpret_cast<const uint8_t *>(hash.data()),
                                                      hash_size },
@@ -311,8 +312,8 @@ size_t utils::read_path_element(SerializationReader &reader, PartialLabel &label
 
     auto fbs_path_element = fbs::GetSizePrefixedPathElement(pe_data.data());
     copy_bytes(fbs_path_element->path_element()->hash().data()->data(), hash_size, hash.data());
-    label.load(gsl::span<const uint8_t, PartialLabel::SaveSize>{
-        fbs_path_element->path_element()->label().data()->data(),
+    label.load(gsl::span<const byte, PartialLabel::SaveSize>{
+        reinterpret_cast<const byte *>(fbs_path_element->path_element()->label().data()->data()),
         fbs_path_element->path_element()->label().data()->size() });
 
     return pe_data.size();

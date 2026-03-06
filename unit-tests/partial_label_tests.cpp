@@ -233,17 +233,17 @@ TEST(PartialLabelTests, EqualityIgnoresTrailingBitsTest)
     // 8-bit label: only word 0's top byte is significant
     PartialLabel lbl1 = make_bytes<PartialLabel>(0xAB);
 
-    array<uint8_t, PartialLabel::SaveSize> buffer{};
-    lbl1.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    array<byte, PartialLabel::SaveSize> buffer{};
+    lbl1.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     // Dirty trailing bytes in unused words
-    array<uint8_t, PartialLabel::SaveSize> dirty_buffer = buffer;
-    dirty_buffer[8] = 0xFF;   // word 1
-    dirty_buffer[16] = 0xDE;  // word 2
-    dirty_buffer[24] = 0xAD;  // word 3
+    array<byte, PartialLabel::SaveSize> dirty_buffer = buffer;
+    dirty_buffer[8] = byte{ 0xFF };   // word 1
+    dirty_buffer[16] = byte{ 0xDE };  // word 2
+    dirty_buffer[24] = byte{ 0xAD };  // word 3
 
     PartialLabel lbl2;
-    lbl2.load(gsl::span<uint8_t, PartialLabel::SaveSize>(dirty_buffer));
+    lbl2.load(gsl::span<byte, PartialLabel::SaveSize>(dirty_buffer));
 
     EXPECT_EQ(lbl1.bit_count(), lbl2.bit_count());
     EXPECT_EQ(lbl1, lbl2);
@@ -252,16 +252,16 @@ TEST(PartialLabelTests, EqualityIgnoresTrailingBitsTest)
     PartialLabel lbl3 = make_bytes<PartialLabel>(
         0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99);
 
-    array<uint8_t, PartialLabel::SaveSize> buffer3{};
-    lbl3.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer3));
+    array<byte, PartialLabel::SaveSize> buffer3{};
+    lbl3.save(gsl::span<byte, PartialLabel::SaveSize>(buffer3));
 
     // Dirty unused words 2 and 3
-    array<uint8_t, PartialLabel::SaveSize> dirty_buffer3 = buffer3;
-    dirty_buffer3[16] = 0xFF;  // word 2
-    dirty_buffer3[24] = 0xFF;  // word 3
+    array<byte, PartialLabel::SaveSize> dirty_buffer3 = buffer3;
+    dirty_buffer3[16] = byte{ 0xFF };  // word 2
+    dirty_buffer3[24] = byte{ 0xFF };  // word 3
 
     PartialLabel lbl4;
-    lbl4.load(gsl::span<uint8_t, PartialLabel::SaveSize>(dirty_buffer3));
+    lbl4.load(gsl::span<byte, PartialLabel::SaveSize>(dirty_buffer3));
 
     EXPECT_EQ(lbl3, lbl4);
 }
@@ -304,17 +304,17 @@ TEST(PartialLabelTests, LessThanIgnoresTrailingBitsTest)
 {
     PartialLabel lbl1 = make_bytes<PartialLabel>(0xAB);
 
-    array<uint8_t, PartialLabel::SaveSize> buffer{};
-    lbl1.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    array<byte, PartialLabel::SaveSize> buffer{};
+    lbl1.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     // Dirty trailing bytes in unused words
-    array<uint8_t, PartialLabel::SaveSize> dirty_buffer = buffer;
-    dirty_buffer[8] = 0xFF;
-    dirty_buffer[16] = 0xFF;
-    dirty_buffer[24] = 0xFF;
+    array<byte, PartialLabel::SaveSize> dirty_buffer = buffer;
+    dirty_buffer[8] = byte{ 0xFF };
+    dirty_buffer[16] = byte{ 0xFF };
+    dirty_buffer[24] = byte{ 0xFF };
 
     PartialLabel lbl2;
-    lbl2.load(gsl::span<uint8_t, PartialLabel::SaveSize>(dirty_buffer));
+    lbl2.load(gsl::span<byte, PartialLabel::SaveSize>(dirty_buffer));
 
     EXPECT_FALSE(lbl1 < lbl2);
     EXPECT_FALSE(lbl2 < lbl1);
@@ -324,20 +324,20 @@ TEST(PartialLabelTests, SaveLoadRoundTripTest)
 {
     // Empty label
     PartialLabel empty;
-    array<uint8_t, PartialLabel::SaveSize> buffer{};
-    empty.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    array<byte, PartialLabel::SaveSize> buffer{};
+    empty.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     PartialLabel loaded_empty;
-    loaded_empty.load(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    loaded_empty.load(gsl::span<byte, PartialLabel::SaveSize>(buffer));
     EXPECT_EQ(empty, loaded_empty);
     EXPECT_EQ(0, loaded_empty.bit_count());
 
     // Short label from bits
     PartialLabel bits_label{ 1, 0, 1, 1, 0, 0, 1, 0, 1, 1 };
-    bits_label.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    bits_label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     PartialLabel loaded_bits;
-    loaded_bits.load(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    loaded_bits.load(gsl::span<byte, PartialLabel::SaveSize>(buffer));
     EXPECT_EQ(bits_label, loaded_bits);
     EXPECT_EQ(10, loaded_bits.bit_count());
     for (uint32_t i = 0; i < loaded_bits.bit_count(); i++) {
@@ -346,20 +346,20 @@ TEST(PartialLabelTests, SaveLoadRoundTripTest)
 
     // Byte-aligned label
     PartialLabel byte_label = make_bytes<PartialLabel>(0xAB, 0xCD, 0xEF);
-    byte_label.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    byte_label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     PartialLabel loaded_byte;
-    loaded_byte.load(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    loaded_byte.load(gsl::span<byte, PartialLabel::SaveSize>(buffer));
     EXPECT_EQ(byte_label, loaded_byte);
     EXPECT_EQ(24, loaded_byte.bit_count());
 
     // Multi-word label (> 64 bits)
     PartialLabel multi_word = make_bytes<PartialLabel>(
         0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA);
-    multi_word.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    multi_word.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     PartialLabel loaded_multi;
-    loaded_multi.load(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    loaded_multi.load(gsl::span<byte, PartialLabel::SaveSize>(buffer));
     EXPECT_EQ(multi_word, loaded_multi);
     EXPECT_EQ(80, loaded_multi.bit_count());
 
@@ -369,10 +369,10 @@ TEST(PartialLabelTests, SaveLoadRoundTripTest)
         0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00,
         0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
         0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10);
-    full_label.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    full_label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     PartialLabel loaded_full;
-    loaded_full.load(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    loaded_full.load(gsl::span<byte, PartialLabel::SaveSize>(buffer));
     EXPECT_EQ(full_label, loaded_full);
     EXPECT_EQ(256, loaded_full.bit_count());
 }
@@ -382,29 +382,29 @@ TEST(PartialLabelTests, LoadCleansTrailingBitsTest)
     // Create a 10-bit label, save it, then dirty the buffer's trailing bytes
     PartialLabel original{ 1, 0, 1, 1, 0, 0, 1, 0, 1, 1 };
 
-    array<uint8_t, PartialLabel::SaveSize> buffer{};
-    original.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    array<byte, PartialLabel::SaveSize> buffer{};
+    original.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     // Fill all trailing bytes with 0xFF
-    array<uint8_t, PartialLabel::SaveSize> dirty_buffer;
+    array<byte, PartialLabel::SaveSize> dirty_buffer;
     memset(dirty_buffer.data(), 0xFF, PartialLabel::SaveSize);
     // Preserve the original data
     memcpy(dirty_buffer.data(), buffer.data(), PartialLabel::SaveSize);
     // Now dirty the unused words
-    dirty_buffer[8] = 0xFF;
-    dirty_buffer[9] = 0xFF;
-    dirty_buffer[16] = 0xFF;
-    dirty_buffer[24] = 0xFF;
+    dirty_buffer[8] = byte{ 0xFF };
+    dirty_buffer[9] = byte{ 0xFF };
+    dirty_buffer[16] = byte{ 0xFF };
+    dirty_buffer[24] = byte{ 0xFF };
 
     PartialLabel loaded;
-    loaded.load(gsl::span<uint8_t, PartialLabel::SaveSize>(dirty_buffer));
+    loaded.load(gsl::span<byte, PartialLabel::SaveSize>(dirty_buffer));
 
     // Should be equal despite dirty trailing bytes
     EXPECT_EQ(original, loaded);
 
     // Save the loaded label again - buffer should be clean
-    array<uint8_t, PartialLabel::SaveSize> resaved_buffer{};
-    loaded.save(gsl::span<uint8_t, PartialLabel::SaveSize>(resaved_buffer));
+    array<byte, PartialLabel::SaveSize> resaved_buffer{};
+    loaded.save(gsl::span<byte, PartialLabel::SaveSize>(resaved_buffer));
 
     // The resaved buffer should match the original clean buffer
     EXPECT_EQ(buffer, resaved_buffer);
@@ -453,10 +453,10 @@ TEST(PartialLabelTests, InitWithSubByteBitCountTest)
     EXPECT_EQ(lbl5, lbl6);
 
     // Save and reload should round-trip correctly
-    array<uint8_t, PartialLabel::SaveSize> buffer{};
-    lbl1.save(gsl::span<uint8_t, PartialLabel::SaveSize>(buffer));
+    array<byte, PartialLabel::SaveSize> buffer{};
+    lbl1.save(gsl::span<byte, PartialLabel::SaveSize>(buffer));
 
     PartialLabel loaded;
-    loaded.load(gsl::span<const uint8_t, PartialLabel::SaveSize>(buffer));
+    loaded.load(gsl::span<const byte, PartialLabel::SaveSize>(buffer));
     EXPECT_EQ(lbl1, loaded);
 }

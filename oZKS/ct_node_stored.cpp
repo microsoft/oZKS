@@ -190,7 +190,8 @@ size_t CTNodeStored::save(SerializationWriter &writer) const
     flatbuffers::FlatBufferBuilder fbs_builder;
 
     array<uint8_t, PartialLabel::SaveSize> label_data{};
-    label().save(gsl::span<uint8_t, PartialLabel::SaveSize>(label_data));
+    label().save(gsl::span<byte, PartialLabel::SaveSize>(
+        reinterpret_cast<byte *>(label_data.data()), label_data.size()));
     fbs::PartialLabel pl_data(
         flatbuffers::span<const uint8_t, PartialLabel::SaveSize>{ label_data });
 
@@ -199,7 +200,8 @@ size_t CTNodeStored::save(SerializationWriter &writer) const
 
     auto create_child_label_data = [&fbs_builder](const PartialLabel &label) {
         array<uint8_t, PartialLabel::SaveSize> child_label_data{};
-        label.save(gsl::span<uint8_t, PartialLabel::SaveSize>(child_label_data));
+        label.save(gsl::span<byte, PartialLabel::SaveSize>(
+            reinterpret_cast<byte *>(child_label_data.data()), child_label_data.size()));
         fbs::PartialLabel child_pl_data(
             flatbuffers::span<const uint8_t, PartialLabel::SaveSize>{ child_label_data });
         return fbs::CreateOptionalPartialLabel(fbs_builder, &child_pl_data);
@@ -262,20 +264,21 @@ tuple<CTNodeStored, PartialLabel, PartialLabel, size_t> CTNodeStored::Load(
     CTNodeStored node;
 
     PartialLabel label;
-    label.load(gsl::span<const uint8_t, PartialLabel::SaveSize>{
-        fbs_ctnode->label()->data()->data(), fbs_ctnode->label()->data()->size() });
+    label.load(gsl::span<const byte, PartialLabel::SaveSize>{
+        reinterpret_cast<const byte *>(fbs_ctnode->label()->data()->data()),
+        fbs_ctnode->label()->data()->size() });
 
     PartialLabel left;
     if (fbs_ctnode->left()) {
-        left.load(gsl::span<const uint8_t, PartialLabel::SaveSize>{
-            fbs_ctnode->left()->label()->data()->data(),
+        left.load(gsl::span<const byte, PartialLabel::SaveSize>{
+            reinterpret_cast<const byte *>(fbs_ctnode->left()->label()->data()->data()),
             fbs_ctnode->left()->label()->data()->size() });
     }
 
     PartialLabel right;
     if (fbs_ctnode->right()) {
-        right.load(gsl::span<const uint8_t, PartialLabel::SaveSize>{
-            fbs_ctnode->right()->label()->data()->data(),
+        right.load(gsl::span<const byte, PartialLabel::SaveSize>{
+            reinterpret_cast<const byte *>(fbs_ctnode->right()->label()->data()->data()),
             fbs_ctnode->right()->label()->data()->size() });
     }
 

@@ -156,12 +156,12 @@ namespace ozks {
         /**
         Save the PartialLabel to a buffer
         */
-        void save(gsl::span<std::uint8_t, SaveSize> buffer) const;
+        void save(gsl::span<std::byte, SaveSize> buffer) const;
 
         /**
         Load a PartialLabel from a buffer.
         */
-        void load(gsl::span<const std::uint8_t, SaveSize> buffer);
+        void load(gsl::span<const std::byte, SaveSize> buffer);
 
     private:
         constexpr static std::size_t WordCount = 4;
