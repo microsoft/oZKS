@@ -62,7 +62,7 @@ The OZKS class (defined in [`examples/ozks_simple/ozks.h`](examples/ozks_simple/
 Insert a key and payload, or a batch of keys and payloads.
 
 ```C++
-InsertResult OZKS::insert(const key_type &key, const payload_type &payload);
+std::shared_ptr<InsertResult> OZKS::insert(const key_type &key, const payload_type &payload);
 InsertResultBatch OZKS::insert(const key_payload_batch_type &input);
 ```
 

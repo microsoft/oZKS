@@ -1,6 +1,6 @@
 {
   "name": "ozks",
-  "version-string": "1.6.0",
+  "version-string": "1.8.0",
   "dependencies": [
     "ms-gsl",
     "flatbuffers",
