@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 // STD
+#include <cstddef>
 #include <unordered_map>
 #include <vector>
 
@@ -48,7 +49,7 @@ namespace {
         byte coin;
         utils::random_bytes(gsl::span<byte>(&coin, 1));
 
-        size_t querier_idx = static_cast<size_t>(coin) % 4;
+        size_t querier_idx = std::to_integer<std::size_t>(coin) % 4;
         return queriers->second[querier_idx];
     }
 } // namespace
