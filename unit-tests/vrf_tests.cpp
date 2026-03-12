@@ -26,8 +26,8 @@ void DoProofTest(vector<byte> &input)
     auto proof = sk->get_vrf_proof(input);
     auto vrf_value = proof->get_vrf_value();
 
-    auto verif_result = pk->verify_vrf_proof(input, proof);
-    auto verif_result_clone = pk_clone->verify_vrf_proof(input, proof);
+    auto verif_result = pk->verify_vrf_proof(input, *proof);
+    auto verif_result_clone = pk_clone->verify_vrf_proof(input, *proof);
 
     EXPECT_TRUE(verif_result.first);
     EXPECT_TRUE(verif_result_clone.first);
@@ -79,8 +79,8 @@ TEST(VRFTests, VRFCacheTest)
 
         if (retrieved_proof) {
 
-            auto verif_result = pk->verify_vrf_proof(key_hash, retrieved_proof);
-            auto verif_original = pk->verify_vrf_proof(key_hash, proofs[i]);
+            auto verif_result = pk->verify_vrf_proof(key_hash, *retrieved_proof);
+            auto verif_original = pk->verify_vrf_proof(key_hash, *proofs[i]);
 
             EXPECT_TRUE(verif_result.first);
             EXPECT_TRUE(verif_original.first);
