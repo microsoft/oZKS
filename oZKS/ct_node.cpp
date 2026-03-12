@@ -425,16 +425,16 @@ bool CTNode::lookup(
 
 bool CTNode::lookup(
     const PartialLabel &lookup_label,
-    const shared_ptr<CTNode> root,
+    const shared_ptr<const CTNode> &root,
     lookup_path_type &path,
     bool include_searched)
 {
-    shared_ptr<CTNode> current = root;
-    shared_ptr<CTNode> sibling;
+    shared_ptr<const CTNode> current = root;
+    shared_ptr<const CTNode> sibling;
     bool sibling_is_left = false;
     bool found = false;
     bool has_route = true;
-    vector<shared_ptr<CTNode>> lookup_path;
+    vector<shared_ptr<const CTNode>> lookup_path;
 
     while (has_route) {
         if (current->get_dirty_bit()) {
@@ -470,8 +470,8 @@ bool CTNode::lookup(
         uint32_t common_count = PartialLabel::CommonPrefixCount(lookup_label, current->label());
         bool next_bit = lookup_label[common_count];
 
-        shared_ptr<CTNode> left_node = current->left();
-        shared_ptr<CTNode> right_node = current->right();
+        shared_ptr<const CTNode> left_node = current->left();
+        shared_ptr<const CTNode> right_node = current->right();
 
         // If there is a route to follow, follow it
         if (next_bit == 1) {

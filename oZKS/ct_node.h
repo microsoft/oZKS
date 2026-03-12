@@ -80,7 +80,7 @@ namespace ozks {
         */
         static bool lookup(
             const PartialLabel &lookup_label,
-            const std::shared_ptr<CTNode> root,
+            const std::shared_ptr<const CTNode> &root,
             lookup_path_type &path,
             bool include_searched);
 
