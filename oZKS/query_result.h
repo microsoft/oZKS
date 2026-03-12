@@ -59,16 +59,22 @@ namespace ozks {
             const key_type &key,
             const payload_type &payload,
             const lookup_path_type &lookup_proof,
-            std::unique_ptr<vrf::Proof> &vrf_proof,
+            const vrf::Proof &vrf_proof,
+            const randomness_type &randomness)
+            : key_(key), payload_(payload), lookup_proof_(lookup_proof),
+              vrf_proof_(vrf_proof.clone()),
+              randomness_(randomness), use_vrf_(config.label_type() == LabelType::VRFLabels)
+        {}
+
+        QueryResult(
+            const OZKSConfig &config,
+            const key_type &key,
+            const payload_type &payload,
+            const lookup_path_type &lookup_proof,
             const randomness_type &randomness)
             : key_(key), payload_(payload), lookup_proof_(lookup_proof),
               randomness_(randomness), use_vrf_(config.label_type() == LabelType::VRFLabels)
-        {
-            if (nullptr != vrf_proof)
-                vrf_proof_ = std::move(vrf_proof);
-            else
-                vrf_proof = nullptr;
-        }
+        {}
 
         /**
         Whether the query found the key that was searched for

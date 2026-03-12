@@ -163,15 +163,26 @@ QueryResult OZKS::query(const key_type &key) const
     hash_type label =
         utils::get_node_label(key, *vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
 
+    bool use_vrf = config_.label_type() == LabelType::VRFLabels;
+    if (use_vrf && !vrf_proof)
+        throw runtime_error("VRF proof expected but not provided");
+
     lookup_path_type lookup_path;
     if (!query_provider_->query(id(), label, lookup_path)) {
         // Non-existence
-        return { config_,
-                 key,
-                 /* payload */ {},
-                 lookup_path,
-                 vrf_proof,
-                 /* randomness */ {} };
+        if (use_vrf)
+            return { config_,
+                     key,
+                     /* payload */ {},
+                     lookup_path,
+                     *vrf_proof,
+                     /* randomness */ {} };
+        else
+            return { config_,
+                     key,
+                     /* payload */ {},
+                     lookup_path,
+                     /* randomness */ {} };
     }
 
     // Existence
@@ -180,12 +191,19 @@ QueryResult OZKS::query(const key_type &key) const
         throw runtime_error("Store should contain the key we found in the trie");
     }
 
-    return { config_,
-             key,
-             element.payload,
-             lookup_path,
-             vrf_proof,
-             element.randomness };
+    if (use_vrf)
+        return { config_,
+                 key,
+                 element.payload,
+                 lookup_path,
+                 *vrf_proof,
+                 element.randomness };
+    else
+        return { config_,
+                 key,
+                 element.payload,
+                 lookup_path,
+                 element.randomness };
 }
 
 unique_ptr<vrf::PublicKey> OZKS::get_vrf_public_key() const

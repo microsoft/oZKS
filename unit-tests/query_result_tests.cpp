@@ -50,7 +50,7 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     randomness[3] = static_cast<byte>(0xFF);
 
     qr = QueryResult(
-        config, key, payload, lookup_proof, vrf_proof, randomness);
+        config, key, payload, lookup_proof, *vrf_proof, randomness);
 }
 
 void VerifyLoadedQueryResult(QueryResult &qr, const OZKSConfig &config)

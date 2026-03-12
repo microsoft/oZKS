@@ -143,15 +143,26 @@ QueryResult OZKS::query(const key_type &key) const
     hash_type label =
         utils::get_node_label(key, *vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
 
+    bool use_vrf = config_.label_type() == LabelType::VRFLabels;
+    if (use_vrf && !vrf_proof)
+        throw runtime_error("VRF proof expected but not provided");
+
     append_proof_type lookup_path;
     if (!query_provider_->query(id(), label, lookup_path)) {
         // Non-existence: return path to partial label that matches key and its two children
-        return { config_,
-                 key,
-                 /* payload */ {},
-                 lookup_path,
-                 vrf_proof,
-                 /* randomness */ {} };
+        if (use_vrf)
+            return { config_,
+                     key,
+                     /* payload */ {},
+                     lookup_path,
+                     *vrf_proof,
+                     /* randomness */ {} };
+        else
+            return { config_,
+                     key,
+                     /* payload */ {},
+                     lookup_path,
+                     /* randomness */ {} };
     }
 
     // Existence: Returns payload, proof (proof = path type) and VRFProof that label was computed
@@ -160,12 +171,19 @@ QueryResult OZKS::query(const key_type &key) const
     if (!storage()->load_store_element(id(), key, store_element))
         throw runtime_error("Store should contain the key we found in the trie");
 
-    return { config_,
-             key,
-             store_element.payload,
-             lookup_path,
-             vrf_proof,
-             store_element.randomness };
+    if (use_vrf)
+        return { config_,
+                 key,
+                 store_element.payload,
+                 lookup_path,
+                 *vrf_proof,
+                 store_element.randomness };
+    else
+        return { config_,
+                 key,
+                 store_element.payload,
+                 lookup_path,
+                 store_element.randomness };
 }
 
 void OZKS::flush()
