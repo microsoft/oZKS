@@ -138,10 +138,8 @@ void OZKS::do_pending_insertions()
 
 QueryResult OZKS::query(const key_type &key) const
 {
-    // get_node_label below will set this to nullopt if the OZKS is not using VRFs
-    unique_ptr<vrf::Proof> vrf_proof;
-    hash_type label =
-        utils::get_node_label(key, *vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
+    auto [label, vrf_proof] =
+        utils::get_node_label(key, *vrf_sk_, vrf_cache_, config_.label_type());
 
     bool use_vrf = config_.label_type() == LabelType::VRFLabels;
     if (use_vrf && !vrf_proof)

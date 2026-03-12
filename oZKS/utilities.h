@@ -129,12 +129,11 @@ namespace ozks {
         /**
         Compute the label for a given key.
         */
-        hash_type get_node_label(
+        std::pair<hash_type, std::unique_ptr<vrf::Proof>> get_node_label(
             const key_type &key,
             vrf::SecretKey &vrf_sk,
             VRFCache &cache,
-            LabelType label_type,
-            std::unique_ptr<vrf::Proof> &proof);
+            LabelType label_type);
 
         /**
         This function computes the label for a given key. In case the VRF proof is not needed,

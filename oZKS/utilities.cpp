@@ -164,16 +164,15 @@ void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
     hash_bytes<sz>(in.data(), in.size(), out.data());
 }
 
-hash_type utils::get_node_label(
+std::pair<hash_type, std::unique_ptr<vrf::Proof>> utils::get_node_label(
     const key_type &key,
     vrf::SecretKey &vrf_sk,
     VRFCache &cache,
-    LabelType label_type,
-    std::unique_ptr<vrf::Proof> &proof)
+    LabelType label_type)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
-    proof = nullptr;
+    std::unique_ptr<vrf::Proof> proof;
 
     if (label_type == LabelType::VRFLabels) {
         // Look up the VRF proof from the cache
@@ -195,7 +194,7 @@ hash_type utils::get_node_label(
         utils::copy_bytes_to_hash(vrf_value, key_hash);
     }
 
-    return key_hash;
+    return { key_hash, std::move(proof) };
 }
 
 hash_type utils::get_node_label(
