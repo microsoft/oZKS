@@ -131,7 +131,7 @@ namespace ozks {
         */
         hash_type get_node_label(
             const key_type &key,
-            vrf::SecretKey *vrf_sk,
+            vrf::SecretKey &vrf_sk,
             VRFCache &cache,
             LabelType label_type,
             std::unique_ptr<vrf::Proof> &proof);
@@ -142,7 +142,7 @@ namespace ozks {
         */
         hash_type get_node_label(
             const key_type &key,
-            vrf::SecretKey *vrf_sk,
+            vrf::SecretKey &vrf_sk,
             LabelType label_type);
 
         /**

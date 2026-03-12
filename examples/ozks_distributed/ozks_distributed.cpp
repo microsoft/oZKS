@@ -87,7 +87,7 @@ shared_ptr<Storage> OZKS::storage_querier() const
 
 void OZKS::insert(const key_type &key, const payload_type &payload)
 {
-    hash_type label = utils::get_node_label(key, vrf_sk_.get(), config_.label_type());
+    hash_type label = utils::get_node_label(key, *vrf_sk_, config_.label_type());
     auto commit_result = utils::commit_payload(payload, config_.payload_commitment());
 
     store_value_type store_element;
@@ -124,7 +124,7 @@ void OZKS::insert(const key_payload_batch_type &input)
             for (size_t j = begin_idx; j < end_idx; j++) {
                 const auto &key_payload = input[j];
                 hash_type label =
-                    utils::get_node_label(key_payload.first, vrf_sk_.get(), config_.label_type());
+                    utils::get_node_label(key_payload.first, *vrf_sk_, config_.label_type());
                 auto payload_commit =
                     utils::commit_payload(key_payload.second, config_.payload_commitment());
                 label_commit_batch[j] = { label, payload_commit.first };
@@ -161,7 +161,7 @@ QueryResult OZKS::query(const key_type &key) const
     // get_node_label below will set this to nullptr if the OZKS is not using VRFs
     unique_ptr<vrf::Proof> vrf_proof;
     hash_type label =
-        utils::get_node_label(key, vrf_sk_.get(), vrf_cache_, config_.label_type(), vrf_proof);
+        utils::get_node_label(key, *vrf_sk_, vrf_cache_, config_.label_type(), vrf_proof);
 
     lookup_path_type lookup_path;
     if (!query_provider_->query(id(), label, lookup_path)) {

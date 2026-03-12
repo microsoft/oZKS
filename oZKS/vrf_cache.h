@@ -30,7 +30,7 @@ namespace ozks {
         VRFCache(const VRFCache &other) : VRFCache(other.size())
         {}
 
-        void add(const hash_type &key_hash, const vrf::Proof *vrf_proof);
+        void add(const hash_type &key_hash, const vrf::Proof &vrf_proof);
 
         std::unique_ptr<vrf::Proof> get(const hash_type &key_hash);
 
