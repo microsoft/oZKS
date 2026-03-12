@@ -469,8 +469,8 @@ TEST(OZKSDistTests, BatchInsertTest)
     for (size_t i = 0; i < batch_count; i++) {
         key_type key(16);
         payload_type payload(40);
-        get_random_bytes(key.data(), key.size());
-        get_random_bytes(payload.data(), payload.size());
+        random_bytes(key);
+        random_bytes(payload);
 
         batch.emplace_back(key, payload);
         keys.push_back(key);
@@ -496,7 +496,7 @@ TEST(OZKSDistTests, BatchInsertTest)
     // A random key that was never inserted must not be found
     for (size_t i = 0; i < 100; i++) {
         key_type random_key(16);
-        get_random_bytes(random_key.data(), random_key.size());
+        random_bytes(random_key);
 
         auto result = ozks.query(random_key);
         EXPECT_FALSE(result.is_member());
