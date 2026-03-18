@@ -44,8 +44,10 @@ namespace ozks {
             std::size_t right_epoch)
             : CTNodeStored(trie, label, hash)
         {
-            set_left_node(left_label, left_epoch);
-            set_right_node(right_label, right_epoch);
+            left_ = left_label;
+            left_child_epoch_ = left_epoch;
+            right_ = right_label;
+            right_child_epoch_ = right_epoch;
             epoch_ = epoch;
             set_dirty_bit(false);
         }
