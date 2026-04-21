@@ -45,33 +45,59 @@ void CTNodeLinked::save_to_storage(unordered_map<PartialLabel, shared_ptr<CTNode
 }
 
 void CTNodeLinked::load_from_storage(
-    shared_ptr<storage::Storage> storage, const PartialLabel &left, const PartialLabel &right)
+    shared_ptr<storage::Storage> storage,
+    const PartialLabel &left,
+    size_t left_epoch,
+    const PartialLabel &right,
+    size_t right_epoch)
 {
     if (!left.empty()) {
         CTNodeStored snode;
-        if (!storage->load_ctnode(trie_->id(), left, storage, snode)) {
+        if (!storage->load_ctnode(trie_->id(), left, left_epoch, storage, snode)) {
             throw runtime_error("Could not load node");
         }
 
-        shared_ptr<CTNode> node = make_shared<CTNodeLinked>(trie_, snode.label(), snode.hash());
-        set_left_node(node);
+        // Use the (trie, label, hash) ctor: it stores the hash verbatim. The 4-arg
+        // ctor would call compute_leaf_hash, which is wrong for interior nodes.
+        auto node = make_shared<CTNodeLinked>(trie_, snode.label(), snode.hash());
+        node->epoch_ = snode.epoch();
+        set_left_node_for_load(node, snode.epoch());
 
-        node->load_from_storage(storage, snode.left_label(), snode.right_label());
+        node->load_from_storage(
+            storage,
+            snode.left_label(),  snode.left_child_epoch(),
+            snode.right_label(), snode.right_child_epoch());
     }
 
     if (!right.empty()) {
         CTNodeStored snode;
-        if (!storage->load_ctnode(trie_->id(), right, storage, snode)) {
+        if (!storage->load_ctnode(trie_->id(), right, right_epoch, storage, snode)) {
             throw runtime_error("Could not load node");
         }
 
-        shared_ptr<CTNode> node = make_shared<CTNodeLinked>(trie_, snode.label(), snode.hash());
-        set_right_node(node);
+        auto node = make_shared<CTNodeLinked>(trie_, snode.label(), snode.hash());
+        node->epoch_ = snode.epoch();
+        set_right_node_for_load(node, snode.epoch());
 
-        node->load_from_storage(storage, snode.left_label(), snode.right_label());
+        node->load_from_storage(
+            storage,
+            snode.left_label(),  snode.left_child_epoch(),
+            snode.right_label(), snode.right_child_epoch());
     }
 
     set_dirty_bit(false);
+}
+
+void CTNodeLinked::set_left_node_for_load(shared_ptr<CTNode> new_left_node, size_t child_epoch)
+{
+    left_ = new_left_node;
+    left_child_epoch_ = child_epoch;
+}
+
+void CTNodeLinked::set_right_node_for_load(shared_ptr<CTNode> new_right_node, size_t child_epoch)
+{
+    right_ = new_right_node;
+    right_child_epoch_ = child_epoch;
 }
 
 void CTNodeLinked::set_left_node(shared_ptr<CTNode> new_left_node)

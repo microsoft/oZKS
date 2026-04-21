@@ -379,10 +379,14 @@ pair<shared_ptr<CompressedTrie>, bool> CompressedTrie::LoadFromStorageWithChildr
         throw runtime_error("Could not load root");
     }
     auto root = make_shared<CTNodeLinked>(trie.get(), snode.label(), snode.hash());
+    root->epoch_ = snode.epoch();
     trie->init(root);
     trie->trie_type_ = TrieType::Linked;
 
-    trie->root_->load_from_storage(storage, snode.left_label(), snode.right_label());
+    trie->root_->load_from_storage(
+        storage,
+        snode.left_label(),  snode.left_child_epoch(),
+        snode.right_label(), snode.right_child_epoch());
 
     return { trie, true };
 }

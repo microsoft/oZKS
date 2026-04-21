@@ -97,7 +97,9 @@ namespace ozks {
         void load_from_storage(
             std::shared_ptr<storage::Storage> storage,
             const PartialLabel &left,
-            const PartialLabel &right) override;
+            std::size_t left_epoch,
+            const PartialLabel &right,
+            std::size_t right_epoch) override;
 
         /**
         Whether the node supports parallelization
@@ -110,6 +112,18 @@ namespace ozks {
     private:
         std::shared_ptr<CTNode> left_;
         std::shared_ptr<CTNode> right_;
+
+        /**
+        Set the left child while loading from storage. Unlike set_left_node, this does not
+        advance this node's epoch or flip the dirty bit, and it records the supplied
+        child epoch rather than reading it from the (not-yet-populated) child.
+        */
+        void set_left_node_for_load(std::shared_ptr<CTNode> new_left_node, std::size_t child_epoch);
+
+        /**
+        Set the right child while loading from storage. Same contract as set_left_node_for_load.
+        */
+        void set_right_node_for_load(std::shared_ptr<CTNode> new_right_node, std::size_t child_epoch);
 
     protected:
         void set_left_node(std::shared_ptr<CTNode> new_left_node) override;
