@@ -56,6 +56,14 @@ namespace {
             return storage_.load_ctnode(trie_id, node_id, epoch, storage, node);
         }
 
+        bool load_ctnodes(
+            trie_id_type trie_id,
+            const vector<pair<PartialLabel, size_t>> &label_epoch_pairs,
+            vector<CTNodeStored> &out_nodes) override
+        {
+            return storage_.load_ctnodes(trie_id, label_epoch_pairs, out_nodes);
+        }
+
         void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) override
         {
             storage_.save_ctnode(trie_id, node);
@@ -234,6 +242,14 @@ namespace {
             CTNodeStored &node) override
         {
             return storage_.load_ctnode(trie_id, node_id, storage, node);
+        }
+
+        bool load_ctnodes(
+            trie_id_type trie_id,
+            const vector<pair<PartialLabel, size_t>> &label_epoch_pairs,
+            vector<CTNodeStored> &out_nodes) override
+        {
+            return storage_.load_ctnodes(trie_id, label_epoch_pairs, out_nodes);
         }
 
         void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) override

@@ -2,12 +2,15 @@
 // Licensed under the MIT license.
 
 // STD
+#include <sstream>
+#include <stdexcept>
 
 // OZKS
 #include "oZKS/compressed_trie.h"
 #include "oZKS/ct_node_stored.h"
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage_batch_inserter.h"
+#include "oZKS/utilities.h"
 
 using namespace std;
 using namespace ozks;
@@ -59,6 +62,50 @@ bool MemoryStorageBatchInserter::load_ctnode(
 
     // Second, check backing storage
     return storage_->load_ctnode(trie_id, node_id, epoch, storage, node);
+}
+
+bool MemoryStorageBatchInserter::load_ctnodes(
+    trie_id_type trie_id,
+    const vector<pair<PartialLabel, size_t>> &label_epoch_pairs,
+    vector<CTNodeStored> &out_nodes)
+{
+    if (nullptr == storage_)
+        throw runtime_error("storage is not initialized");
+
+    out_nodes.assign(label_epoch_pairs.size(), CTNodeStored{});
+
+    // Split input into what's already in unsaved_nodes_ (hit locally) and what needs to
+    // go to the backing store (batched). Preserve the original ordering via indices.
+    vector<pair<PartialLabel, size_t>> backing_pairs;
+    vector<size_t> backing_indices;
+    backing_pairs.reserve(label_epoch_pairs.size());
+    backing_indices.reserve(label_epoch_pairs.size());
+
+    for (size_t i = 0; i < label_epoch_pairs.size(); i++) {
+        const auto &[label, epoch] = label_epoch_pairs[i];
+        StorageNodeKey key(trie_id, label);
+        auto unsaved_it = unsaved_nodes_.find(key);
+        if (unsaved_it != unsaved_nodes_.end() && unsaved_it->second.epoch() == epoch) {
+            out_nodes[i] = unsaved_it->second;
+        } else {
+            backing_pairs.emplace_back(label, epoch);
+            backing_indices.push_back(i);
+        }
+    }
+
+    if (backing_pairs.empty()) {
+        return true;
+    }
+
+    vector<CTNodeStored> backing_nodes;
+    if (!storage_->load_ctnodes(trie_id, backing_pairs, backing_nodes)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < backing_indices.size(); i++) {
+        out_nodes[backing_indices[i]] = std::move(backing_nodes[i]);
+    }
+    return true;
 }
 
 void MemoryStorageBatchInserter::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)

@@ -176,19 +176,6 @@ namespace ozks {
         bool update_hash(std::size_t level = 0, std::size_t root_levels = 0);
 
         /**
-        Load this node from storage, as well as its children.
-        The child epochs are used to load the specific versions referenced by this node,
-        and are stored on the loaded node so that its own children can later be resolved.
-        */
-        virtual void load_from_storage(
-            std::shared_ptr<storage::Storage> /* storage */,
-            const PartialLabel & /* left */,
-            std::size_t /* left_epoch */,
-            const PartialLabel & /* right */,
-            std::size_t /* right_epoch */)
-        {}
-
-        /**
         Initialize a node with the given Trie pointer
         */
         void init(const CompressedTrie *trie);

@@ -11,6 +11,7 @@ target_sources(unit_tests
         ${CMAKE_CURRENT_LIST_DIR}/insert_result_tests.cpp
         ${CMAKE_CURRENT_LIST_DIR}/partial_label_tests.cpp
         ${CMAKE_CURRENT_LIST_DIR}/query_result_tests.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/storage_tests.cpp
         ${CMAKE_CURRENT_LIST_DIR}/utilities_tests.cpp
         ${CMAKE_CURRENT_LIST_DIR}/vrf_tests.cpp
 )

@@ -12,6 +12,8 @@
 
 namespace ozks {
     class CTNodeLinked : public CTNode {
+        friend class CompressedTrie;
+
     public:
         CTNodeLinked(const CompressedTrie *trie = nullptr, std::size_t epoch = invalid_epoch) : CTNode(trie, epoch)
         {}
@@ -90,16 +92,6 @@ namespace ozks {
         void save_to_storage(
             std::unordered_map<PartialLabel, std::shared_ptr<CTNode>> *updated_nodes =
                 nullptr) override;
-
-        /**
-        Load this node from storage, as well as its children
-        */
-        void load_from_storage(
-            std::shared_ptr<storage::Storage> storage,
-            const PartialLabel &left,
-            std::size_t left_epoch,
-            const PartialLabel &right,
-            std::size_t right_epoch) override;
 
         /**
         Whether the node supports parallelization

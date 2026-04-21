@@ -61,6 +61,17 @@ namespace {
         }
 
         /**
+        Load a batch of nodes from storage.
+        */
+        bool load_ctnodes(
+            trie_id_type trie_id,
+            const vector<pair<PartialLabel, size_t>> &label_epoch_pairs,
+            vector<CTNodeStored> &out_nodes) override
+        {
+            return backing_->load_ctnodes(trie_id, label_epoch_pairs, out_nodes);
+        }
+
+        /**
         Save a node to storage
         */
         void save_ctnode(trie_id_type trie_id, const CTNodeStored &node) override

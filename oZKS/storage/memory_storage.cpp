@@ -2,10 +2,13 @@
 // Licensed under the MIT license.
 
 // STD
+#include <sstream>
+#include <stdexcept>
 #include <unordered_set>
 
 // OZKS
 #include "oZKS/storage/memory_storage.h"
+#include "oZKS/utilities.h"
 
 using namespace std;
 using namespace ozks;
@@ -49,6 +52,35 @@ bool MemoryStorage::load_ctnode(
     }
 
     node = node_it->second;
+    return true;
+}
+
+bool MemoryStorage::load_ctnodes(
+    trie_id_type trie_id,
+    const vector<pair<PartialLabel, size_t>> &label_epoch_pairs,
+    vector<CTNodeStored> &out_nodes)
+{
+    out_nodes.assign(label_epoch_pairs.size(), CTNodeStored{});
+
+    vector<size_t> missing_indices;
+    for (size_t i = 0; i < label_epoch_pairs.size(); i++) {
+        const auto &[label, epoch] = label_epoch_pairs[i];
+        if (!load_ctnode(trie_id, label, epoch, /* storage */ nullptr, out_nodes[i])) {
+            missing_indices.push_back(i);
+        }
+    }
+
+    if (!missing_indices.empty()) {
+        ostringstream oss;
+        oss << "MemoryStorage::load_ctnodes: " << missing_indices.size()
+            << " missing node(s):";
+        for (size_t idx : missing_indices) {
+            oss << " [" << ozks::utils::to_string(label_epoch_pairs[idx].first)
+                << " @ epoch " << label_epoch_pairs[idx].second << "]";
+        }
+        throw runtime_error(oss.str());
+    }
+
     return true;
 }
 

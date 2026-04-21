@@ -83,6 +83,49 @@ bool MemoryStorageCache::load_ctnode(
     return true;
 }
 
+bool MemoryStorageCache::load_ctnodes(
+    trie_id_type trie_id,
+    const vector<pair<PartialLabel, size_t>> &label_epoch_pairs,
+    vector<CTNodeStored> &out_nodes)
+{
+    out_nodes.assign(label_epoch_pairs.size(), CTNodeStored{});
+
+    // Serve what we can from the cache; collect the rest for the backing store.
+    vector<pair<PartialLabel, size_t>> backing_pairs;
+    vector<size_t> backing_indices;
+    backing_pairs.reserve(label_epoch_pairs.size());
+    backing_indices.reserve(label_epoch_pairs.size());
+
+    for (size_t i = 0; i < label_epoch_pairs.size(); i++) {
+        const auto &[label, epoch] = label_epoch_pairs[i];
+        StorageNodeVersionedKey key(trie_id, label, epoch);
+        auto cached = node_cache_.get(key);
+        if (!cached.isNull()) {
+            out_nodes[i] = *cached.get();
+        } else {
+            backing_pairs.emplace_back(label, epoch);
+            backing_indices.push_back(i);
+        }
+    }
+
+    if (backing_pairs.empty()) {
+        return true;
+    }
+
+    vector<CTNodeStored> backing_nodes;
+    if (!storage_->load_ctnodes(trie_id, backing_pairs, backing_nodes)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < backing_indices.size(); i++) {
+        const auto &[label, epoch] = backing_pairs[i];
+        StorageNodeVersionedKey key(trie_id, label, epoch);
+        node_cache_.add(key, backing_nodes[i]);
+        out_nodes[backing_indices[i]] = std::move(backing_nodes[i]);
+    }
+    return true;
+}
+
 void MemoryStorageCache::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
 {
     StorageNodeVersionedKey key(trie_id, node.label(), node.epoch());

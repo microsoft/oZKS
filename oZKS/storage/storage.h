@@ -6,9 +6,12 @@
 // STD
 #include <memory>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 // OZKS
 #include "oZKS/defines.h"
+#include "oZKS/partial_label.h"
 
 namespace ozks {
     class CTNodeStored;
@@ -46,6 +49,17 @@ namespace ozks {
                 std::size_t epoch,
                 std::shared_ptr<Storage> storage,
                 CTNodeStored &node) = 0;
+
+            /**
+            Load a batch of nodes from storage in a single call.
+            out_nodes is resized to label_epoch_pairs.size() on success and indexed identically
+            to the input vector. Throws std::runtime_error with a message identifying any
+            missing (label, epoch) entries.
+            */
+            virtual bool load_ctnodes(
+                trie_id_type trie_id,
+                const std::vector<std::pair<PartialLabel, std::size_t>> &label_epoch_pairs,
+                std::vector<CTNodeStored> &out_nodes) = 0;
 
             /**
             Save a node to storage

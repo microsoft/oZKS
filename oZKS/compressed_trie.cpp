@@ -372,21 +372,80 @@ pair<shared_ptr<CompressedTrie>, bool> CompressedTrie::LoadFromStorageWithChildr
         return { nullptr, false };
     }
     trie->init(storage);
-
-    // Now load the children
-    CTNodeStored snode;
-    if (!storage->load_ctnode(trie_id, {}, trie->epoch(), storage, snode)) {
-        throw runtime_error("Could not load root");
-    }
-    auto root = make_shared<CTNodeLinked>(trie.get(), snode.label(), snode.hash());
-    root->epoch_ = snode.epoch();
-    trie->init(root);
     trie->trie_type_ = TrieType::Linked;
 
-    trie->root_->load_from_storage(
-        storage,
-        snode.left_label(),  snode.left_child_epoch(),
-        snode.right_label(), snode.right_child_epoch());
+    // Load the root
+    CTNodeStored root_stored;
+    if (!storage->load_ctnode(trie_id, {}, trie->epoch(), /* storage */ nullptr, root_stored)) {
+        throw runtime_error("Could not load root");
+    }
+
+    auto root = make_shared<CTNodeLinked>(trie.get(), root_stored.label(), root_stored.hash());
+    root->epoch_ = root_stored.epoch();
+    trie->init(root);
+
+    // BFS: each level is loaded in one batched storage call. A PendingChild remembers which
+    // parent slot to fill once the child arrives.
+    struct PendingChild {
+        shared_ptr<CTNodeLinked> parent;
+        bool is_left;
+        PartialLabel label;
+        size_t epoch;
+    };
+
+    auto enqueue_children =
+        [](const shared_ptr<CTNodeLinked> &parent,
+           const CTNodeStored &snode,
+           vector<PendingChild> &out_pending) {
+            if (!snode.left_label().empty()) {
+                out_pending.push_back(
+                    { parent, /* is_left */ true, snode.left_label(), snode.left_child_epoch() });
+            }
+            if (!snode.right_label().empty()) {
+                out_pending.push_back(
+                    { parent, /* is_left */ false, snode.right_label(), snode.right_child_epoch() });
+            }
+        };
+
+    vector<PendingChild> current_level;
+    enqueue_children(root, root_stored, current_level);
+
+    while (!current_level.empty()) {
+        vector<pair<PartialLabel, size_t>> pairs;
+        pairs.reserve(current_level.size());
+        for (const auto &pc : current_level) {
+            pairs.emplace_back(pc.label, pc.epoch);
+        }
+
+        vector<CTNodeStored> loaded_nodes;
+        // Backends throw with the list of missing labels on any miss; propagate through.
+        if (!storage->load_ctnodes(trie_id, pairs, loaded_nodes)) {
+            throw runtime_error("load_ctnodes returned false without throwing");
+        }
+
+        vector<PendingChild> next_level;
+        next_level.reserve(current_level.size() * 2);
+
+        for (size_t i = 0; i < current_level.size(); i++) {
+            const PendingChild &pc = current_level[i];
+            const CTNodeStored &snode = loaded_nodes[i];
+
+            // Use the (trie, label, hash) ctor — it stashes the hash verbatim. The leaf-hash
+            // recomputation path (4-arg ctor) would corrupt interior-node hashes.
+            auto child = make_shared<CTNodeLinked>(trie.get(), snode.label(), snode.hash());
+            child->epoch_ = snode.epoch();
+
+            if (pc.is_left) {
+                pc.parent->set_left_node_for_load(child, snode.epoch());
+            } else {
+                pc.parent->set_right_node_for_load(child, snode.epoch());
+            }
+
+            enqueue_children(child, snode, next_level);
+        }
+
+        current_level = std::move(next_level);
+    }
 
     return { trie, true };
 }
