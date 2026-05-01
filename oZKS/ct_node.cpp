@@ -195,11 +195,20 @@ std::pair<PartialLabel, std::size_t> CTNode::insert(
         // Convert current leaf to non-leaf
         hash_type node_hash =
             hash(); // Need to make a copy because node will become dirty in the process
+
+        // Cache the leaf's epoch BEFORE any setter mutates this->epoch_. The set_left_node /
+        // set_right_node overloads that take (label, hash, epoch) advance this->epoch_ to
+        // trie_->epoch() as a side effect (they're preparing `this` to become an internal
+        // node). If we then read this->epoch() for the sibling wrapper leaf, we'd stamp the
+        // OLD leaf's preserved (label, hash) with the NEW epoch — corrupting an immutable
+        // leaf record. See ct_node tests covering the LeafEpochInvariant scenario.
+        size_t this_epoch = this->epoch();
+
         if (next_bit == 0) {
             left_node = set_left_node(insert_label, insert_hash, epoch);
-            right_node = set_existing_right_node(label(), node_hash, this->epoch());
+            right_node = set_existing_right_node(label(), node_hash, this_epoch);
         } else {
-            left_node = set_existing_left_node(label(), node_hash, this->epoch());
+            left_node = set_existing_left_node(label(), node_hash, this_epoch);
             right_node = set_right_node(insert_label, insert_hash, epoch);
         }
 

@@ -2031,3 +2031,98 @@ TEST(CompressedTrieTests, LoadFromStorageTest2)
     EXPECT_TRUE(trie_linked.lookup(key5, lookup_path));
     EXPECT_FALSE(trie_linked.lookup(key6, lookup_path));
 }
+
+// Reproduces the UpdateServer scenario: two consecutive epoch batches inserted into a
+// linked-mode trie backed by MemoryStorage. MemoryStorage::save_ctnode will throw if any
+// leaf is re-saved at an epoch different from the one it was originally written with —
+// which is exactly the symptom we observed in CosmosDB (≈20% of "epoch 1" leaves being
+// rewritten under epoch 2 with no other change). With the fix in CTNode::insert, the
+// second batch must not trigger that throw.
+TEST(CompressedTrieTests, LeafEpochInvariantBatchInsert)
+{
+    auto storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Linked);
+
+    constexpr size_t batch_size = 1000;
+
+    auto make_random_batch = [](size_t count) {
+        partial_label_hash_batch_type batch;
+        batch.resize(count);
+        for (size_t idx = 0; idx < count; idx++) {
+            array<byte, PartialLabel::ByteCount> key_bytes{};
+            utils::random_bytes(gsl::span<byte>(key_bytes.data(), key_bytes.size()));
+            PartialLabel key(key_bytes);
+
+            hash_type payload{};
+            utils::random_bytes(gsl::span<byte>(payload.data(), payload.size()));
+
+            batch[idx] = { key, payload };
+        }
+        return batch;
+    };
+
+    // Epoch 1
+    {
+        partial_label_hash_batch_type batch = make_random_batch(batch_size);
+        append_proof_batch_type append_proofs;
+        ASSERT_NO_THROW(trie.insert(batch, append_proofs));
+    }
+    EXPECT_EQ(1, trie.epoch());
+
+    // Epoch 2 — without the CTNode::insert fix, the leaf-to-internal-split path stamps the
+    // wrapper leaf carrying the epoch-1 leaf's preserved (label, hash) with the new epoch,
+    // and MemoryStorage::save_ctnode throws.
+    {
+        partial_label_hash_batch_type batch = make_random_batch(batch_size);
+        append_proof_batch_type append_proofs;
+        ASSERT_NO_THROW(trie.insert(batch, append_proofs));
+    }
+    EXPECT_EQ(2, trie.epoch());
+}
+
+// Targeted test exercising both leaf-to-internal split branches (next_bit == 0 and
+// next_bit == 1) and asserting that the displaced leaf's epoch is preserved.
+TEST(CompressedTrieTests, LeafEpochPreservedOnLeafToInternalSplit)
+{
+    // Case 1: next_bit == 0 (the buggy branch before the fix).
+    // Existing leaf at 0xC0 (110...) inserted in epoch 1; in epoch 2 we insert 0x80
+    // (100...). Their common prefix is "1", and the new label has next_bit == 0 at
+    // depth 1, which routes the existing leaf to the right slot via
+    // set_existing_right_node — the path that previously read the corrupted this->epoch().
+    {
+        auto storage = make_shared<storage::MemoryStorage>();
+        CompressedTrie trie(storage, TrieType::Linked);
+        append_proof_type append_proof;
+
+        trie.insert(
+            make_bytes<PartialLabel>(0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+            make_bytes<hash_type>(0x01, 0x02, 0x03),
+            append_proof);
+        EXPECT_EQ(1, trie.epoch());
+
+        ASSERT_NO_THROW(trie.insert(
+            make_bytes<PartialLabel>(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+            make_bytes<hash_type>(0x04, 0x05, 0x06),
+            append_proof));
+        EXPECT_EQ(2, trie.epoch());
+    }
+
+    // Case 2: next_bit == 1 (the historically correct branch).
+    {
+        auto storage = make_shared<storage::MemoryStorage>();
+        CompressedTrie trie(storage, TrieType::Linked);
+        append_proof_type append_proof;
+
+        trie.insert(
+            make_bytes<PartialLabel>(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+            make_bytes<hash_type>(0x01, 0x02, 0x03),
+            append_proof);
+        EXPECT_EQ(1, trie.epoch());
+
+        ASSERT_NO_THROW(trie.insert(
+            make_bytes<PartialLabel>(0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+            make_bytes<hash_type>(0x04, 0x05, 0x06),
+            append_proof));
+        EXPECT_EQ(2, trie.epoch());
+    }
+}
