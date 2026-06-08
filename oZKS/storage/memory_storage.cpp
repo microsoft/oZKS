@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 // OZKS
+#include "oZKS/config.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
 
@@ -90,28 +91,31 @@ void MemoryStorage::save_ctnode(trie_id_type trie_id, const CTNodeStored &node)
     StorageNodeKey node_key{ trie_id, node.label() };
     auto epochs_it = node_epochs_.find(node_key);
     if (epochs_it != node_epochs_.end()) {
+#ifdef OZKS_STORAGE_INVARIANT_CHECKS
         // A leaf node's record (label, hash, epoch) is immutable: once written it must
         // never be re-saved at a different epoch. If we hit this, something on the insert
         // path mutated the leaf's epoch_ and then re-saved it. Throw so callers can see
-        // exactly which leaf was corrupted.
+        // exactly which leaf was corrupted. This extra lookup is compiled out of production
+        // builds (enabled only when OZKS_STORAGE_INVARIANT_CHECKS is defined).
         bool incoming_is_leaf = node.left_label().empty() && node.right_label().empty();
         if (incoming_is_leaf) {
-            size_t existing_epoch = epochs_it->second;
-            StorageNodeVersionedKey existing_key{ trie_id, node.label(), existing_epoch };
-            auto existing_it = nodes_.find(existing_key);
+            size_t check_epoch = epochs_it->second;
+            StorageNodeVersionedKey check_key{ trie_id, node.label(), check_epoch };
+            auto existing_it = nodes_.find(check_key);
             if (existing_it != nodes_.end()) {
                 const CTNodeStored &existing = existing_it->second;
                 bool existing_is_leaf =
                     existing.left_label().empty() && existing.right_label().empty();
-                if (existing_is_leaf && existing_epoch != node.epoch()) {
+                if (existing_is_leaf && check_epoch != node.epoch()) {
                     std::ostringstream oss;
                     oss << "MemoryStorage::save_ctnode: leaf epoch invariant violated for label "
                         << ozks::utils::to_string(node.label()) << ": stored epoch "
-                        << existing_epoch << ", incoming epoch " << node.epoch();
+                        << check_epoch << ", incoming epoch " << node.epoch();
                     throw std::runtime_error(oss.str());
                 }
             }
         }
+#endif // OZKS_STORAGE_INVARIANT_CHECKS
 
         // Remove existing node
         size_t existing_epoch = epochs_it->second;

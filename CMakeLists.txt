@@ -167,6 +167,15 @@ if(OZKS_BUILD_TESTS)
     endif()
 endif()
 
+# [Option] OZKS_STORAGE_INVARIANT_CHECKS (default: OFF; forced ON in test builds)
+# Compiles extra storage-layer invariant checks (e.g. MemoryStorage's leaf save-once
+# invariant) into the library. Kept out of production builds so they pay no runtime cost.
+set(OZKS_STORAGE_INVARIANT_CHECKS_OPTION_STR "Compile storage-layer invariant checks into the library")
+option(OZKS_STORAGE_INVARIANT_CHECKS ${OZKS_STORAGE_INVARIANT_CHECKS_OPTION_STR} OFF)
+if(OZKS_BUILD_TESTS)
+    set(OZKS_STORAGE_INVARIANT_CHECKS ON)
+endif()
+
 # [Option] OZKS_BUILD_BENCH (default: OFF)
 set(OZKS_BUILD_BENCH_OPTION_STR "Build performance benchmarks")
 option(OZKS_BUILD_BENCH ${OZKS_BUILD_BENCH_OPTION_STR} OFF)

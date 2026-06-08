@@ -16,3 +16,8 @@
 #cmakedefine OZKS_ARCH_AMD64
 #cmakedefine OZKS_USE__BITSCANREVERSE64
 #cmakedefine OZKS_USE___BUILTIN_CLZLL
+
+// Enables extra storage-layer invariant checks (e.g. MemoryStorage's leaf save-once
+// invariant). Defaulted ON in test builds (OZKS_BUILD_TESTS) and compiled out otherwise so
+// production builds pay no runtime cost.
+#cmakedefine OZKS_STORAGE_INVARIANT_CHECKS
