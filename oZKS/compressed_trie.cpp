@@ -423,6 +423,12 @@ pair<shared_ptr<CompressedTrie>, bool> CompressedTrie::LoadFromStorageWithChildr
             throw runtime_error("load_ctnodes returned false without throwing");
         }
 
+        // On success the contract guarantees one node per requested pair; guard against a
+        // non-conforming backend so we fail loudly instead of reading past the end below.
+        if (loaded_nodes.size() != current_level.size()) {
+            throw runtime_error("load_ctnodes returned an unexpected node count");
+        }
+
         vector<PendingChild> next_level;
         next_level.reserve(current_level.size() * 2);
 

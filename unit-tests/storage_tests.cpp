@@ -277,3 +277,44 @@ TEST(StorageTests, CacheLoadCtnodesSplitsCacheHitsAndBacking)
     ASSERT_EQ(1U, call.pairs.size());
     EXPECT_EQ(label_B, call.pairs[0].first);
 }
+
+// MemoryStorageCache::load_ctnodes must keep the latest-epoch index coherent: when a
+// batch brings in a newer version of a label the cache already tracks, a subsequent
+// latest-version load_ctnode must return the newer version rather than the stale one.
+TEST(StorageTests, CacheLoadCtnodesAdvancesLatestEpochIndex)
+{
+    auto backing = make_shared<InstrumentedBatchStorage>();
+    auto cache = make_shared<MemoryStorageCache>(backing, /* cache_size */ 128);
+
+    constexpr trie_id_type trie_id = 23;
+
+    PartialLabel label = make_bytes<PartialLabel>(0x40);
+
+    // Hashes must have the low bit of byte 0 clear — see note in the batch-inserter test.
+    hash_type hash_v1 = make_bytes<hash_type>(0x10);
+    hash_type hash_v2 = make_bytes<hash_type>(0x20);
+
+    // The cache already tracks the label at epoch 1, so node_epochs_ points there.
+    cache->add_ctnode(trie_id, make_test_node(label, hash_v1, /* epoch */ 1));
+
+    // A newer version (epoch 2) lives in the backing and gets batch-loaded.
+    backing->save_ctnode(trie_id, make_test_node(label, hash_v2, /* epoch */ 2));
+
+    vector<pair<PartialLabel, size_t>> pairs = { { label, 2 } };
+    vector<CTNodeStored> out;
+    ASSERT_TRUE(cache->load_ctnodes(trie_id, pairs, out));
+    ASSERT_EQ(1U, out.size());
+    EXPECT_EQ(hash_v2, out[0].hash());
+
+    backing->reset_instrumentation();
+
+    // A latest-version load must now resolve to epoch 2 (served from cache), proving the
+    // batch load advanced the latest-epoch index instead of leaving it on the stale epoch 1.
+    CTNodeStored latest;
+    ASSERT_TRUE(cache->load_ctnode(trie_id, label, /* storage */ nullptr, latest));
+    EXPECT_EQ(2U, latest.epoch());
+    EXPECT_EQ(hash_v2, latest.hash());
+
+    // The latest read was served from cache, so the backing batch path was not consulted.
+    EXPECT_EQ(0U, backing->load_ctnodes_call_count());
+}

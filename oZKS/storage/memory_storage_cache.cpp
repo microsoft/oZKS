@@ -117,10 +117,30 @@ bool MemoryStorageCache::load_ctnodes(
         return false;
     }
 
+    // The interface contract guarantees one node per requested pair when load_ctnodes
+    // returns true (missing entries are signaled by throwing). Guard against a
+    // non-conforming backend so we fail loudly instead of reading past the end below.
+    if (backing_nodes.size() != backing_indices.size()) {
+        throw runtime_error(
+            "MemoryStorageCache::load_ctnodes: backing store returned an unexpected node count");
+    }
+
     for (size_t i = 0; i < backing_indices.size(); i++) {
         const auto &[label, epoch] = backing_pairs[i];
         StorageNodeVersionedKey key(trie_id, label, epoch);
         node_cache_.add(key, backing_nodes[i]);
+
+        // Keep the latest-epoch index coherent with the rest of the class. If we already
+        // track an epoch for this label and this batch-loaded version is newer, advance the
+        // index (update_node_epochs_cache drops the now-stale cached version). We deliberately
+        // do NOT create a new entry: a batch load may bring a historical version, and recording
+        // it as the latest would shadow the true latest still held in backing storage.
+        StorageNodeKey epochs_key(trie_id, label);
+        auto epochs_it = node_epochs_.find(epochs_key);
+        if (epochs_it != node_epochs_.end() && epoch > epochs_it->second) {
+            update_node_epochs_cache(trie_id, label, epoch);
+        }
+
         out_nodes[backing_indices[i]] = std::move(backing_nodes[i]);
     }
     return true;

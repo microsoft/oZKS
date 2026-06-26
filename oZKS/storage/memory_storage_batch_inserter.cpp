@@ -102,6 +102,14 @@ bool MemoryStorageBatchInserter::load_ctnodes(
         return false;
     }
 
+    // The interface contract guarantees one node per requested pair when load_ctnodes
+    // returns true (missing entries are signaled by throwing). Guard against a
+    // non-conforming backend so we fail loudly instead of reading past the end below.
+    if (backing_nodes.size() != backing_indices.size()) {
+        throw runtime_error(
+            "MemoryStorageBatchInserter::load_ctnodes: backing store returned an unexpected node count");
+    }
+
     for (size_t i = 0; i < backing_indices.size(); i++) {
         out_nodes[backing_indices[i]] = std::move(backing_nodes[i]);
     }
