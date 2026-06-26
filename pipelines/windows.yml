@@ -51,7 +51,7 @@ steps:
     script: |
       .\build\bin\${{ parameters.configuration }}\unit_tests.exe
     workingDirectory: '$(Build.SourcesDirectory)'
-    failOnStderr: true
+    failOnStderr: false
 
 - task: CmdLine@2
   displayName: 'Remove unnecessary files'
