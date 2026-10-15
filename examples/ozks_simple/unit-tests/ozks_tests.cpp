@@ -25,6 +25,40 @@ using namespace ozks_simple;
 
 constexpr size_t random_iterations = 5000;
 
+TEST(OZKSTests, RejectsUnrelatedMembershipPathWithValidVRF)
+{
+    OZKSConfig config;
+    OZKS ozks(config);
+    for (size_t i = 0; i < 16; i++) {
+        ozks.insert(key_type{ static_cast<byte>(i) }, payload_type{ static_cast<byte>(i) });
+    }
+    ozks.flush();
+    auto honest = ozks.query(key_type{ byte{ 0 } });
+    auto commitment = ozks.get_commitment();
+    ASSERT_NE(nullptr, honest.vrf_proof());
+    ASSERT_EQ(QueryVerificationResult::ValidIsMember, honest.verify(commitment));
+
+    bool rejected = false;
+    for (size_t i = 1; i < 16; i++) {
+        auto other = ozks.query(key_type{ static_cast<byte>(i) });
+        QueryResult substituted(
+            config,
+            honest.key(),
+            honest.payload(),
+            other.lookup_proof(),
+            *honest.vrf_proof(),
+            honest.randomness());
+        vector<byte> serialized;
+        substituted.save(serialized);
+        auto loaded = QueryResult::Load(config, serialized);
+        ASSERT_TRUE(loaded.first.verify_vrf_proof(*commitment.public_key()));
+        auto verified = loaded.first.verify(commitment);
+        EXPECT_NE(QueryVerificationResult::ValidNotMember, verified);
+        rejected |= verified == QueryVerificationResult::NotValid;
+    }
+    EXPECT_TRUE(rejected);
+}
+
 namespace {
     /**
     Class for testing Batch storage

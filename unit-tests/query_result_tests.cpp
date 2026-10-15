@@ -19,6 +19,113 @@ using namespace ozks;
 using namespace ozks::storage;
 using namespace std;
 
+namespace {
+    QueryResult RoundTripQuery(
+        const OZKSConfig &config, const key_type &key, const lookup_path_type &path)
+    {
+        QueryResult result(config, key, {}, path, randomness_type{});
+        vector<byte> serialized;
+        result.save(serialized);
+        return QueryResult::Load(config, serialized).first;
+    }
+} // namespace
+
+TEST(QueryResultTests, QueryPathsAreBoundToRequestedKey)
+{
+    for (auto trie_type : { TrieType::Stored, TrieType::Linked, TrieType::LinkedNoStorage }) {
+        for (size_t count : { 0, 1, 2, 8, 32 }) {
+            auto storage = make_shared<MemoryStorage>();
+            OZKSConfig config(
+                PayloadCommitmentType::UncommitedPayload,
+                LabelType::HashedLabels,
+                trie_type,
+                storage);
+            CompressedTrie trie(storage, trie_type);
+            append_proof_type insertion;
+            for (size_t i = 0; i < count; i++) {
+                key_type key{ static_cast<byte>(i) };
+                trie.insert(PartialLabel(utils::compute_key_hash(key)), {}, insertion);
+            }
+            Commitment commitment(nullptr, trie.get_commitment());
+            size_t rejected_substitutions = 0;
+            for (size_t i = 0; i < 64; i++) {
+                key_type key{ static_cast<byte>(i) };
+                lookup_path_type path;
+                ASSERT_EQ(i < count, trie.lookup(PartialLabel(utils::compute_key_hash(key)), path));
+                auto honest = RoundTripQuery(config, key, path);
+                EXPECT_EQ(
+                    i < count ? QueryVerificationResult::ValidIsMember
+                              : QueryVerificationResult::ValidNotMember,
+                    honest.verify(commitment));
+
+                if (i >= count) {
+                    continue;
+                }
+                for (size_t j = 0; j < count; j++) {
+                    key_type other_key{ static_cast<byte>(j) };
+                    lookup_path_type other_path;
+                    ASSERT_TRUE(
+                        trie.lookup(PartialLabel(utils::compute_key_hash(other_key)), other_path));
+                    auto substituted = RoundTripQuery(config, key, other_path);
+                    auto verified = substituted.verify(commitment);
+                    EXPECT_NE(QueryVerificationResult::ValidNotMember, verified);
+                    EXPECT_EQ(
+                        substituted.is_member() ? QueryVerificationResult::ValidIsMember
+                                                : QueryVerificationResult::NotValid,
+                        verified);
+                    rejected_substitutions += verified == QueryVerificationResult::NotValid;
+                }
+            }
+            if (count >= 8) {
+                EXPECT_GT(rejected_substitutions, 0);
+            }
+        }
+    }
+}
+
+TEST(QueryResultTests, RejectsUnopenedSubtreeContainingQuery)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        storage);
+    key_type key{ byte{ 1 } };
+    PartialLabel label(utils::compute_key_hash(key));
+    PartialLabel prefix{ label[0] };
+    hash_type hash = utils::compute_hash(key);
+    auto root = label[0] ? utils::compute_node_hash({}, {}, prefix, hash)
+                         : utils::compute_node_hash(prefix, hash, {}, {});
+    auto result = RoundTripQuery(config, key, { { prefix, hash } });
+    EXPECT_EQ(QueryVerificationResult::NotValid, result.verify_lookup_path(root));
+}
+
+TEST(QueryResultTests, RejectsMalformedPathsWithoutThrowing)
+{
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        make_shared<MemoryStorage>());
+    key_type key{ byte{ 1 } };
+    PartialLabel label(utils::compute_key_hash(key));
+    PartialLabel prefix{ label[0] };
+    hash_type hash = utils::compute_hash(key);
+    vector<lookup_path_type> malformed{ {},
+                                        { { {}, hash } },
+                                        { { label, hash }, { label, hash } },
+                                        { { label, hash }, { prefix, hash } },
+                                        { { prefix, hash }, { label, hash } },
+                                        { { label, hash }, { {}, {} } },
+                                        lookup_path_type(
+                                            PartialLabel::MaxBitCount + 2, { label, hash }) };
+    for (const auto &path : malformed) {
+        auto result = RoundTripQuery(config, key, path);
+        EXPECT_EQ(QueryVerificationResult::NotValid, result.verify_lookup_path(hash));
+    }
+}
+
 TEST(QueryResultTests, RejectsShortenedLeafLabelAfterSerialization)
 {
     OZKSConfig config(

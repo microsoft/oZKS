@@ -175,5 +175,6 @@ namespace ozks {
             const OZKSConfig &config, SerializationReader &reader);
 
         bool is_member_from_path() const;
+        PartialLabel queried_label() const;
     };
 } // namespace ozks

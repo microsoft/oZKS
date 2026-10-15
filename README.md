@@ -103,7 +103,7 @@ bool InsertResult::verify() const;
 ### Commitment format compatibility
 
 Serialization version 2 authenticates each label's bit count as well as its backing bytes in leaf and internal-node hashes.
-This changes commitments, including the empty-tree commitment, and is incompatible with version 1.
+This changes nonempty-tree commitments and is incompatible with version 1.
 Version 1 serialized commitments, tries, and example instances are rejected by the corresponding loaders.
 Do not relabel old serialized objects as version 2 or mix old stored nodes with new nodes.
 Rebuild persisted tries from the authoritative insertion history, preserving insertion epochs, and publish and independently distribute new trusted commitments before serving version 2 proofs.

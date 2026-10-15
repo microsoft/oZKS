@@ -12,21 +12,6 @@
 using namespace std;
 using namespace ozks;
 
-namespace {
-    QueryVerificationResult determine_query_result(bool is_member, bool is_valid)
-    {
-        if (!is_valid) {
-            return QueryVerificationResult::NotValid;
-        }
-
-        if (is_member) {
-            return QueryVerificationResult::ValidIsMember;
-        }
-
-        return QueryVerificationResult::ValidNotMember;
-    }
-}
-
 bool QueryResult::is_member() const
 {
     return is_member_from_path();
@@ -34,98 +19,94 @@ bool QueryResult::is_member() const
 
 QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &commitment) const
 {
-    if (lookup_proof().size() == 0) {
-        throw runtime_error("Lookup proof cannot be empty");
+    if (lookup_proof_.empty() || lookup_proof_.size() > PartialLabel::MaxBitCount + 1 ||
+        (use_vrf_ && !vrf_proof_)) {
+        return QueryVerificationResult::NotValid;
     }
+
+    if (lookup_proof_[0].first.empty()) {
+        // An empty trie is represented by the zero root, not an opaque arbitrary root hash.
+        return lookup_proof_.size() == 1 && lookup_proof_[0].second == hash_type{} &&
+                       commitment == commitment_type{}
+                   ? QueryVerificationResult::ValidNotMember
+                   : QueryVerificationResult::NotValid;
+    }
+
+    const PartialLabel query_label = queried_label();
+    auto classify_subtree = [&query_label](const PartialLabel &label) {
+        if (label == query_label) {
+            return QueryVerificationResult::ValidIsMember;
+        }
+        // An unopened subtree can exclude the query only when its prefix diverges.
+        return PartialLabel::CommonPrefixCount(label, query_label) < label.bit_count()
+                   ? QueryVerificationResult::ValidNotMember
+                   : QueryVerificationResult::NotValid;
+    };
 
     PartialLabel partial_label = lookup_proof()[0].first;
     hash_type hash = lookup_proof()[0].second;
-    hash_type temp_hash;
+    auto result = classify_subtree(partial_label);
 
     for (size_t idx = 1; idx < lookup_proof().size(); idx++) {
         auto &sibling = lookup_proof()[idx];
         PartialLabel common = PartialLabel::CommonPrefix(sibling.first, partial_label);
+        if (common.bit_count() >= partial_label.bit_count() ||
+            common.bit_count() >= sibling.first.bit_count()) {
+            return QueryVerificationResult::NotValid;
+        }
+
+        bool current_is_right = partial_label[common.bit_count()];
+        if (PartialLabel::CommonPrefixCount(common, query_label) < common.bit_count()) {
+            result = QueryVerificationResult::ValidNotMember;
+        } else if (query_label[common.bit_count()] != current_is_right) {
+            result = classify_subtree(sibling.first);
+        }
 
         // These are sibling nodes
-        if (partial_label[common.bit_count()] == 0) {
-            temp_hash =
-                utils::compute_node_hash(partial_label, hash, sibling.first, sibling.second);
+        if (!current_is_right) {
+            hash = utils::compute_node_hash(partial_label, hash, sibling.first, sibling.second);
         } else {
-            temp_hash =
-                utils::compute_node_hash(sibling.first, sibling.second, partial_label, hash);
+            hash = utils::compute_node_hash(sibling.first, sibling.second, partial_label, hash);
         }
 
         // Up the tree
         partial_label = common;
-        hash = temp_hash;
     }
 
-    // At the end, the resulting hash is either:
-    // - The commitment
-    // - the last child node hash we need to get the commitment
-    commitment_type hash_commitment{};
-    utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
-    if (hash_commitment == commitment) {
-        return determine_query_result(is_member(), /* is_valiid */ true);
+    if (!partial_label.empty()) {
+        // The only unary node is the root; authenticate its missing child explicitly.
+        if (partial_label[0] != query_label[0]) {
+            result = QueryVerificationResult::ValidNotMember;
+        }
+        hash = partial_label[0] ? utils::compute_node_hash({}, {}, partial_label, hash)
+                                : utils::compute_node_hash(partial_label, hash, {}, {});
     }
 
-    if (partial_label.bit_count() == 0) {
-        // This means the current hash should have matched the commitment, but it didn't
-        return determine_query_result(is_member(), /* is_valid */ false);
-    }
-
-    if (partial_label[0] == 0) {
-        temp_hash = utils::compute_node_hash(partial_label, hash, {}, {});
-    } else {
-        temp_hash = utils::compute_node_hash({}, {}, partial_label, hash);
-    }
-
-    utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
-    bool is_valid = (hash_commitment == commitment);
-
-    return determine_query_result(is_member(), is_valid);
+    return hash == commitment ? result : QueryVerificationResult::NotValid;
 }
 
-bool QueryResult::is_member_from_path() const
+PartialLabel QueryResult::queried_label() const
 {
-    if (lookup_proof().size() == 0) {
-        return false;
-    }
-
-    bool is_member = false;
     hash_type vrf_value = utils::compute_key_hash(key_);
-
     if (use_vrf_) {
         auto vrf_val_vec = vrf_proof_->get_vrf_value();
         utils::copy_bytes_to_hash(vrf_val_vec, vrf_value);
     }
+    return PartialLabel(vrf_value);
+}
 
-    PartialLabel vrf_label(vrf_value);
-    PartialLabel lvl1 = lookup_proof_[0].first;
-
-    if (lookup_proof().size() == 1) {
-        // Path label is the actual VRF label, or it's not a member
-        is_member = (vrf_label == lvl1);
-        return is_member;
+bool QueryResult::is_member_from_path() const
+{
+    if (lookup_proof_.empty() || (use_vrf_ && !vrf_proof_)) {
+        return false;
     }
-
-    PartialLabel lvl2 = lookup_proof_[1].first;
-
-    // If both labels are leaves, one of them must be the vrf_value
-    if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
-        lvl2.bit_count() == PartialLabel::MaxBitCount) {
-        is_member = (vrf_label == lvl1 || vrf_label == lvl2);
-        return is_member;
+    const auto label = queried_label();
+    for (const auto &element : lookup_proof_) {
+        if (element.first == label) {
+            return true;
+        }
     }
-
-    // If first node is leaf and second is not, then this is a membership proof
-    if (lvl1.bit_count() == PartialLabel::MaxBitCount &&
-        lvl2.bit_count() < PartialLabel::MaxBitCount) {
-
-        is_member = (vrf_label == lvl1);
-    }
-
-    return is_member;
+    return false;
 }
 
 bool QueryResult::verify_vrf_proof(vrf::PublicKey &public_key) const
