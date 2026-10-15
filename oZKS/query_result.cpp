@@ -117,7 +117,10 @@ bool QueryResult::is_member_from_path() const
 
 bool QueryResult::verify_vrf_proof(vrf::PublicKey &public_key) const
 {
+    // A proof from a different VRF suite than the trusted key cannot be valid; fail before
+    // handing mismatched objects to the VRF library.
     return vrf_proof_ && vrf_proof_->is_initialized() && public_key.is_initialized() &&
+           vrf_proof_->get_type() == public_key.get_type() &&
            utils::verify_vrf_proof(key_, *vrf_proof_, public_key);
 }
 

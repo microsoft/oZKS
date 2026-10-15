@@ -27,6 +27,11 @@ size_t Commitment::save(SerializationWriter &writer) const
     commitment_builder.add_version(ozks_serialization_version);
     commitment_builder.add_public_key(fbs_pk);
     commitment_builder.add_root_commitment(&root_commitment_data);
+    // cppvrf also encodes the suite in the first byte of the key bytes. The explicit field is a
+    // redundancy check so that a commitment can never be loaded under a suite other than the
+    // one it was issued for. It uses cppvrf's own wire numbering (vrf::to_byte).
+    commitment_builder.add_vrf_type(
+        std::to_integer<uint8_t>(vrf::to_byte(public_key_->get_type())));
 
     auto fbs_commitment = commitment_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_commitment);
@@ -74,6 +79,17 @@ pair<Commitment, size_t> Commitment::Load(SerializationReader &reader)
 
     if (commitment.public_key_ == nullptr) {
         throw runtime_error("Failed to load Commitment: invalid public key");
+    }
+
+    // The parsed key must belong to the suite the commitment states. The field is an optional
+    // scalar so that its absence is distinguishable from any suite value.
+    auto stated_type = fbs_commitment->vrf_type();
+    if (!stated_type.has_value()) {
+        throw runtime_error("Failed to load Commitment: VRF type is missing");
+    }
+    uint8_t key_type = std::to_integer<uint8_t>(vrf::to_byte(commitment.public_key_->get_type()));
+    if (*stated_type != key_type) {
+        throw runtime_error("Failed to load Commitment: VRF type does not match public key");
     }
 
     if (fbs_commitment->root_commitment()->data()->size() != commitment.root_commitment_.size()) {

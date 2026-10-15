@@ -241,6 +241,32 @@ TEST(QueryResultTests, RejectsShortenedLeafLabelAfterSerialization)
     EXPECT_FALSE(InsertResult::Load(serialized).first.verify());
 }
 
+TEST(QueryResultTests, RejectsProofFromDifferentVRFSuite)
+{
+    OZKSConfig config;
+    key_type key{ byte{ 1 } };
+    auto ec_sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto rsa_sk = vrf::VRF::Create(vrf::Type::rsa_fdh_vrf_rsa2048_sha256);
+    auto ec_pk = ec_sk->get_public_key();
+    auto rsa_pk = rsa_sk->get_public_key();
+    auto ec_proof = ec_sk->get_vrf_proof(utils::compute_key_hash(key));
+    auto rsa_proof = rsa_sk->get_vrf_proof(utils::compute_key_hash(key));
+    lookup_path_type empty_tree{ { {}, {} } };
+
+    QueryResult ec_result(config, key, {}, empty_tree, *ec_proof, {}, 0);
+    EXPECT_TRUE(ec_result.verify_vrf_proof(*ec_pk));
+    EXPECT_FALSE(ec_result.verify_vrf_proof(*rsa_pk));
+    EXPECT_EQ(
+        QueryVerificationResult::ValidNotMember, ec_result.verify(Commitment(ec_pk.get(), {})));
+    EXPECT_EQ(
+        QueryVerificationResult::NotValid, ec_result.verify(Commitment(rsa_pk.get(), {})));
+
+    QueryResult rsa_result(config, key, {}, empty_tree, *rsa_proof, {}, 0);
+    EXPECT_TRUE(rsa_result.verify_vrf_proof(*rsa_pk));
+    EXPECT_FALSE(rsa_result.verify_vrf_proof(*ec_pk));
+    EXPECT_EQ(QueryVerificationResult::NotValid, rsa_result.verify(Commitment(ec_pk.get(), {})));
+}
+
 TEST(QueryResultTests, RejectsSerializedLabelModeMismatch)
 {
     key_type key{ byte{ 1 } };

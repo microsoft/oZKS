@@ -12,6 +12,7 @@ table Commitment {
     version:uint32;
     public_key:PublicKey (required);
     root_commitment:RootCommitment;
+    vrf_type:uint8 = null;
 }
 
 root_type Commitment;
