@@ -71,7 +71,10 @@ namespace ozks {
         }
 
         /**
-        Verify the append proof and commitment
+        Verify that the append proof reconstructs the commitment carried in this result.
+        The commitment is the one supplied with the result, not an independently trusted
+        one; callers must compare it with the published commitment. A malformed proof is
+        reported as invalid rather than throwing. Throws only if the result is uninitialized.
         */
         bool verify() const;
 

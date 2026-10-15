@@ -108,6 +108,53 @@ TEST(InsertResultTests, VerifySingleInsertTest)
     }
 }
 
+TEST(InsertResultTests, RejectsMalformedProofsWithoutThrowing)
+{
+    // Build an honest single-leaf proof as the control.
+    hash_type payload = make_bytes<hash_type>(0x01, 0x02);
+    PartialLabel label = make_bytes<PartialLabel>(0xAA, 0xBB, 0xCC, 0xDD, 0xEE);
+    PartialLabel prefix{ label[0] };
+    shared_ptr<storage::Storage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Stored);
+    append_proof_type honest;
+    trie.insert(label, payload, honest);
+    commitment_type commitment = trie.get_commitment();
+    ASSERT_TRUE(InsertResult(commitment, honest).verify());
+    hash_type leaf_hash = honest[0].second;
+    // A well-formed proof with the wrong leaf hash is invalid, so the control is meaningful.
+    EXPECT_FALSE(InsertResult(commitment, { { label, hash_type{} } }).verify());
+
+    // Each malformed proof must be reported as invalid and must never make verify throw.
+    // `other` differs from `label` at bit 0, so a pair of them reconstructs the root.
+    PartialLabel other = make_bytes<PartialLabel>(0x2A, 0xBB, 0xCC, 0xDD, 0xEE);
+    ASSERT_NE(label[0], other[0]);
+    vector<append_proof_type> malformed{
+        {},
+        { { {}, leaf_hash } },
+        // The commitment itself presented as the leaf hash of the inserted label.
+        { { label, commitment } },
+        { { label, leaf_hash }, { label, leaf_hash } },
+        { { label, leaf_hash }, { prefix, leaf_hash } },
+        { { prefix, leaf_hash }, { label, leaf_hash } },
+        { { label, leaf_hash }, { {}, {} } },
+        // Reaches the root but does not match the commitment.
+        { { label, leaf_hash }, { other, leaf_hash } },
+        // Continues past the root.
+        { { label, leaf_hash }, { other, leaf_hash }, { label, leaf_hash } },
+        append_proof_type(PartialLabel::MaxBitCount + 2, { label, leaf_hash }),
+    };
+    for (size_t idx = 0; idx < malformed.size(); idx++) {
+        SCOPED_TRACE(idx);
+        InsertResult result(commitment, malformed[idx]);
+        bool verified = true;
+        EXPECT_NO_THROW(verified = result.verify());
+        EXPECT_FALSE(verified);
+    }
+
+    // Verifying an uninitialized result is a programming error and still throws.
+    EXPECT_THROW(InsertResult().verify(), runtime_error);
+}
+
 TEST(InsertResultTests, CarriesSerializationVersion)
 {
     commitment_type commitment = make_bytes<commitment_type>(0x80, 0x23);

@@ -26,54 +26,51 @@ namespace ozks {
             throw runtime_error("This result has not been initialized");
         }
 
-        if (append_proof_->size() == 0) {
-            throw runtime_error("Append proof cannot be empty");
+        // A malformed proof is simply not a valid proof. Validate the structure before any
+        // label is indexed so that untrusted input can never make verification throw.
+        const append_proof_type &proof = *append_proof_;
+        if (proof.empty() || proof.size() > PartialLabel::MaxBitCount + 1 ||
+            proof[0].first.empty()) {
+            return false;
         }
 
-        PartialLabel partial_label = (*append_proof_)[0].first;
-        hash_type hash = (*append_proof_)[0].second;
-        hash_type temp_hash;
+        PartialLabel partial_label = proof[0].first;
+        hash_type hash = proof[0].second;
 
-        for (size_t idx = 1; idx < append_proof_->size(); idx++) {
-            auto sibling = (*append_proof_)[idx];
+        for (size_t idx = 1; idx < proof.size(); idx++) {
+            const auto &sibling = proof[idx];
             PartialLabel common = PartialLabel::CommonPrefix(sibling.first, partial_label);
+            // Siblings must both extend their common prefix, so neither label may equal or be
+            // a prefix of the other.
+            if (common.bit_count() >= partial_label.bit_count() ||
+                common.bit_count() >= sibling.first.bit_count()) {
+                return false;
+            }
 
             // These are sibling nodes
-            if (partial_label[common.bit_count()] == 0) {
-                temp_hash =
-                    utils::compute_node_hash(partial_label, hash, sibling.first, sibling.second);
+            if (!partial_label[common.bit_count()]) {
+                hash = utils::compute_node_hash(partial_label, hash, sibling.first, sibling.second);
             } else {
-                temp_hash =
-                    utils::compute_node_hash(sibling.first, sibling.second, partial_label, hash);
+                hash = utils::compute_node_hash(sibling.first, sibling.second, partial_label, hash);
             }
 
             // Up the tree
             partial_label = common;
-            hash = temp_hash;
         }
 
-        // At the end, the resulting hash is either:
-        // - the commitment
-        // - the last child node hash we need to get the commitment
+        // If the chain stopped short of the empty root label, the last node is the root's
+        // only child and the root itself still has to be hashed, with its other child
+        // missing. The root is folded before comparing so that a supplied hash can never be
+        // accepted as the commitment directly.
+        if (!partial_label.empty()) {
+            hash = partial_label[0] ? utils::compute_node_hash({}, {}, partial_label, hash)
+                                    : utils::compute_node_hash(partial_label, hash, {}, {});
+        }
+
         static_assert(sizeof(commitment_type) == sizeof(hash_type));
         commitment_type hash_commitment;
         utils::copy_bytes(hash.data(), hash.size(), hash_commitment.data());
-        if (hash_commitment == *commitment_) {
-            return true;
-        }
-
-        if (partial_label.bit_count() == 0) {
-            throw runtime_error("partial_label should have 1 bit");
-        }
-
-        if (partial_label[0] == 0) {
-            temp_hash = utils::compute_node_hash(partial_label, hash, {}, {});
-        } else {
-            temp_hash = utils::compute_node_hash({}, {}, partial_label, hash);
-        }
-
-        utils::copy_bytes(temp_hash.data(), temp_hash.size(), hash_commitment.data());
-        return (hash_commitment == *commitment_);
+        return hash_commitment == *commitment_;
     }
 
     size_t InsertResult::save(ostream &stream) const

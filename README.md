@@ -100,6 +100,7 @@ bool InsertResult::verify() const;
 
 `QueryResult::verify` authenticates the proof against the trusted `Commitment` passed to it.
 `InsertResult::verify` checks the append proof against the commitment carried in the result (`InsertResult::commitment()`); applications must compare that commitment with the published one.
+Both verifiers report a malformed proof as invalid rather than throwing; `InsertResult::verify` throws only when called on an uninitialized result.
 `is_member()` and successful deserialization are not authentication.
 Applications must also check that the key in a returned `QueryResult` is the key they asked for.
 
