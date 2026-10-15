@@ -414,6 +414,22 @@ namespace {
         vector<CompressedTrie> added_tries_;
     };
 
+    // Wait until the instance's trie reaches the expected epoch, then refresh its queriers.
+    // The distributed updaters tick every five seconds and share a global try-lock, so a tick
+    // can be skipped when two instances collide; a fixed sleep races against the next tick.
+    bool wait_for_epoch(OZKS &ozks, size_t expected_epoch, chrono::seconds timeout)
+    {
+        auto deadline = chrono::steady_clock::now() + timeout;
+        while (ozks.get_epoch() < expected_epoch) {
+            if (chrono::steady_clock::now() >= deadline) {
+                return false;
+            }
+            this_thread::sleep_for(chrono::milliseconds(100));
+        }
+        ozks.check_for_update();
+        return true;
+    }
+
     vector<key_type> RandomInsertTestCore(OZKS &ozks, size_t iterations)
     {
         key_type key(16);
@@ -423,6 +439,7 @@ namespace {
         // vector<shared_ptr<InsertResult>> insert_results;
 
         ozks.check_for_update();
+        size_t start_epoch = ozks.get_epoch();
 
         for (size_t i = 0; i < iterations; i++) {
             utils::random_bytes(key);
@@ -439,9 +456,9 @@ namespace {
             }
         }
 
-        // Wait for updater to finish
-        this_thread::sleep_for(chrono::seconds(10));
-        ozks.check_for_update();
+        // Wait for the async updater to publish the inserted batch as the next epoch.
+        EXPECT_TRUE(wait_for_epoch(ozks, start_epoch + 1, chrono::seconds(60)))
+            << "updater did not publish epoch " << (start_epoch + 1);
 
         // Check the valid keys are found and that their path is verified correctly
         for (size_t i = 0; i < valid_keys.size(); i++) {
@@ -540,9 +557,8 @@ TEST(OZKSDistTests, BatchInsertTest)
     // Use the batch insert overload
     ozks.insert(batch);
 
-    // Wait for the async updater to finish
-    this_thread::sleep_for(chrono::seconds(10));
-    ozks.check_for_update();
+    // Wait for the async updater to publish the batch (epoch 1).
+    ASSERT_TRUE(wait_for_epoch(ozks, 1, chrono::seconds(60)));
 
     // Every inserted key must be found and verify correctly
     for (size_t i = 0; i < keys.size(); i++) {
@@ -648,24 +664,6 @@ TEST(OZKSDistTests, BatchInserterCallbackTest)
     EXPECT_EQ(cached_storage->added_nodes_count(), 0);
     EXPECT_EQ(cached_storage->added_tries_count(), 0);
 }
-
-namespace {
-    // Wait until the instance's trie reaches the expected epoch, then refresh its queriers.
-    // The distributed updaters tick every five seconds and share a global try-lock, so a tick
-    // can be skipped when two instances collide; a fixed sleep races against the next tick.
-    bool wait_for_epoch(OZKS &ozks, size_t expected_epoch, chrono::seconds timeout)
-    {
-        auto deadline = chrono::steady_clock::now() + timeout;
-        while (ozks.get_epoch() < expected_epoch) {
-            if (chrono::steady_clock::now() >= deadline) {
-                return false;
-            }
-            this_thread::sleep_for(chrono::milliseconds(100));
-        }
-        ozks.check_for_update();
-        return true;
-    }
-} // namespace
 
 TEST(OZKSDistTests, SharedSecretKeyTest)
 {
