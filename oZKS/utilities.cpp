@@ -12,6 +12,7 @@
 #include "oZKS/core_types_generated.h"
 #include "oZKS/path_element_generated.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 // OpenSSL
 #include <openssl/rand.h>
@@ -21,6 +22,53 @@ using namespace std;
 using namespace ozks;
 
 namespace {
+    // Hash input encodings are fixed-width and big-endian so that commitments do not depend
+    // on the width of std::size_t or on how integers are laid out in memory. The label bits
+    // are taken from PartialLabel's word values, which the class itself only defines on
+    // little-endian hosts (see the static_assert in partial_label.cpp).
+    constexpr size_t LabelEncodingSize = PartialLabel::ByteCount + sizeof(uint32_t);
+    constexpr size_t EpochEncodingSize = sizeof(uint64_t);
+    static_assert(
+        PartialLabel::ByteCount % sizeof(uint64_t) == 0,
+        "Label encoding assumes whole 64-bit words");
+
+    void encode_big_endian(uint64_t value, byte *out, size_t width)
+    {
+        for (size_t idx = 0; idx < width; idx++) {
+            out[idx] = static_cast<byte>((value >> (8 * (width - 1 - idx))) & 0xFF);
+        }
+    }
+
+    // Canonical label encoding: the 256 label bits in order (bit 0 is the most significant
+    // bit of the first byte, bits past the bit count are zero), followed by the bit count.
+    void encode_label(const PartialLabel &label, byte *out)
+    {
+        const uint64_t *words = label.data();
+        for (size_t word = 0; word < PartialLabel::ByteCount / sizeof(uint64_t); word++) {
+            encode_big_endian(words[word], out + word * sizeof(uint64_t), sizeof(uint64_t));
+        }
+        encode_big_endian(label.bit_count(), out + PartialLabel::ByteCount, sizeof(uint32_t));
+    }
+
+    // Commitment-structure hashes embed the serialization version in their domain so that
+    // hashes from different format versions can never coincide.
+    string versioned_domain(const char *base)
+    {
+        return string(base) + "_v" + std::to_string(ozks_serialization_version);
+    }
+
+    const string &leaf_hash_domain()
+    {
+        static const string domain = versioned_domain("leaf_hash");
+        return domain;
+    }
+
+    const string &node_hash_domain()
+    {
+        static const string domain = versioned_domain("node_hash");
+        return domain;
+    }
+
     template <std::size_t sz>
     void hash_bytes(const std::byte *data, std::size_t size, std::byte *hash_out);
 
@@ -92,12 +140,14 @@ hash_type utils::compute_key_hash(const key_type &key)
 
 hash_type utils::compute_leaf_hash(const PartialLabel &label, const hash_type &hash, size_t epoch)
 {
-    array<byte, PartialLabel::SaveSize + hash_size + sizeof(epoch)> buffer{};
-    label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer.data(), PartialLabel::SaveSize));
-    utils::copy_bytes(hash.data(), hash_size, buffer.data() + PartialLabel::SaveSize);
-    utils::copy_bytes(&epoch, sizeof(epoch), buffer.data() + PartialLabel::SaveSize + hash_size);
+    array<byte, LabelEncodingSize + hash_size + EpochEncodingSize> buffer{};
+    encode_label(label, buffer.data());
+    utils::copy_bytes(hash.data(), hash_size, buffer.data() + LabelEncodingSize);
+    encode_big_endian(
+        static_cast<uint64_t>(epoch), buffer.data() + LabelEncodingSize + hash_size,
+        EpochEncodingSize);
 
-    return clear_lsb(compute_hash(buffer, "leaf_hash"));
+    return clear_lsb(compute_hash(buffer, leaf_hash_domain()));
 }
 
 hash_type utils::compute_node_hash(
@@ -106,16 +156,14 @@ hash_type utils::compute_node_hash(
     const PartialLabel &right_label,
     const hash_type &right_hash)
 {
-    array<byte, 2 * (PartialLabel::SaveSize + hash_size)> buffer{};
-    left_label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer.data(), PartialLabel::SaveSize));
-    utils::copy_bytes(left_hash.data(), hash_size, buffer.data() + PartialLabel::SaveSize);
-    right_label.save(
-        gsl::span<byte, PartialLabel::SaveSize>(
-            buffer.data() + PartialLabel::SaveSize + hash_size, PartialLabel::SaveSize));
+    array<byte, 2 * (LabelEncodingSize + hash_size)> buffer{};
+    encode_label(left_label, buffer.data());
+    utils::copy_bytes(left_hash.data(), hash_size, buffer.data() + LabelEncodingSize);
+    encode_label(right_label, buffer.data() + LabelEncodingSize + hash_size);
     utils::copy_bytes(
-        right_hash.data(), hash_size, buffer.data() + 2 * PartialLabel::SaveSize + hash_size);
+        right_hash.data(), hash_size, buffer.data() + 2 * LabelEncodingSize + hash_size);
 
-    return clear_lsb(compute_hash(buffer, "node_hash"));
+    return clear_lsb(compute_hash(buffer, node_hash_domain()));
 }
 
 hash_type utils::compute_randomness_hash(gsl::span<const byte> buffer, randomness_type &randomness)

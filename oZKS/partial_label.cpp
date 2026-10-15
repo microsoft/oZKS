@@ -3,6 +3,7 @@
 
 // STD
 #include <algorithm>
+#include <bit>
 #include <cstddef>
 
 // oZKS
@@ -25,6 +26,11 @@
 
 using namespace std;
 using namespace ozks;
+
+// Word values are built by byte-reversing little-endian memory (init, set_bit, to_bytes), so the
+// class, and every hash derived from it, is only defined on little-endian hosts.
+static_assert(
+    std::endian::native == std::endian::little, "PartialLabel assumes a little-endian host");
 
 PartialLabel::PartialLabel(gsl::span<const byte> input, size_t bit_count)
 {

@@ -10,6 +10,7 @@
 // oZKS
 #include "oZKS/ct_node_linked.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -17,6 +18,153 @@
 using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
+
+namespace {
+    // Canonical hash encoding of a label: 32 bytes in bit order, then the bit count as a
+    // 4-byte big-endian integer. Built independently of the library's implementation.
+    vector<byte> encode_label_for_hash(const PartialLabel &label)
+    {
+        vector<byte> encoded(PartialLabel::ByteCount + 4);
+        // Rebuild the bytes bit by bit from operator[] so the expectation does not share
+        // PartialLabel's internal byte layout.
+        for (uint32_t idx = 0; idx < label.bit_count(); idx++) {
+            if (label[idx]) {
+                encoded[idx / 8] |= static_cast<byte>(0x80 >> (idx % 8));
+            }
+        }
+        uint32_t bit_count = label.bit_count();
+        for (size_t idx = 0; idx < 4; idx++) {
+            encoded[PartialLabel::ByteCount + idx] =
+                static_cast<byte>((bit_count >> (8 * (3 - idx))) & 0xFF);
+        }
+        return encoded;
+    }
+
+    hash_type expected_hash(const vector<byte> &input, const string &domain)
+    {
+        hash_type hash = compute_hash(input, domain);
+        hash[0] &= byte{ 0xFE };
+        return hash;
+    }
+} // namespace
+
+TEST(Utilities, LeafAndNodeHashEncoding)
+{
+    const string version_suffix = "_v" + to_string(ozks_serialization_version);
+    PartialLabel label = make_bytes<PartialLabel>(0x80, 0x01);
+    ASSERT_EQ(16, label.bit_count());
+    hash_type payload = make_bytes<hash_type>(0xAB, 0xCD);
+    size_t epoch = 0x01020304;
+
+    vector<byte> leaf_input = encode_label_for_hash(label);
+    ASSERT_EQ(
+        make_bytes<vector<byte>>(0x80, 0x01),
+        vector<byte>(leaf_input.begin(), leaf_input.begin() + 2));
+    ASSERT_EQ(
+        make_bytes<vector<byte>>(0x00, 0x00, 0x00, 0x10),
+        vector<byte>(leaf_input.begin() + 32, leaf_input.end()));
+    leaf_input.insert(leaf_input.end(), payload.begin(), payload.end());
+    vector<byte> epoch_bytes =
+        make_bytes<vector<byte>>(0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04);
+    leaf_input.insert(leaf_input.end(), epoch_bytes.begin(), epoch_bytes.end());
+    ASSERT_EQ(36 + 32 + 8, leaf_input.size());
+    EXPECT_EQ(
+        expected_hash(leaf_input, "leaf_hash" + version_suffix),
+        compute_leaf_hash(label, payload, epoch));
+
+    PartialLabel right{ true, true };
+    hash_type right_hash = make_bytes<hash_type>(0x01, 0x02);
+    vector<byte> node_input = encode_label_for_hash(label);
+    node_input.insert(node_input.end(), payload.begin(), payload.end());
+    vector<byte> right_encoded = encode_label_for_hash(right);
+    ASSERT_EQ(byte{ 0xC0 }, right_encoded[0]);
+    ASSERT_EQ(byte{ 0x02 }, right_encoded[35]);
+    node_input.insert(node_input.end(), right_encoded.begin(), right_encoded.end());
+    node_input.insert(node_input.end(), right_hash.begin(), right_hash.end());
+    ASSERT_EQ(2 * (36 + 32), node_input.size());
+    EXPECT_EQ(
+        expected_hash(node_input, "node_hash" + version_suffix),
+        compute_node_hash(label, payload, right, right_hash));
+
+    // The empty label and the all-zero full label differ only in the encoded bit count.
+    EXPECT_NE(
+        compute_leaf_hash(PartialLabel{}, payload, epoch),
+        compute_leaf_hash(PartialLabel(hash_type{}), payload, epoch));
+
+    // Full 256-bit label with a distinct byte in every position: every label word and byte
+    // must come out in order.
+    hash_type distinct_bytes;
+    for (size_t idx = 0; idx < distinct_bytes.size(); idx++) {
+        distinct_bytes[idx] = static_cast<byte>(idx + 1);
+    }
+    PartialLabel full(distinct_bytes);
+    ASSERT_EQ(PartialLabel::MaxBitCount, full.bit_count());
+    vector<byte> full_input = encode_label_for_hash(full);
+    EXPECT_TRUE(equal(distinct_bytes.begin(), distinct_bytes.end(), full_input.begin()));
+    EXPECT_EQ(
+        make_bytes<vector<byte>>(0x00, 0x00, 0x01, 0x00),
+        vector<byte>(full_input.begin() + 32, full_input.end()));
+    full_input.insert(full_input.end(), payload.begin(), payload.end());
+    full_input.insert(full_input.end(), epoch_bytes.begin(), epoch_bytes.end());
+    EXPECT_EQ(
+        expected_hash(full_input, "leaf_hash" + version_suffix),
+        compute_leaf_hash(full, payload, epoch));
+
+    // A 70-bit label crosses a word boundary and ends mid-byte: bits past the bit count
+    // are encoded as zero.
+    vector<byte> ones(9, byte{ 0xFF });
+    PartialLabel crossing(ones, 70);
+    ASSERT_EQ(70, crossing.bit_count());
+    vector<byte> crossing_input = encode_label_for_hash(crossing);
+    EXPECT_EQ(byte{ 0xFF }, crossing_input[7]);
+    EXPECT_EQ(byte{ 0xFC }, crossing_input[8]);
+    EXPECT_EQ(byte{ 0x00 }, crossing_input[9]);
+    EXPECT_EQ(byte{ 70 }, crossing_input[35]);
+    crossing_input.insert(crossing_input.end(), payload.begin(), payload.end());
+    crossing_input.insert(crossing_input.end(), epoch_bytes.begin(), epoch_bytes.end());
+    EXPECT_EQ(
+        expected_hash(crossing_input, "leaf_hash" + version_suffix),
+        compute_leaf_hash(crossing, payload, epoch));
+
+    // All eight epoch bytes participate.
+    if constexpr (sizeof(size_t) >= 8) {
+        size_t big_epoch = static_cast<size_t>(0x0102030405060708ULL);
+        vector<byte> big_input = encode_label_for_hash(label);
+        big_input.insert(big_input.end(), payload.begin(), payload.end());
+        vector<byte> big_epoch_bytes =
+            make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);
+        big_input.insert(big_input.end(), big_epoch_bytes.begin(), big_epoch_bytes.end());
+        EXPECT_EQ(
+            expected_hash(big_input, "leaf_hash" + version_suffix),
+            compute_leaf_hash(label, payload, big_epoch));
+    }
+}
+
+TEST(Utilities, LeafAndNodeHashKnownAnswers)
+{
+    // Pinned for serialization version 2. A change here means commitments moved.
+    ASSERT_EQ(2U, ozks_serialization_version);
+    PartialLabel label = make_bytes<PartialLabel>(0x80, 0x01);
+    hash_type payload = make_bytes<hash_type>(0xAB, 0xCD);
+    PartialLabel right{ true, true };
+    hash_type right_hash = make_bytes<hash_type>(0x01, 0x02);
+    EXPECT_EQ(
+        "8801ea86d7d80b0febce52f79378a4fc4e3f50385a4749e4a55f20fd292469ee",
+        to_string(compute_leaf_hash(label, payload, 0x01020304)));
+    EXPECT_EQ(
+        "988a68e18fce4179224681b749667a215ccf9c01ba703b3aeb7d9de30fd80250",
+        to_string(compute_node_hash(label, payload, right, right_hash)));
+    EXPECT_EQ(
+        "c648349c7d26f45b9a1e3c52d583030023faf97ca25f1e34a7fc4a7a0e962ff2",
+        to_string(compute_node_hash({}, {}, PartialLabel(hash_type{}), payload)));
+    hash_type distinct_bytes;
+    for (size_t idx = 0; idx < distinct_bytes.size(); idx++) {
+        distinct_bytes[idx] = static_cast<byte>(idx + 1);
+    }
+    EXPECT_EQ(
+        "ee34fa5c3a334f611259fb79e27fc17c260f648e2aa3035a8d91859bd9946650",
+        to_string(compute_leaf_hash(PartialLabel(distinct_bytes), payload, 0x01020304)));
+}
 
 TEST(Utilities, BoolVectorTest)
 {

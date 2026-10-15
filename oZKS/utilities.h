@@ -75,20 +75,25 @@ namespace ozks {
 
         /**
         Compute the hash of a leaf node in a Compressed Trie.
-        The hash is computed by using SHA2 on the concatenation of:
-        - serialized partial label, including its bit count
-        - payload
-        - epoch
+        The hash is computed by using SHA2, with the domain "leaf_hash_v<serialization
+        version>", on the concatenation of:
+        - the 32 label bytes in bit order, then the bit count as a 4-byte big-endian integer
+        - payload commitment hash
+        - epoch as an 8-byte big-endian integer
+        The encoding does not depend on the width of std::size_t or on the in-memory layout
+        of integers. Changing it, or the domain, changes every commitment and requires a new
+        serialization version.
         */
         hash_type compute_leaf_hash(
             const PartialLabel &label, const hash_type &hash, std::size_t epoch);
 
         /**
         Compute the hash of a non-leaf node in a Compressed Trie.
-        The hash is computed by using SHA2 on the concatenation of:
-        - serialized partial label of left node, including its bit count
+        The hash is computed by using SHA2, with the domain "node_hash_v<serialization
+        version>", on the concatenation of:
+        - label of left node, encoded as for compute_leaf_hash
         - hash of left node
-        - serialized partial label of right node, including its bit count
+        - label of right node, encoded as for compute_leaf_hash
         - hash of right node
         */
         hash_type compute_node_hash(
