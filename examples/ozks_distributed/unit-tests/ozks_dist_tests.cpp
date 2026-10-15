@@ -215,19 +215,10 @@ namespace {
                 updated_epoch = updated_trie->epoch();
             }
 
-            vector<CompressedTrie> existing_updated_tries;
-            auto itt = updated_tries_.find(updated_epoch);
-            if (itt != updated_tries_.end()) {
-                existing_updated_tries = itt->second;
-            }
-
-            for (auto &trie : tries) {
-                storage_.save_compressed_trie(trie);
-                existing_updated_tries.push_back(trie);
-            }
-
-            updated_tries_.insert_or_assign(updated_epoch, std::move(existing_updated_tries));
-
+            // Persist the nodes and store elements of the epoch first, and the trie records
+            // last. The trie record carries the epoch that readers poll, so it must become
+            // visible only once everything it refers to is already durable; a querier that
+            // refreshes between the two would otherwise find the new epoch without its nodes.
             vector<CTNodeStored> existing_updated_nodes;
             auto it = updated_nodes_.find(updated_epoch);
             if (it != updated_nodes_.end()) {
@@ -244,6 +235,19 @@ namespace {
             for (auto &se : store_elements) {
                 storage_.save_store_element(trie_id, se.first, se.second);
             }
+
+            vector<CompressedTrie> existing_updated_tries;
+            auto itt = updated_tries_.find(updated_epoch);
+            if (itt != updated_tries_.end()) {
+                existing_updated_tries = itt->second;
+            }
+
+            for (auto &trie : tries) {
+                storage_.save_compressed_trie(trie);
+                existing_updated_tries.push_back(trie);
+            }
+
+            updated_tries_.insert_or_assign(updated_epoch, std::move(existing_updated_tries));
         }
 
         size_t node_count() const
