@@ -135,6 +135,16 @@ QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
     return verify_lookup_path(commitment.root_commitment());
 }
 
+QueryVerificationResult QueryResult::verify(
+    const Commitment &commitment, const key_type &expected_key) const
+{
+    if (key_ != expected_key) {
+        return QueryVerificationResult::NotValid;
+    }
+
+    return verify(commitment);
+}
+
 size_t QueryResult::save(ostream &stream) const
 {
     StreamSerializationWriter writer(&stream);

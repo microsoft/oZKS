@@ -149,8 +149,19 @@ namespace ozks {
         Verify that:
         - the lookup proof is correct
         - the queried key is valid for the VRF proof in this query result
+        Does not check which key this result is for: the caller must compare key() with the
+        key it requested, or use verify(commitment, expected_key).
         */
         QueryVerificationResult verify(const Commitment &commitment) const;
+
+        /**
+        Verify as verify(const Commitment &) and additionally require that the key in this
+        result is the key the caller requested. Returns NotValid if key() differs from
+        expected_key, otherwise the result of verify(commitment). Prefer this overload: a
+        responder must not be able to answer a query for one key with a result for another.
+        */
+        QueryVerificationResult verify(
+            const Commitment &commitment, const key_type &expected_key) const;
 
         /**
         Save this query result to a stream

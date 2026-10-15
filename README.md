@@ -85,12 +85,14 @@ QueryResult OZKS::query(const key_type &key) const;
 
 `InsertResult` objects returned from an `insert` operation and `QueryResult` objects returned from a `query` operation can be verified for correctness.
 
-Verify that the `QueryResult` returned by a `query` has a correct proof:
+Verify that the `QueryResult` returned by a `query` has a correct proof and is the answer to the key that was requested:
 ```C++
-QueryVerificationResult QueryResult::verify(const Commitment &commitment) const;
+QueryVerificationResult QueryResult::verify(
+    const Commitment &commitment, const key_type &expected_key) const;
 ```
 
 The `Commitment` received by the method as parameter should be built from the information that was published publicly, as specified in the SEEMless protocol.
+The overload without `expected_key` performs the same verification but cannot know which key was requested; prefer the two-argument form, which returns `NotValid` for a result that answers a different key.
 
 Verify that the `InsertResult` from an `insert` operation provides a correct append proof:
 
@@ -102,7 +104,7 @@ bool InsertResult::verify() const;
 `InsertResult::verify` checks the append proof against the commitment carried in the result (`InsertResult::commitment()`); applications must compare that commitment with the published one.
 Both verifiers report a malformed proof as invalid rather than throwing; `InsertResult::verify` throws only when called on an uninitialized result.
 `is_member()` and successful deserialization are not authentication.
-Applications must also check that the key in a returned `QueryResult` is the key they asked for.
+Applications using the single-argument `verify` must check themselves that the key in a returned `QueryResult` is the key they asked for.
 
 ## Serialization versioning and compatibility
 

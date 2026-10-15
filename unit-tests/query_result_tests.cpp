@@ -112,6 +112,50 @@ TEST(QueryResultTests, RejectsUnopenedSubtreeContainingQuery)
     EXPECT_EQ(QueryVerificationResult::NotValid, result.verify_lookup_path(root));
 }
 
+TEST(QueryResultTests, VerifyWithExpectedKeyRejectsOtherKeys)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        storage);
+    CompressedTrie trie(storage, TrieType::Stored);
+    key_type member{ byte{ 1 } }, absent{ byte{ 2 } }, other{ byte{ 3 } };
+    append_proof_type insertion;
+    auto payload_hash = utils::compute_payload_commitment({}, config.payload_commitment(), {});
+    trie.insert(PartialLabel(utils::compute_key_hash(member)), payload_hash, insertion);
+    trie.insert(PartialLabel(utils::compute_key_hash(other)), payload_hash, insertion);
+    Commitment commitment(nullptr, trie.get_commitment());
+
+    lookup_path_type path;
+    ASSERT_TRUE(trie.lookup(PartialLabel(utils::compute_key_hash(member)), path));
+    auto member_result = RoundTripQuery(config, member, path, 1);
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, member_result.verify(commitment));
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, member_result.verify(commitment, member));
+    EXPECT_EQ(QueryVerificationResult::NotValid, member_result.verify(commitment, {}));
+
+    // A responder answering a query for `other` with the honest result for `member` is
+    // rejected even though the result itself verifies.
+    EXPECT_EQ(QueryVerificationResult::NotValid, member_result.verify(commitment, other));
+
+    // A matching key does not short-circuit verification: a wrong commitment, or a path that
+    // belongs to another key, is judged exactly as the single-argument overload judges it.
+    EXPECT_EQ(
+        QueryVerificationResult::NotValid, member_result.verify(Commitment(nullptr, {}), member));
+    lookup_path_type other_path;
+    ASSERT_TRUE(trie.lookup(PartialLabel(utils::compute_key_hash(other)), other_path));
+    auto substituted = RoundTripQuery(config, member, other_path, 2);
+    EXPECT_EQ(substituted.verify(commitment), substituted.verify(commitment, member));
+    EXPECT_NE(QueryVerificationResult::ValidNotMember, substituted.verify(commitment, member));
+
+    ASSERT_FALSE(trie.lookup(PartialLabel(utils::compute_key_hash(absent)), path));
+    auto absent_result = RoundTripQuery(config, absent, path);
+    EXPECT_EQ(QueryVerificationResult::ValidNotMember, absent_result.verify(commitment));
+    EXPECT_EQ(QueryVerificationResult::ValidNotMember, absent_result.verify(commitment, absent));
+    EXPECT_EQ(QueryVerificationResult::NotValid, absent_result.verify(commitment, member));
+}
+
 TEST(QueryResultTests, RejectsUnversionedQueryResult)
 {
     OZKSConfig config(
@@ -387,6 +431,9 @@ TEST(QueryResultTests, RequiresVRFProofAndPublicKey)
         QueryVerificationResult::ValidIsMember,
         wrong_key.verify_lookup_path(trie.get_commitment()));
     EXPECT_EQ(QueryVerificationResult::NotValid, wrong_key.verify(commitment));
+    // The expected-key overload binds the key in VRF mode as well.
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, honest.verify(commitment, key));
+    EXPECT_EQ(QueryVerificationResult::NotValid, honest.verify(commitment, other_key));
     auto other_proof = sk->get_vrf_proof(utils::compute_key_hash(other_key));
     QueryResult wrong_proof(config, key, {}, path, *other_proof, {}, 1);
     EXPECT_FALSE(wrong_proof.verify_vrf_proof(*pk));
