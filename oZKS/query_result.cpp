@@ -22,7 +22,7 @@ bool QueryResult::is_member() const
 QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &commitment) const
 {
     if (lookup_proof_.empty() || lookup_proof_.size() > PartialLabel::MaxBitCount + 1 ||
-        (use_vrf_ && !vrf_proof_)) {
+        (use_vrf_ && (!vrf_proof_ || !vrf_proof_->is_initialized()))) {
         return QueryVerificationResult::NotValid;
     }
 
@@ -103,7 +103,7 @@ PartialLabel QueryResult::queried_label() const
 
 bool QueryResult::is_member_from_path() const
 {
-    if (lookup_proof_.empty() || (use_vrf_ && !vrf_proof_)) {
+    if (lookup_proof_.empty() || (use_vrf_ && (!vrf_proof_ || !vrf_proof_->is_initialized()))) {
         return false;
     }
     const auto label = queried_label();
@@ -117,13 +117,14 @@ bool QueryResult::is_member_from_path() const
 
 bool QueryResult::verify_vrf_proof(vrf::PublicKey &public_key) const
 {
-    return utils::verify_vrf_proof(key_, *vrf_proof_, public_key);
+    return vrf_proof_ && vrf_proof_->is_initialized() && public_key.is_initialized() &&
+           utils::verify_vrf_proof(key_, *vrf_proof_, public_key);
 }
 
 QueryVerificationResult QueryResult::verify(const Commitment &commitment) const
 {
     if (use_vrf_) {
-        if (!verify_vrf_proof(*commitment.public_key())) {
+        if (!commitment.public_key() || !verify_vrf_proof(*commitment.public_key())) {
             return QueryVerificationResult::NotValid;
         }
     }
@@ -146,6 +147,9 @@ size_t QueryResult::save(vector<T> &vector) const
 
 size_t QueryResult::save(SerializationWriter &writer) const
 {
+    if (use_vrf_ && (!vrf_proof_ || !vrf_proof_->is_initialized())) {
+        throw logic_error("Cannot save QueryResult: VRF proof is missing or uninitialized");
+    }
     flatbuffers::FlatBufferBuilder fbs_builder;
 
     auto key_data =
@@ -210,7 +214,9 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
 
     QueryResult query_result(config);
     query_result.epoch_ = static_cast<size_t>(fbs_query_result->epoch());
-    query_result.use_vrf_ = fbs_query_result->use_vrf();
+    if (fbs_query_result->use_vrf() != query_result.use_vrf_) {
+        throw runtime_error("Failed to load QueryResult: label mode does not match configuration");
+    }
 
     query_result.key_.resize(fbs_query_result->key()->size());
     utils::copy_bytes(
@@ -233,9 +239,15 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
     query_result.lookup_proof_.resize(fbs_query_result->lookup_proof_count());
 
     if (query_result.use_vrf_) {
-        query_result.vrf_proof_ = vrf::VRF::ProofFromBytes(gsl::span<const byte>(
-            reinterpret_cast<const byte *>(fbs_query_result->vrf_proof()->data()),
-            fbs_query_result->vrf_proof()->size()));
+        auto proof = fbs_query_result->vrf_proof();
+        if (!proof || proof->size() == 0) {
+            throw runtime_error("Failed to load QueryResult: VRF proof is missing");
+        }
+        query_result.vrf_proof_ = vrf::VRF::ProofFromBytes(
+            gsl::span<const byte>(reinterpret_cast<const byte *>(proof->data()), proof->size()));
+        if (!query_result.vrf_proof_ || !query_result.vrf_proof_->is_initialized()) {
+            throw runtime_error("Failed to load QueryResult: VRF proof is invalid");
+        }
     } else {
         query_result.vrf_proof_ = nullptr;
     }

@@ -4,6 +4,9 @@
 // STD
 #include <iostream>
 
+// VRF
+#include <vrf/ec/ecvrf.h>
+
 // OZKS
 #include "oZKS/compressed_trie.h"
 #include "oZKS/insert_result.h"
@@ -12,6 +15,7 @@
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -235,6 +239,227 @@ TEST(QueryResultTests, RejectsShortenedLeafLabelAfterSerialization)
     serialized.clear();
     forged_insert.save(serialized);
     EXPECT_FALSE(InsertResult::Load(serialized).first.verify());
+}
+
+TEST(QueryResultTests, RejectsSerializedLabelModeMismatch)
+{
+    key_type key{ byte{ 1 } };
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto pk = sk->get_public_key();
+    auto proof = sk->get_vrf_proof(utils::compute_key_hash(key));
+    for (auto mode : { LabelType::VRFLabels, LabelType::HashedLabels }) {
+        auto storage = make_shared<MemoryStorage>();
+        OZKSConfig config(
+            PayloadCommitmentType::UncommitedPayload, mode, TrieType::Stored, storage);
+        OZKSConfig other(
+            config.payload_commitment(),
+            mode == LabelType::VRFLabels ? LabelType::HashedLabels : LabelType::VRFLabels,
+            TrieType::Stored,
+            storage);
+        hash_type label = utils::compute_key_hash(key);
+        if (mode == LabelType::VRFLabels) {
+            utils::copy_bytes_to_hash(proof->get_vrf_value(), label);
+        }
+        CompressedTrie trie(storage, TrieType::Stored);
+        append_proof_type path;
+        trie.insert(
+            PartialLabel(label),
+            utils::compute_payload_commitment({}, config.payload_commitment(), {}),
+            path);
+        QueryResult honest(config, key, {}, path, *proof, {}, 1);
+        Commitment commitment(
+            mode == LabelType::VRFLabels ? pk.get() : nullptr, trie.get_commitment());
+        vector<byte> serialized;
+        honest.save(serialized);
+        EXPECT_EQ(
+            QueryVerificationResult::ValidIsMember,
+            QueryResult::Load(config, serialized).first.verify(commitment));
+        EXPECT_THROW(QueryResult::Load(other, serialized), runtime_error);
+        stringstream stream;
+        honest.save(stream);
+        EXPECT_THROW(QueryResult::Load(other, stream), runtime_error);
+    }
+}
+
+TEST(QueryResultTests, RejectsDowngradedFalseExclusion)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfig trusted(
+        PayloadCommitmentType::UncommitedPayload, LabelType::VRFLabels, TrieType::Stored, storage);
+    OZKSConfig downgraded(
+        trusted.payload_commitment(), LabelType::HashedLabels, TrieType::Stored, storage);
+    key_type key{ byte{ 1 } };
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto pk = sk->get_public_key();
+    auto proof = sk->get_vrf_proof(utils::compute_key_hash(key));
+    hash_type label;
+    utils::copy_bytes_to_hash(proof->get_vrf_value(), label);
+    CompressedTrie trie(storage, TrieType::Stored);
+    append_proof_type path;
+    trie.insert(
+        PartialLabel(label),
+        utils::compute_payload_commitment({}, trusted.payload_commitment(), {}),
+        path);
+    Commitment commitment(pk.get(), trie.get_commitment());
+    QueryResult honest(trusted, key, {}, path, *proof, {}, 1);
+    ASSERT_EQ(QueryVerificationResult::ValidIsMember, honest.verify(commitment));
+
+    ASSERT_FALSE(trie.lookup(PartialLabel(utils::compute_key_hash(key)), path));
+    QueryResult forged(downgraded, key, {}, path, {}, 0);
+    ASSERT_EQ(QueryVerificationResult::ValidNotMember, forged.verify(commitment));
+    vector<byte> serialized;
+    forged.save(serialized);
+    EXPECT_THROW(QueryResult::Load(trusted, serialized), runtime_error);
+}
+
+TEST(QueryResultTests, RequiresVRFProofAndPublicKey)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload, LabelType::VRFLabels, TrieType::Stored, storage);
+    key_type key{ byte{ 1 } }, other_key{ byte{ 2 } };
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto pk = sk->get_public_key();
+    auto proof = sk->get_vrf_proof(utils::compute_key_hash(key));
+    hash_type label;
+    utils::copy_bytes_to_hash(proof->get_vrf_value(), label);
+    CompressedTrie trie(storage, TrieType::Stored);
+    append_proof_type path;
+    trie.insert(
+        PartialLabel(label),
+        utils::compute_payload_commitment({}, config.payload_commitment(), {}),
+        path);
+    Commitment commitment(pk.get(), trie.get_commitment());
+    QueryResult honest(config, key, {}, path, *proof, {}, 1);
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, honest.verify(commitment));
+    EXPECT_EQ(
+        QueryVerificationResult::NotValid,
+        honest.verify(Commitment(nullptr, trie.get_commitment())));
+
+    QueryResult missing(config, key, {}, path, {}, 1);
+    EXPECT_FALSE(missing.is_member());
+    EXPECT_FALSE(missing.verify_vrf_proof(*pk));
+    EXPECT_EQ(QueryVerificationResult::NotValid, missing.verify_lookup_path(trie.get_commitment()));
+    EXPECT_EQ(QueryVerificationResult::NotValid, missing.verify(commitment));
+    EXPECT_EQ(QueryVerificationResult::NotValid, missing.verify(Commitment()));
+    EXPECT_EQ(QueryVerificationResult::NotValid, QueryResult(config).verify(commitment));
+    vector<byte> serialized{ byte{ 42 } };
+    EXPECT_THROW(missing.save(serialized), logic_error);
+    EXPECT_EQ((vector<byte>{ byte{ 42 } }), serialized);
+    stringstream stream;
+    EXPECT_THROW(missing.save(stream), logic_error);
+    EXPECT_TRUE(stream.str().empty());
+
+    auto wrong_sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto wrong_pk = wrong_sk->get_public_key();
+    EXPECT_FALSE(honest.verify_vrf_proof(*wrong_pk));
+    EXPECT_EQ(
+        QueryVerificationResult::NotValid,
+        honest.verify(Commitment(wrong_pk.get(), trie.get_commitment())));
+    QueryResult wrong_key(config, other_key, {}, path, *proof, {}, 1);
+    EXPECT_EQ(
+        QueryVerificationResult::ValidIsMember,
+        wrong_key.verify_lookup_path(trie.get_commitment()));
+    EXPECT_EQ(QueryVerificationResult::NotValid, wrong_key.verify(commitment));
+    auto other_proof = sk->get_vrf_proof(utils::compute_key_hash(other_key));
+    QueryResult wrong_proof(config, key, {}, path, *other_proof, {}, 1);
+    EXPECT_FALSE(wrong_proof.verify_vrf_proof(*pk));
+    EXPECT_EQ(QueryVerificationResult::NotValid, wrong_proof.verify(commitment));
+    serialized.clear();
+    wrong_proof.save(serialized);
+    EXPECT_EQ(
+        QueryVerificationResult::NotValid,
+        QueryResult::Load(config, serialized).first.verify(commitment));
+}
+
+TEST(QueryResultTests, UninitializedVRFObjectsFailSafely)
+{
+    OZKSConfig config;
+    key_type key{ byte{ 1 } };
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto pk = sk->get_public_key();
+    auto proof = sk->get_vrf_proof(utils::compute_key_hash(key));
+    lookup_path_type empty_tree{ { {}, {} } };
+    QueryResult honest(config, key, {}, empty_tree, *proof, {}, 0);
+    Commitment commitment(pk.get(), {});
+    EXPECT_EQ(QueryVerificationResult::ValidNotMember, honest.verify(commitment));
+    EXPECT_EQ(QueryVerificationResult::NotValid, honest.verify(Commitment()));
+    vrf::ec::ECPublicKey invalid_pk;
+    ASSERT_FALSE(invalid_pk.is_initialized());
+    EXPECT_FALSE(honest.verify_vrf_proof(invalid_pk));
+    EXPECT_EQ(QueryVerificationResult::NotValid, honest.verify(Commitment(&invalid_pk, {})));
+
+    vrf::ec::ECProof invalid_proof;
+    ASSERT_FALSE(invalid_proof.is_initialized());
+    QueryResult invalid(config, key, {}, empty_tree, invalid_proof, {}, 0);
+    EXPECT_FALSE(invalid.is_member());
+    EXPECT_FALSE(invalid.verify_vrf_proof(*pk));
+    EXPECT_EQ(QueryVerificationResult::NotValid, invalid.verify_lookup_path({}));
+    EXPECT_EQ(QueryVerificationResult::NotValid, invalid.verify(commitment));
+    vector<byte> serialized;
+    EXPECT_THROW(invalid.save(serialized), logic_error);
+    EXPECT_TRUE(serialized.empty());
+}
+
+TEST(QueryResultTests, RejectsMissingAndUnparseableSerializedVRFProof)
+{
+    OZKSConfig config;
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto proof = sk->get_vrf_proof(utils::compute_key_hash(key_type{ byte{ 1 } }));
+    for (int mutation : { 0, 1, 2, 3 }) {
+        SCOPED_TRACE(mutation);
+        flatbuffers::FlatBufferBuilder builder;
+        auto empty = builder.CreateVector(vector<uint8_t>{});
+        auto randomness = builder.CreateVector(vector<uint8_t>(randomness_type{}.size()));
+        flatbuffers::Offset<flatbuffers::Vector<uint8_t>> proof_data = 0;
+        if (mutation != 0) {
+            auto bytes = proof->to_bytes();
+            if (mutation == 1) {
+                bytes.clear();
+            } else if (mutation == 2) {
+                bytes.assign(3, byte{ 0xFF });
+            } else {
+                bytes.resize(1);
+            }
+            proof_data =
+                builder.CreateVector(reinterpret_cast<const uint8_t *>(bytes.data()), bytes.size());
+        }
+        fbs::QueryResultBuilder query(builder);
+        query.add_key(empty);
+        query.add_payload(empty);
+        query.add_randomness(randomness);
+        query.add_vrf_proof(proof_data);
+        query.add_use_vrf(true);
+        query.add_version(ozks_serialization_version);
+        auto result = query.Finish();
+        builder.FinishSizePrefixed(result);
+        vector<uint8_t> serialized(
+            builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+        EXPECT_THROW(QueryResult::Load(config, serialized), runtime_error);
+    }
+}
+
+TEST(QueryResultTests, RejectsTruncatedProofDuringVerification)
+{
+    OZKSConfig config;
+    key_type key{ byte{ 1 } };
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto pk = sk->get_public_key();
+    auto proof = sk->get_vrf_proof(utils::compute_key_hash(key));
+    auto bytes = proof->to_bytes();
+    bytes.pop_back();
+    auto truncated = vrf::VRF::ProofFromBytes(bytes);
+    ASSERT_NE(nullptr, truncated);
+    // The dependency accepts truncated encodings as initialized objects; verification must reject
+    // them.
+    ASSERT_TRUE(truncated->is_initialized());
+    QueryResult result(config, key, {}, { { {}, {} } }, *truncated, {}, 0);
+    EXPECT_FALSE(result.verify_vrf_proof(*pk));
+    EXPECT_EQ(QueryVerificationResult::NotValid, result.verify(Commitment(pk.get(), {})));
+    vector<byte> serialized;
+    result.save(serialized);
+    auto loaded = QueryResult::Load(config, serialized);
+    EXPECT_EQ(QueryVerificationResult::NotValid, loaded.first.verify(Commitment(pk.get(), {})));
 }
 
 void InitQueryResult(QueryResult &qr, const OZKSConfig &config)

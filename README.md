@@ -113,6 +113,8 @@ Unversioned query results are rejected.
 Query providers must return insertion epochs for both single and batched lookups; use zero for absent keys.
 Pass that epoch to the `QueryResult` constructor, not the current root epoch.
 Membership verification authenticates the returned payload and its opening randomness using the caller's configured payload commitment mode.
+Query results must also match the caller's configured label mode; serialized data cannot enable or disable VRF verification.
+VRF-mode results require a proof and a trusted commitment containing the VRF public key.
 
 oZKS has multiple external dependencies that must be pre-installed.
 By far the easiest and recommended way to do this is using [vcpkg](https://github.com/microsoft/vcpkg).
