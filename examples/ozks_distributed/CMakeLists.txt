@@ -31,6 +31,9 @@ else()
     message(FATAL_ERROR "Cannot find target OZKS::ozks")
 endif()
 
+# The generated schema header lives under ${OZKS_BUILD_DIR}/oZKS. In-tree builds already see
+# that directory through the ozks target; standalone builds against an installed OZKS do not.
+target_include_directories(ozks-distributed PRIVATE $<BUILD_INTERFACE:${OZKS_BUILD_DIR}>)
 
 if(OZKS_BUILD_TESTS)
     add_executable(ozks-distributed-unit-tests)

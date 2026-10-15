@@ -17,16 +17,21 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
 project(ozks-perf VERSION 2.0.0 LANGUAGES CXX)
 
-# If not called from root CMakeLists.txt
-if(NOT DEFINED OZKS_BUILD_BENCH)
+# Standalone build: this directory is the top-level project rather than a subdirectory of the
+# root CMakeLists.txt.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    # Import an installed OZKS and build the ozks-simple example library from its sibling
+    # directory. ozks-simple is never installed as a package of its own, so it cannot be found
+    # with find_package.
+    include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/OZKSStandaloneSetup.cmake)
+    ozks_standalone_setup()
+
+    # ozks_simple adds this directory itself when OZKS_BUILD_BENCH is ON, so keep it OFF (and
+    # tests OFF) while adding it, then build the benchmark below.
+    set(OZKS_BUILD_TESTS OFF)
+    set(OZKS_BUILD_BENCH OFF)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/ozks-simple)
     set(OZKS_BUILD_BENCH ON)
-
-    # Import OZKS
-    find_package(ozks-simple 2.0 REQUIRED)
-
-    # Must define these variables and include macros
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${OUTLIB_PATH})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 endif()
 
 # if OZKS_BUILD_BENCH is ON, use GoogleBenchmark
@@ -52,13 +57,9 @@ if(OZKS_BUILD_BENCH)
         target_compile_options(ozks-perf PUBLIC "/Zi")
     endif()
 
-    if(TARGET OZKS::ozks-simple)
-        target_link_libraries(ozks-perf PUBLIC OZKS::ozks-simple benchmark::benchmark)
-    elseif(TARGET ozks-simple)
+    if(TARGET ozks-simple)
         target_link_libraries(ozks-perf PUBLIC ozks-simple benchmark::benchmark)
     else()
-        message(FATAL_ERROR "Cannot find target OZKS::ozks-simple")
+        message(FATAL_ERROR "Cannot find target ozks-simple")
     endif()
-
-    target_include_directories(ozks-perf PUBLIC ${TCLAP_INCLUDE_DIRS})
 endif()

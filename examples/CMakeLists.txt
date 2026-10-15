@@ -17,19 +17,17 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
 project(ozks-examples VERSION 2.0.0 LANGUAGES CXX)
 
-# If not called from root CMakeLists.txt
-if(NOT DEFINED OZKS_BUILD_EXAMPLES)
+# Standalone build: this directory is the top-level project rather than a subdirectory of the
+# root CMakeLists.txt.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(OZKS_BUILD_EXAMPLES ON)
 
-    # Import OZKS
-    find_package(OZKS 2.0 REQUIRED)
-
-    # Must define these variables and include macros
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${OUTLIB_PATH})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+    # Standalone build: import an installed OZKS and define the variables the root build
+    # would otherwise provide.
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/OZKSStandaloneSetup.cmake)
+    ozks_standalone_setup()
 endif()
 
-# if OZKS_BUILD_BENCH is ON, use GoogleBenchmark
 if(OZKS_BUILD_EXAMPLES)
     add_subdirectory(ozks_simple)
     add_subdirectory(ozks_distributed)
