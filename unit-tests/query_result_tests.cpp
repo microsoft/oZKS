@@ -156,6 +156,50 @@ TEST(QueryResultTests, VerifyWithExpectedKeyRejectsOtherKeys)
     EXPECT_EQ(QueryVerificationResult::NotValid, absent_result.verify(commitment, member));
 }
 
+TEST(QueryResultTests, RejectsOversizedProofCountBeforeAllocating)
+{
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        make_shared<MemoryStorage>());
+    PartialLabel label = utils::make_bytes<PartialLabel>(0xAA, 0xBB);
+    hash_type hash = utils::compute_hash(utils::make_bytes<vector<byte>>(0x01), "hash");
+    // A hostile count must be rejected before it sizes an allocation or reads any element.
+    // The longest honest proof, max_proof_length elements, is the control that must load.
+    const uint32_t longest = static_cast<uint32_t>(max_proof_length);
+    for (uint32_t count : { longest, longest + 1, 0xFFFFFFFFU }) {
+        SCOPED_TRACE(count);
+        flatbuffers::FlatBufferBuilder builder;
+        auto empty = builder.CreateVector(vector<uint8_t>{});
+        auto randomness = builder.CreateVector(vector<uint8_t>(randomness_type{}.size()));
+        fbs::QueryResultBuilder query(builder);
+        query.add_key(empty);
+        query.add_payload(empty);
+        query.add_randomness(randomness);
+        query.add_version(ozks_serialization_version);
+        query.add_lookup_proof_count(count);
+        builder.FinishSizePrefixed(query.Finish());
+        vector<uint8_t> buffer(
+            builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+        if (count == longest) {
+            VectorSerializationWriter<uint8_t> writer(&buffer);
+            for (uint32_t idx = 0; idx < count; idx++) {
+                utils::write_path_element(label, hash, writer);
+            }
+            EXPECT_EQ(
+                max_proof_length, QueryResult::Load(config, buffer).first.lookup_proof().size());
+            continue;
+        }
+        try {
+            QueryResult::Load(config, buffer);
+            FAIL() << "Load should have rejected the proof count";
+        } catch (const runtime_error &ex) {
+            EXPECT_STREQ("Failed to load QueryResult: lookup proof too long", ex.what());
+        }
+    }
+}
+
 TEST(QueryResultTests, RejectsUnversionedQueryResult)
 {
     OZKSConfig config(
@@ -227,12 +271,24 @@ TEST(QueryResultTests, RejectsMalformedPathsWithoutThrowing)
                                         { { label, hash }, { label, hash } },
                                         { { label, hash }, { prefix, hash } },
                                         { { prefix, hash }, { label, hash } },
-                                        { { label, hash }, { {}, {} } },
-                                        lookup_path_type(
-                                            PartialLabel::MaxBitCount + 2, { label, hash }) };
+                                        { { label, hash }, { {}, {} } } };
     for (const auto &path : malformed) {
         auto result = RoundTripQuery(config, key, path);
         EXPECT_EQ(QueryVerificationResult::NotValid, result.verify_lookup_path(hash));
+    }
+
+    // An over-long path is rejected by the verifier when built in memory, and by Load before
+    // it allocates when it arrives serialized.
+    lookup_path_type over_long(max_proof_length + 1, { label, hash });
+    QueryResult in_memory(config, key, {}, over_long, randomness_type{}, 0);
+    EXPECT_EQ(QueryVerificationResult::NotValid, in_memory.verify_lookup_path(hash));
+    vector<byte> serialized;
+    in_memory.save(serialized);
+    try {
+        QueryResult::Load(config, serialized);
+        FAIL() << "Load should have rejected the over-long path";
+    } catch (const runtime_error &ex) {
+        EXPECT_STREQ("Failed to load QueryResult: lookup proof too long", ex.what());
     }
 }
 

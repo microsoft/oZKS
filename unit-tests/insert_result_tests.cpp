@@ -141,7 +141,7 @@ TEST(InsertResultTests, RejectsMalformedProofsWithoutThrowing)
         { { label, leaf_hash }, { other, leaf_hash } },
         // Continues past the root.
         { { label, leaf_hash }, { other, leaf_hash }, { label, leaf_hash } },
-        append_proof_type(PartialLabel::MaxBitCount + 2, { label, leaf_hash }),
+        append_proof_type(max_proof_length + 1, { label, leaf_hash }),
     };
     for (size_t idx = 0; idx < malformed.size(); idx++) {
         SCOPED_TRACE(idx);
@@ -153,6 +153,43 @@ TEST(InsertResultTests, RejectsMalformedProofsWithoutThrowing)
 
     // Verifying an uninitialized result is a programming error and still throws.
     EXPECT_THROW(InsertResult().verify(), runtime_error);
+}
+
+TEST(InsertResultTests, RejectsOversizedProofCountBeforeAllocating)
+{
+    commitment_type commitment = make_bytes<commitment_type>(0x80, 0x23);
+    PartialLabel label = make_bytes<PartialLabel>(0xAA, 0xBB);
+    hash_type hash = utils::compute_hash(make_bytes<vector<byte>>(0x01), "hash");
+    // A hostile count must be rejected before it sizes an allocation or reads any element.
+    // The longest honest proof, max_proof_length elements, is the control that must load.
+    const uint32_t longest = static_cast<uint32_t>(max_proof_length);
+    for (uint32_t count : { longest, longest + 1, 0xFFFFFFFFU }) {
+        SCOPED_TRACE(count);
+        flatbuffers::FlatBufferBuilder builder;
+        fbs::RootCommitment root(flatbuffers::span<const uint8_t, 32>{
+            reinterpret_cast<const uint8_t *>(commitment.data()), commitment.size() });
+        fbs::InsertResultBuilder result_builder(builder);
+        result_builder.add_commitment(&root);
+        result_builder.add_append_proof_count(count);
+        result_builder.add_version(ozks_serialization_version);
+        builder.FinishSizePrefixed(result_builder.Finish());
+        vector<uint8_t> buffer(
+            builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+        if (count == longest) {
+            VectorSerializationWriter<uint8_t> writer(&buffer);
+            for (uint32_t idx = 0; idx < count; idx++) {
+                utils::write_path_element(label, hash, writer);
+            }
+            EXPECT_EQ(max_proof_length, InsertResult::Load(buffer).first.append_proof().size());
+            continue;
+        }
+        try {
+            InsertResult::Load(buffer);
+            FAIL() << "Load should have rejected the proof count";
+        } catch (const runtime_error &ex) {
+            EXPECT_STREQ("Failed to load InsertResult: append proof too long", ex.what());
+        }
+    }
 }
 
 TEST(InsertResultTests, CarriesSerializationVersion)

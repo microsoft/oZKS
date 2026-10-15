@@ -29,8 +29,7 @@ namespace ozks {
         // A malformed proof is simply not a valid proof. Validate the structure before any
         // label is indexed so that untrusted input can never make verification throw.
         const append_proof_type &proof = *append_proof_;
-        if (proof.empty() || proof.size() > PartialLabel::MaxBitCount + 1 ||
-            proof[0].first.empty()) {
+        if (proof.empty() || proof.size() > max_proof_length || proof[0].first.empty()) {
             return false;
         }
 
@@ -147,7 +146,12 @@ namespace ozks {
             fbs_insert_result->commitment()->data()->size(),
             root_commitment.data());
 
+        // The element count comes from untrusted input and sizes an allocation before any
+        // element is read, so bound it before using it.
         size_t ap_count = fbs_insert_result->append_proof_count();
+        if (ap_count > max_proof_length) {
+            throw runtime_error("Failed to load InsertResult: append proof too long");
+        }
         size_t ap_size = 0;
         append_proof_type append_proof(ap_count);
 

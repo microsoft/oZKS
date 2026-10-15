@@ -21,7 +21,7 @@ bool QueryResult::is_member() const
 
 QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &commitment) const
 {
-    if (lookup_proof_.empty() || lookup_proof_.size() > PartialLabel::MaxBitCount + 1 ||
+    if (lookup_proof_.empty() || lookup_proof_.size() > max_proof_length ||
         (use_vrf_ && (!vrf_proof_ || !vrf_proof_->is_initialized()))) {
         return QueryVerificationResult::NotValid;
     }
@@ -264,7 +264,13 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
         fbs_query_result->randomness()->size(),
         query_result.randomness_.data());
 
-    query_result.lookup_proof_.resize(fbs_query_result->lookup_proof_count());
+    // The element count comes from untrusted input and sizes an allocation before any element
+    // is read, so bound it before using it.
+    std::size_t lp_count = fbs_query_result->lookup_proof_count();
+    if (lp_count > max_proof_length) {
+        throw runtime_error("Failed to load QueryResult: lookup proof too long");
+    }
+    query_result.lookup_proof_.resize(lp_count);
 
     if (query_result.use_vrf_) {
         auto proof = fbs_query_result->vrf_proof();
@@ -280,7 +286,6 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
         query_result.vrf_proof_ = nullptr;
     }
 
-    std::size_t lp_count = fbs_query_result->lookup_proof_count();
     std::size_t lp_size = 0;
 
     for (size_t idx = 0; idx < lp_count; idx++) {

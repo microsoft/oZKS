@@ -47,6 +47,7 @@ See the README section "Serialization versioning and compatibility" for the poli
 - `QueryResult::verify_lookup_path` and `InsertResult::verify` no longer throw on malformed proofs; `InsertResult::verify` throws only when called on an uninitialized result.
 - `QueryResult::Load` throws on an unsupported version, a label mode that does not match the configuration, an out-of-range epoch, or a missing or invalid VRF proof in VRF mode.
   `QueryResult::save` throws for a VRF-mode result without an initialized proof.
+- `QueryResult::Load` and `InsertResult::Load` reject a proof element count above `max_proof_length` (257) before allocating, so a hostile buffer cannot force a large allocation.
 - `QueryResult::verify_vrf_proof` returns false when the proof's VRF suite differs from the key's.
 - `Commitment::Load` throws when the stated VRF suite is missing or does not match the public key.
 

@@ -42,6 +42,13 @@ namespace ozks {
     using append_proof_type = std::vector<std::pair<PartialLabel, hash_type>>;
     using append_proof_batch_type = std::vector<append_proof_type>;
 
+    /**
+    The longest lookup or append proof a trie with 256-bit labels can produce: one sibling
+    per edge on the way down, plus the searched node. Loaders reject longer proofs before
+    allocating, and verifiers reject them before indexing.
+    */
+    constexpr std::size_t max_proof_length = 256 + 1;
+
     using key_payload_batch_type = std::vector<std::pair<key_type, payload_type>>;
 
     struct store_value_type {

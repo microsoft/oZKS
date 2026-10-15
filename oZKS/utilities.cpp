@@ -31,6 +31,9 @@ namespace {
     static_assert(
         PartialLabel::ByteCount % sizeof(uint64_t) == 0,
         "Label encoding assumes whole 64-bit words");
+    static_assert(
+        max_proof_length == PartialLabel::MaxBitCount + 1,
+        "A proof holds at most one sibling per label bit plus the searched node");
 
     void encode_big_endian(uint64_t value, byte *out, size_t width)
     {
