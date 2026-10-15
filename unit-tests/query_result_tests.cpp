@@ -533,6 +533,19 @@ TEST(QueryResultTests, RejectsTruncatedProofDuringVerification)
     result.save(serialized);
     auto loaded = QueryResult::Load(config, serialized);
     EXPECT_EQ(QueryVerificationResult::NotValid, loaded.first.verify(Commitment(pk.get(), {})));
+
+    // The path verifier and the membership accessor derive the queried label from the VRF
+    // value without verifying the proof. A truncated proof yields a value of the wrong size;
+    // both must report "not valid" or "not a member" rather than throw. The path is non-empty
+    // so that the label is actually needed.
+    PartialLabel leaf(hash_type{});
+    QueryResult with_path(config, key, {}, { { leaf, hash_type{} } }, *truncated, {}, 0);
+    QueryVerificationResult path_result = QueryVerificationResult::ValidIsMember;
+    EXPECT_NO_THROW(path_result = with_path.verify_lookup_path({}));
+    EXPECT_EQ(QueryVerificationResult::NotValid, path_result);
+    bool member = true;
+    EXPECT_NO_THROW(member = with_path.is_member());
+    EXPECT_FALSE(member);
 }
 
 void InitQueryResult(QueryResult &qr, const OZKSConfig &config)

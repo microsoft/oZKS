@@ -159,6 +159,85 @@ TEST(OZKSTests, AuthenticatesPayloadAndInsertionEpoch)
     }
 }
 
+TEST(OZKSTests, LeafEpochsSurviveManyEpochsAndReload)
+{
+    // Membership verification recomputes the leaf hash from the leaf's original insertion
+    // epoch, so a leaf's reported epoch must always equal the epoch it was hashed with: after
+    // many later insertions have restructured the trie around it, and after the trie is
+    // rebuilt from persisted nodes through both storage load paths.
+    constexpr size_t epochs = 12;
+    constexpr size_t keys_per_epoch = 8;
+    for (auto type : { TrieType::Stored, TrieType::Linked, TrieType::LinkedNoStorage }) {
+        SCOPED_TRACE(static_cast<int>(type));
+        OZKSConfig config(
+            PayloadCommitmentType::CommitedPayload,
+            LabelType::VRFLabels,
+            type,
+            make_shared<MemoryStorage>());
+        OZKS ozks(config);
+
+        // Deterministic keys: labels are VRF outputs of the key hash, so they are already
+        // pseudo-random, and a failure names the key through the epoch and index.
+        vector<pair<key_type, size_t>> inserted;
+        for (size_t epoch = 1; epoch <= epochs; epoch++) {
+            for (size_t i = 0; i < keys_per_epoch; i++) {
+                key_type key{ static_cast<byte>(epoch), static_cast<byte>(i) };
+                ozks.insert(key, payload_type{ static_cast<byte>(epoch), static_cast<byte>(i) });
+                inserted.emplace_back(key, epoch);
+            }
+            ozks.flush();
+            ASSERT_EQ(epoch, ozks.get_epoch());
+        }
+
+        // Through the instance: every leaf reports its insertion epoch and verifies, before
+        // and after the result is serialized.
+        auto commitment = ozks.get_commitment();
+        for (const auto &[key, epoch] : inserted) {
+            SCOPED_TRACE(static_cast<int>(epoch));
+            auto result = ozks.query(key);
+            EXPECT_EQ(epoch, result.epoch());
+            EXPECT_EQ(QueryVerificationResult::ValidIsMember, result.verify(commitment, key));
+            vector<byte> serialized;
+            result.save(serialized);
+            EXPECT_EQ(
+                QueryVerificationResult::ValidIsMember,
+                QueryResult::Load(config, serialized).first.verify(commitment, key));
+        }
+
+        // From storage: rebuild the trie from its persisted nodes, through the node-by-node
+        // loader and the loader that materializes all children, and check that the persisted
+        // leaf epochs still reproduce the leaf hashes. LinkedNoStorage persists nothing.
+        if (type == TrieType::LinkedNoStorage) {
+            continue;
+        }
+        auto from_storage = CompressedTrie::LoadFromStorage(ozks.id(), config.storage());
+        auto with_children =
+            CompressedTrie::LoadFromStorageWithChildren(ozks.id(), config.storage());
+        ASSERT_TRUE(from_storage.second);
+        ASSERT_TRUE(with_children.second);
+        for (const auto &trie : { from_storage.first, with_children.first }) {
+            ASSERT_EQ(commitment.root_commitment(), trie->get_commitment());
+            Commitment trie_commitment(commitment.public_key().get(), trie->get_commitment());
+            for (const auto &[key, epoch] : inserted) {
+                SCOPED_TRACE(static_cast<int>(epoch));
+                auto result = ozks.query(key);
+                hash_type label_hash;
+                copy_bytes_to_hash(result.vrf_proof()->get_vrf_value(), label_hash);
+                lookup_path_type path;
+                size_t leaf_epoch = 0;
+                ASSERT_TRUE(trie->lookup(PartialLabel(label_hash), path, leaf_epoch));
+                EXPECT_EQ(epoch, leaf_epoch);
+                QueryResult rebuilt(
+                    config, key, result.payload(), path, *result.vrf_proof(),
+                    result.randomness(), leaf_epoch);
+                EXPECT_EQ(
+                    QueryVerificationResult::ValidIsMember,
+                    rebuilt.verify(trie_commitment, key));
+            }
+        }
+    }
+}
+
 TEST(OZKSTests, BatchQueriesReturnLeafEpochs)
 {
     OZKSConfig config(

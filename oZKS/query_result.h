@@ -202,6 +202,13 @@ namespace ozks {
             const OZKSConfig &config, SerializationReader &reader);
 
         bool is_member_from_path() const;
-        PartialLabel queried_label() const;
+
+        /**
+        Derive the queried label from the key, or from the VRF value in VRF mode. Returns
+        false when the VRF value has the wrong size, which happens for a proof the VRF
+        library cannot decode (for example a truncated one) but nevertheless reports as
+        initialized. This is a size check only; the proof is authenticated by verify().
+        */
+        bool queried_label(PartialLabel &label) const;
     };
 } // namespace ozks

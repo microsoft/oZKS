@@ -34,7 +34,10 @@ QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &c
                    : QueryVerificationResult::NotValid;
     }
 
-    const PartialLabel query_label = queried_label();
+    PartialLabel query_label;
+    if (!queried_label(query_label)) {
+        return QueryVerificationResult::NotValid;
+    }
     auto classify_subtree = [this, &query_label](const PartialLabel &label, const hash_type &hash) {
         if (label == query_label) {
             auto payload_hash =
@@ -91,14 +94,23 @@ QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &c
     return hash == commitment ? result : QueryVerificationResult::NotValid;
 }
 
-PartialLabel QueryResult::queried_label() const
+bool QueryResult::queried_label(PartialLabel &label) const
 {
     hash_type vrf_value = utils::compute_key_hash(key_);
     if (use_vrf_) {
+        // The VRF library can report a proof it cannot decode (for example a truncated one)
+        // as initialized, in which case its value is empty or has the wrong size. Treat that
+        // as "no label" rather than throwing; the proof fails cryptographic verification in
+        // verify() regardless. This is a size check only: a well-sized value from a proof for
+        // the wrong key still yields a label, which is why only verify() authenticates.
         auto vrf_val_vec = vrf_proof_->get_vrf_value();
+        if (vrf_val_vec.size() != vrf_value.size()) {
+            return false;
+        }
         utils::copy_bytes_to_hash(vrf_val_vec, vrf_value);
     }
-    return PartialLabel(vrf_value);
+    label = PartialLabel(vrf_value);
+    return true;
 }
 
 bool QueryResult::is_member_from_path() const
@@ -106,7 +118,10 @@ bool QueryResult::is_member_from_path() const
     if (lookup_proof_.empty() || (use_vrf_ && (!vrf_proof_ || !vrf_proof_->is_initialized()))) {
         return false;
     }
-    const auto label = queried_label();
+    PartialLabel label;
+    if (!queried_label(label)) {
+        return false;
+    }
     for (const auto &element : lookup_proof_) {
         if (element.first == label) {
             return true;
