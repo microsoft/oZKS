@@ -122,7 +122,7 @@ Treat each bump as a full migration (see below). Wire-only or storage-only chang
 ### Version 2
 
 Version 2 is the first version whose hashes and formats are fully specified.
-Version 2 has not shipped; until it does, its formats may still change without a further bump. Once shipped, any change requires version 3.
+Version 2 ships with library release 2.0.0. Any further change to its hashes or formats requires version 3.
 Relative to version 1:
 
 - Leaf and node hashes cover the label's bit count as well as its bytes. Labels are hashed as their 32 bytes in bit order (bits past the bit count are zero) followed by the bit count as a 4-byte big-endian integer. A leaf hashes the encoded label, the payload commitment hash and the insertion epoch as an 8-byte big-endian integer; a node hashes the encoded label and hash of each child. The encoding does not depend on the width of `std::size_t`; the library requires a little-endian host, enforced at compile time.
