@@ -7,6 +7,7 @@
 #include "oZKS/ct_node_stored_generated.h"
 #include "oZKS/storage/storage.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 using namespace std;
 using namespace ozks;
@@ -225,6 +226,7 @@ size_t CTNodeStored::save(SerializationWriter &writer) const
     ctnode_builder.add_right(right_label);
     ctnode_builder.add_right_epoch(right_child_epoch());
     ctnode_builder.add_hash(&hash_data);
+    ctnode_builder.add_version(ozks_serialization_version);
 
     auto fbs_ctnode = ctnode_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_ctnode);
@@ -261,6 +263,11 @@ tuple<CTNodeStored, PartialLabel, PartialLabel, size_t> CTNodeStored::Load(
     }
 
     auto fbs_ctnode = fbs::GetSizePrefixedCTNodeStored(in_data.data());
+    // Node hashes are only meaningful under the serialization version that produced them.
+    // Legacy nodes have no version field and read back as version 0.
+    if (!same_serialization_version(fbs_ctnode->version())) {
+        throw runtime_error("Failed to load CTNode: unsupported version");
+    }
     CTNodeStored node;
 
     PartialLabel label;

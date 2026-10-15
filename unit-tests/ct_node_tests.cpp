@@ -9,8 +9,10 @@
 #include "oZKS/ct_node.h"
 #include "oZKS/ct_node_linked.h"
 #include "oZKS/ct_node_stored.h"
+#include "oZKS/ct_node_stored_generated.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 // GSL
 #include "gsl/span"
@@ -411,6 +413,57 @@ TEST(CTNodeTests, LinkedAllNodesHashedTest)
     shared_ptr<CTNode> root = make_shared<CTNodeLinked>(&trie);
 
     DoAllNodesHashedTest(root);
+}
+
+TEST(CTNodeTests, StoredNodeCarriesSerializationVersion)
+{
+    shared_ptr<storage::MemoryStorage> storage = make_shared<storage::MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Stored);
+    // Even first byte: the low bit of a node hash doubles as the in-memory dirty flag.
+    hash_type hash = make_bytes<hash_type>(0x02, 0x04, 0x06);
+    CTNodeStored node(&trie, PartialLabel{ 1, 0, 1 }, hash, /* epoch */ 4);
+
+    // An honest round trip carries the current version.
+    vector<byte> serialized;
+    node.save(serialized);
+    auto fbs_node =
+        fbs::GetSizePrefixedCTNodeStored(reinterpret_cast<const uint8_t *>(serialized.data()));
+    EXPECT_EQ(ozks_serialization_version, fbs_node->version());
+    auto loaded = CTNodeStored::Load(serialized, &trie);
+    EXPECT_EQ(node.hash(), get<0>(loaded).hash());
+    EXPECT_EQ(node.label(), get<0>(loaded).label());
+    EXPECT_EQ(4U, get<0>(loaded).epoch());
+
+    // A legacy node without the field reads back as version 0; any other version is foreign.
+    // The current version is included as a control that must load, proving the hand-built
+    // buffers are otherwise well formed and rejection is due to the version alone.
+    for (uint32_t version :
+         { 0U, 1U, ozks_serialization_version, ozks_serialization_version + 1 }) {
+        SCOPED_TRACE(version);
+        flatbuffers::FlatBufferBuilder builder;
+        array<uint8_t, PartialLabel::SaveSize> label_data{};
+        node.label().save(gsl::span<byte, PartialLabel::SaveSize>(
+            reinterpret_cast<byte *>(label_data.data()), label_data.size()));
+        fbs::PartialLabel label_struct(
+            flatbuffers::span<const uint8_t, PartialLabel::SaveSize>{ label_data });
+        fbs::Hash hash_struct(flatbuffers::span<const uint8_t, hash_size>{
+            reinterpret_cast<const uint8_t *>(hash.data()), hash_size });
+        fbs::CTNodeStoredBuilder node_builder(builder);
+        node_builder.add_label(&label_struct);
+        node_builder.add_hash(&hash_struct);
+        node_builder.add_epoch(4);
+        if (version != 0) {
+            node_builder.add_version(version);
+        }
+        builder.FinishSizePrefixed(node_builder.Finish());
+        vector<uint8_t> buffer(
+            builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+        if (version == ozks_serialization_version) {
+            EXPECT_EQ(hash, get<0>(CTNodeStored::Load(buffer, &trie)).hash());
+        } else {
+            EXPECT_THROW(CTNodeStored::Load(buffer, &trie), runtime_error);
+        }
+    }
 }
 
 TEST(CTNodeTests, StoredSaveLoadTest)

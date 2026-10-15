@@ -16,6 +16,7 @@ table CTNodeStored {
     left_epoch:uint64;
     right:OptionalPartialLabel;
     right_epoch:uint64;
+    version:uint32;
 }
 
 root_type CTNodeStored;

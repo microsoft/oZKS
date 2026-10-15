@@ -104,8 +104,9 @@ bool InsertResult::verify() const;
 
 Serialization version 2 authenticates each label's bit count as well as its backing bytes in leaf and internal-node hashes.
 This changes nonempty-tree commitments and is incompatible with version 1.
-Version 1 serialized commitments, tries, and example instances are rejected by the corresponding loaders.
-Do not relabel old serialized objects as version 2 or mix old stored nodes with new nodes.
+Version 1 serialized commitments, tries, stored nodes, and example instances are rejected by the corresponding loaders.
+Stored nodes serialized with `CTNodeStored::save` carry the serialization version and `CTNodeStored::Load` rejects any other version; a backend that persists node fields in its own record format must version its records itself. The in-memory backends hold node objects and never serialize them.
+Do not relabel old serialized objects as version 2.
 Rebuild persisted tries from the authoritative insertion history, preserving insertion epochs, and publish and independently distribute new trusted commitments before serving version 2 proofs.
 Regenerate query and insertion proofs against the rebuilt tries; retain historical version 1 data separately if needed.
 Query results now carry a serialization version and the queried leaf's original insertion epoch.
