@@ -15,6 +15,7 @@
 #include "oZKS/utilities.h"
 #include "../ozks_config_dist.h"
 #include "../ozks_distributed.h"
+#include "../providers/dist_query_provider.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -26,6 +27,49 @@ using namespace ozks::utils;
 using namespace ozks_distributed;
 
 constexpr size_t random_iterations = 50000;
+
+TEST(OZKSDistTests, QueryProviderReturnsAuthenticatedLeafEpochs)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfigDist config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        storage,
+        storage);
+    CompressedTrie trie(storage, TrieType::Stored);
+    auto payload_hash = compute_payload_commitment({}, config.payload_commitment(), {});
+    vector<hash_type> labels{ compute_key_hash(key_type{ byte{ 1 } }),
+                              compute_key_hash(key_type{ byte{ 2 } }),
+                              compute_key_hash(key_type{ byte{ 3 } }) };
+    append_proof_type path;
+    trie.insert(PartialLabel(labels[0]), payload_hash, path);
+    ozks_distributed::providers::QueryProvider provider(config);
+    size_t epoch = 0;
+    EXPECT_TRUE(provider.query(trie.id(), labels[0], path, epoch));
+    EXPECT_EQ(1, epoch);
+
+    trie.insert(PartialLabel(labels[1]), payload_hash, path);
+    provider.check_for_update(trie.id());
+    vector<bool> found;
+    vector<lookup_path_type> paths;
+    vector<size_t> epochs;
+    provider.query(trie.id(), labels, found, paths, epochs);
+    EXPECT_EQ((vector<bool>{ true, true, false }), found);
+    ASSERT_EQ((vector<size_t>{ 1, 2, 0 }), epochs);
+    ASSERT_EQ(labels.size(), paths.size());
+    for (size_t i = 0; i < labels.size(); i++) {
+        QueryResult result(
+            config, key_type{ static_cast<byte>(i + 1) }, {}, paths[i], {}, epochs[i]);
+        vector<byte> serialized;
+        result.save(serialized);
+        auto loaded = QueryResult::Load(config, serialized);
+        EXPECT_EQ(
+            found[i] ? QueryVerificationResult::ValidIsMember
+                     : QueryVerificationResult::ValidNotMember,
+            loaded.first.verify(Commitment(nullptr, trie.get_commitment())));
+    }
+}
 
 namespace {
     /**

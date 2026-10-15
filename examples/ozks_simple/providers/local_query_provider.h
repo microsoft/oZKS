@@ -25,7 +25,8 @@ namespace ozks_simple {
             bool query(
                 ozks::trie_id_type trie_id,
                 const ozks::hash_type &label,
-                ozks::lookup_path_type &lookup_path) override;
+                ozks::lookup_path_type &lookup_path,
+                std::size_t &leaf_epoch) override;
 
             /**
             Perform several queries on a compressed trie
@@ -34,7 +35,8 @@ namespace ozks_simple {
                 ozks::trie_id_type trie_id,
                 const std::vector<ozks::hash_type> &labels,
                 std::vector<bool> &found,
-                std::vector<ozks::lookup_path_type> &lookup_paths) override;
+                std::vector<ozks::lookup_path_type> &lookup_paths,
+                std::vector<std::size_t> &leaf_epochs) override;
 
             /**
             Get epoch number of the current querier

@@ -61,6 +61,11 @@ namespace ozks {
         */
         void copy_bytes_to_hash(gsl::span<const std::byte> src, hash_type &dst);
 
+        hash_type compute_payload_commitment(
+            gsl::span<const std::byte> payload,
+            PayloadCommitmentType payload_commitment,
+            const randomness_type &randomness);
+
         /**
         Compute an intermediate hash value for the label value in a Compressed Trie.
         This intermediate hash is used directly as the label if no VRF is used. Otherwise,

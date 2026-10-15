@@ -146,7 +146,8 @@ QueryResult OZKS::query(const key_type &key) const
         throw runtime_error("VRF proof expected but not provided");
 
     append_proof_type lookup_path;
-    if (!query_provider_->query(id(), label, lookup_path)) {
+    size_t leaf_epoch = 0;
+    if (!query_provider_->query(id(), label, lookup_path, leaf_epoch)) {
         // Non-existence: return path to partial label that matches key and its two children
         if (use_vrf)
             return { config_,
@@ -154,13 +155,15 @@ QueryResult OZKS::query(const key_type &key) const
                      /* payload */ {},
                      lookup_path,
                      *vrf_proof,
-                     /* randomness */ {} };
+                     /* randomness */ {},
+                     leaf_epoch };
         else
             return { config_,
                      key,
                      /* payload */ {},
                      lookup_path,
-                     /* randomness */ {} };
+                     /* randomness */ {},
+                     leaf_epoch };
     }
 
     // Existence: Returns payload, proof (proof = path type) and VRFProof that label was computed
@@ -170,18 +173,12 @@ QueryResult OZKS::query(const key_type &key) const
         throw runtime_error("Store should contain the key we found in the trie");
 
     if (use_vrf)
-        return { config_,
-                 key,
-                 store_element.payload,
-                 lookup_path,
-                 *vrf_proof,
-                 store_element.randomness };
+        return { config_,     key,        store_element.payload,
+                 lookup_path, *vrf_proof, store_element.randomness,
+                 leaf_epoch };
     else
-        return { config_,
-                 key,
-                 store_element.payload,
-                 lookup_path,
-                 store_element.randomness };
+        return { config_,   key, store_element.payload, lookup_path, store_element.randomness,
+                 leaf_epoch };
 }
 
 void OZKS::flush()

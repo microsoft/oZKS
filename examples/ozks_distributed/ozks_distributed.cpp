@@ -166,7 +166,8 @@ QueryResult OZKS::query(const key_type &key) const
         throw runtime_error("VRF proof expected but not provided");
 
     lookup_path_type lookup_path;
-    if (!query_provider_->query(id(), label, lookup_path)) {
+    size_t leaf_epoch = 0;
+    if (!query_provider_->query(id(), label, lookup_path, leaf_epoch)) {
         // Non-existence
         if (use_vrf)
             return { config_,
@@ -174,13 +175,15 @@ QueryResult OZKS::query(const key_type &key) const
                      /* payload */ {},
                      lookup_path,
                      *vrf_proof,
-                     /* randomness */ {} };
+                     /* randomness */ {},
+                     leaf_epoch };
         else
             return { config_,
                      key,
                      /* payload */ {},
                      lookup_path,
-                     /* randomness */ {} };
+                     /* randomness */ {},
+                     leaf_epoch };
     }
 
     // Existence
@@ -190,18 +193,10 @@ QueryResult OZKS::query(const key_type &key) const
     }
 
     if (use_vrf)
-        return { config_,
-                 key,
-                 element.payload,
-                 lookup_path,
-                 *vrf_proof,
-                 element.randomness };
+        return { config_,   key, element.payload, lookup_path, *vrf_proof, element.randomness,
+                 leaf_epoch };
     else
-        return { config_,
-                 key,
-                 element.payload,
-                 lookup_path,
-                 element.randomness };
+        return { config_, key, element.payload, lookup_path, element.randomness, leaf_epoch };
 }
 
 unique_ptr<vrf::PublicKey> OZKS::get_vrf_public_key() const

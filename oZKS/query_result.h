@@ -43,7 +43,8 @@ namespace ozks {
         Construct an instance of QueryResult
         */
         QueryResult(const OZKSConfig &config)
-            : use_vrf_(config.label_type() == LabelType::VRFLabels)
+            : use_vrf_(config.label_type() == LabelType::VRFLabels),
+              payload_commitment_(config.payload_commitment())
         {}
 
         /**
@@ -60,10 +61,12 @@ namespace ozks {
             const payload_type &payload,
             const lookup_path_type &lookup_proof,
             const vrf::Proof &vrf_proof,
-            const randomness_type &randomness)
+            const randomness_type &randomness,
+            std::size_t epoch)
             : key_(key), payload_(payload), lookup_proof_(lookup_proof),
-              vrf_proof_(vrf_proof.clone()),
-              randomness_(randomness), use_vrf_(config.label_type() == LabelType::VRFLabels)
+              vrf_proof_(vrf_proof.clone()), randomness_(randomness),
+              use_vrf_(config.label_type() == LabelType::VRFLabels),
+              payload_commitment_(config.payload_commitment()), epoch_(epoch)
         {}
 
         QueryResult(
@@ -71,9 +74,11 @@ namespace ozks {
             const key_type &key,
             const payload_type &payload,
             const lookup_path_type &lookup_proof,
-            const randomness_type &randomness)
-            : key_(key), payload_(payload), lookup_proof_(lookup_proof),
-              randomness_(randomness), use_vrf_(config.label_type() == LabelType::VRFLabels)
+            const randomness_type &randomness,
+            std::size_t epoch)
+            : key_(key), payload_(payload), lookup_proof_(lookup_proof), randomness_(randomness),
+              use_vrf_(config.label_type() == LabelType::VRFLabels),
+              payload_commitment_(config.payload_commitment()), epoch_(epoch)
         {}
 
         /**
@@ -122,7 +127,16 @@ namespace ozks {
         }
 
         /**
-        Verify whether the lookup proof is correct
+        Original insertion epoch of the queried leaf; zero for non-membership.
+        */
+        std::size_t epoch() const noexcept
+        {
+            return epoch_;
+        }
+
+        /**
+        Verify the query path and, for membership, the payload and insertion epoch.
+        VRF authentication additionally requires verify().
         */
         QueryVerificationResult verify_lookup_path(const commitment_type &commitment) const;
 
@@ -169,6 +183,8 @@ namespace ozks {
         std::unique_ptr<vrf::Proof> vrf_proof_{};
         randomness_type randomness_{};
         bool use_vrf_ = false;
+        PayloadCommitmentType payload_commitment_;
+        std::size_t epoch_ = 0;
 
         std::size_t save(SerializationWriter &writer) const;
         static std::pair<QueryResult, std::size_t> Load(

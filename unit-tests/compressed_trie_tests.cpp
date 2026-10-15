@@ -39,6 +39,25 @@ TEST(CompressedTrieTests, RejectsLegacyHashFormat)
     EXPECT_THROW(CompressedTrie::Load(serialized, storage), runtime_error);
 }
 
+TEST(CompressedTrieTests, LookupReturnsOriginalLeafEpoch)
+{
+    for (auto type : { TrieType::Stored, TrieType::Linked, TrieType::LinkedNoStorage }) {
+        auto storage = make_shared<MemoryStorage>();
+        CompressedTrie trie(storage, type);
+        append_proof_type path;
+        PartialLabel first{ false, false }, second{ false, true }, absent{ true, false };
+        trie.insert(first, {}, path);
+        trie.insert(second, {}, path);
+        size_t epoch = 99;
+        EXPECT_TRUE(trie.lookup(first, path, epoch));
+        EXPECT_EQ(1, epoch);
+        EXPECT_TRUE(trie.lookup(second, path, epoch));
+        EXPECT_EQ(2, epoch);
+        EXPECT_FALSE(trie.lookup(absent, path, epoch));
+        EXPECT_EQ(0, epoch);
+    }
+}
+
 namespace {
     /**
     A storage that will keep track of which nodes and tries where updated in a given epoch

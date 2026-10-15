@@ -328,6 +328,27 @@ TEST(Utilities, NodeHashesBindEveryLabelLength)
     }
 }
 
+TEST(Utilities, PayloadCommitmentRecomputation)
+{
+    for (auto mode :
+         { PayloadCommitmentType::CommitedPayload, PayloadCommitmentType::UncommitedPayload }) {
+        for (const auto &payload : { payload_type{}, payload_type{ byte{ 1 }, byte{ 2 } } }) {
+            auto committed = commit_payload(payload, mode);
+            EXPECT_EQ(committed.first, compute_payload_commitment(payload, mode, committed.second));
+            auto changed = payload;
+            changed.push_back(byte{ 3 });
+            EXPECT_NE(committed.first, compute_payload_commitment(changed, mode, committed.second));
+            if (mode == PayloadCommitmentType::UncommitedPayload) {
+                EXPECT_EQ(randomness_type{}, committed.second);
+            } else {
+                committed.second[0] ^= byte{ 1 };
+                EXPECT_NE(
+                    committed.first, compute_payload_commitment(payload, mode, committed.second));
+            }
+        }
+    }
+}
+
 TEST(Utilities, ByteVectorHashTest)
 {
     byte_vector_hash hasher;

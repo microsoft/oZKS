@@ -436,8 +436,12 @@ bool CTNode::lookup(
     const PartialLabel &lookup_label,
     const shared_ptr<const CTNode> &root,
     lookup_path_type &path,
-    bool include_searched)
+    bool include_searched,
+    size_t *leaf_epoch)
 {
+    if (leaf_epoch) {
+        *leaf_epoch = 0;
+    }
     shared_ptr<const CTNode> current = root;
     shared_ptr<const CTNode> sibling;
     bool sibling_is_left = false;
@@ -451,6 +455,9 @@ bool CTNode::lookup(
         }
 
         if (current->label() == lookup_label) {
+            if (leaf_epoch) {
+                *leaf_epoch = current->epoch();
+            }
             if (include_searched) {
                 // This node is the result
                 lookup_path.push_back(current);

@@ -17,29 +17,31 @@ LocalQueryProvider::LocalQueryProvider(const OZKSConfig &config)
 }
 
 bool LocalQueryProvider::query(
-    trie_id_type trie_id, const hash_type &label, lookup_path_type &lookup_path)
+    trie_id_type trie_id, const hash_type &label, lookup_path_type &lookup_path, size_t &leaf_epoch)
 {
     auto trie = get_compressed_trie(trie_id);
     PartialLabel plabel(label);
 
-    return trie->lookup(plabel, lookup_path);
+    return trie->lookup(plabel, lookup_path, leaf_epoch);
 }
 
 void LocalQueryProvider::query(
     trie_id_type trie_id,
     const vector<hash_type> &labels,
     vector<bool> &found,
-    vector<lookup_path_type> &lookup_paths)
+    vector<lookup_path_type> &lookup_paths,
+    vector<size_t> &leaf_epochs)
 {
     vector<PartialLabel> plabels(labels.size());
     found.resize(labels.size());
     lookup_paths.resize(labels.size());
+    leaf_epochs.resize(labels.size());
 
     auto trie = get_compressed_trie(trie_id);
 
     for (size_t i = 0; i < labels.size(); i++) {
         PartialLabel plabel(labels[i]);
-        found[i] = trie->lookup(plabel, lookup_paths[i]);
+        found[i] = trie->lookup(plabel, lookup_paths[i], leaf_epochs[i]);
     }
 }
 

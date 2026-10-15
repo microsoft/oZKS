@@ -121,12 +121,26 @@ hash_type utils::compute_node_hash(
 hash_type utils::compute_randomness_hash(gsl::span<const byte> buffer, randomness_type &randomness)
 {
     random_bytes(randomness);
+    return compute_payload_commitment(buffer, PayloadCommitmentType::CommitedPayload, randomness);
+}
 
-    vector<byte> hash_buffer(randomness.size() + buffer.size());
-    utils::copy_bytes(buffer.data(), buffer.size(), hash_buffer.data());
-    utils::copy_bytes(randomness.data(), randomness.size(), hash_buffer.data() + buffer.size());
-
-    return compute_hash(hash_buffer, "randomness_hash");
+hash_type utils::compute_payload_commitment(
+    gsl::span<const byte> payload,
+    PayloadCommitmentType payload_commitment,
+    const randomness_type &randomness)
+{
+    switch (payload_commitment) {
+    case PayloadCommitmentType::CommitedPayload: {
+        vector<byte> buffer(payload.size() + randomness.size());
+        copy_bytes(payload.data(), payload.size(), buffer.data());
+        copy_bytes(randomness.data(), randomness.size(), buffer.data() + payload.size());
+        return compute_hash(buffer, "randomness_hash");
+    }
+    case PayloadCommitmentType::UncommitedPayload:
+        return compute_hash(payload, "commitment_hash");
+    default:
+        throw invalid_argument("Invalid payload commitment type");
+    }
 }
 
 hash_type utils::compute_hash(gsl::span<const byte> in, const string &domain_str)
@@ -319,17 +333,11 @@ size_t utils::read_path_element(SerializationReader &reader, PartialLabel &label
 pair<hash_type, randomness_type> utils::commit_payload(
     const payload_type &payload, PayloadCommitmentType payload_commitment)
 {
-    randomness_type randomness;
-    hash_type payload_hash;
-
+    randomness_type randomness{};
     if (payload_commitment == PayloadCommitmentType::CommitedPayload) {
-        payload_hash = compute_randomness_hash(payload, randomness);
-    } else {
-        payload_hash = compute_hash(payload, "commitment_hash");
+        random_bytes(randomness);
     }
-
-    // Returns payload_com and the randomness used to compute it
-    return { payload_hash, randomness };
+    return { compute_payload_commitment(payload, payload_commitment, randomness), randomness };
 }
 
 size_t utils::get_insertion_thread_limit(shared_ptr<CTNode> node, size_t max_threads)

@@ -8,6 +8,7 @@
 #include "oZKS/compressed_trie.h"
 #include "oZKS/insert_result.h"
 #include "oZKS/query_result.h"
+#include "oZKS/query_result_generated.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
@@ -21,9 +22,12 @@ using namespace std;
 
 namespace {
     QueryResult RoundTripQuery(
-        const OZKSConfig &config, const key_type &key, const lookup_path_type &path)
+        const OZKSConfig &config,
+        const key_type &key,
+        const lookup_path_type &path,
+        size_t epoch = 0)
     {
-        QueryResult result(config, key, {}, path, randomness_type{});
+        QueryResult result(config, key, {}, path, randomness_type{}, epoch);
         vector<byte> serialized;
         result.save(serialized);
         return QueryResult::Load(config, serialized).first;
@@ -44,7 +48,10 @@ TEST(QueryResultTests, QueryPathsAreBoundToRequestedKey)
             append_proof_type insertion;
             for (size_t i = 0; i < count; i++) {
                 key_type key{ static_cast<byte>(i) };
-                trie.insert(PartialLabel(utils::compute_key_hash(key)), {}, insertion);
+                trie.insert(
+                    PartialLabel(utils::compute_key_hash(key)),
+                    utils::compute_payload_commitment({}, config.payload_commitment(), {}),
+                    insertion);
             }
             Commitment commitment(nullptr, trie.get_commitment());
             size_t rejected_substitutions = 0;
@@ -52,7 +59,7 @@ TEST(QueryResultTests, QueryPathsAreBoundToRequestedKey)
                 key_type key{ static_cast<byte>(i) };
                 lookup_path_type path;
                 ASSERT_EQ(i < count, trie.lookup(PartialLabel(utils::compute_key_hash(key)), path));
-                auto honest = RoundTripQuery(config, key, path);
+                auto honest = RoundTripQuery(config, key, path, i < count ? i + 1 : 0);
                 EXPECT_EQ(
                     i < count ? QueryVerificationResult::ValidIsMember
                               : QueryVerificationResult::ValidNotMember,
@@ -66,7 +73,7 @@ TEST(QueryResultTests, QueryPathsAreBoundToRequestedKey)
                     lookup_path_type other_path;
                     ASSERT_TRUE(
                         trie.lookup(PartialLabel(utils::compute_key_hash(other_key)), other_path));
-                    auto substituted = RoundTripQuery(config, key, other_path);
+                    auto substituted = RoundTripQuery(config, key, other_path, i + 1);
                     auto verified = substituted.verify(commitment);
                     EXPECT_NE(QueryVerificationResult::ValidNotMember, verified);
                     EXPECT_EQ(
@@ -99,6 +106,61 @@ TEST(QueryResultTests, RejectsUnopenedSubtreeContainingQuery)
                          : utils::compute_node_hash(prefix, hash, {}, {});
     auto result = RoundTripQuery(config, key, { { prefix, hash } });
     EXPECT_EQ(QueryVerificationResult::NotValid, result.verify_lookup_path(root));
+}
+
+TEST(QueryResultTests, RejectsUnversionedQueryResult)
+{
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        make_shared<MemoryStorage>());
+    flatbuffers::FlatBufferBuilder builder;
+    auto empty = builder.CreateVector(vector<uint8_t>{});
+    auto randomness = builder.CreateVector(vector<uint8_t>(randomness_type{}.size()));
+    fbs::QueryResultBuilder query(builder);
+    query.add_key(empty);
+    query.add_payload(empty);
+    query.add_randomness(randomness);
+    auto result = query.Finish();
+    builder.FinishSizePrefixed(result);
+    vector<uint8_t> serialized(
+        builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+    EXPECT_THROW(QueryResult::Load(config, serialized), runtime_error);
+}
+
+TEST(QueryResultTests, AuthenticatesQueriedLeafInSiblingPosition)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        storage);
+    CompressedTrie trie(storage, TrieType::Stored);
+    key_type first_key{ byte{ 1 } }, second_key{ byte{ 2 } };
+    payload_type first_payload{ byte{ 3 } }, second_payload{ byte{ 4 } };
+    append_proof_type path;
+    trie.insert(
+        PartialLabel(utils::compute_key_hash(first_key)),
+        utils::compute_payload_commitment(first_payload, config.payload_commitment(), {}),
+        path);
+    trie.insert(
+        PartialLabel(utils::compute_key_hash(second_key)),
+        utils::compute_payload_commitment(second_payload, config.payload_commitment(), {}),
+        path);
+    ASSERT_TRUE(trie.lookup(PartialLabel(utils::compute_key_hash(first_key)), path));
+    ASSERT_EQ(2, path.size());
+    ASSERT_EQ(PartialLabel(utils::compute_key_hash(second_key)), path[1].first);
+    for (bool tamper : { false, true }) {
+        QueryResult query(config, second_key, tamper ? first_payload : second_payload, path, {}, 2);
+        vector<byte> serialized;
+        query.save(serialized);
+        auto loaded = QueryResult::Load(config, serialized);
+        EXPECT_EQ(
+            tamper ? QueryVerificationResult::NotValid : QueryVerificationResult::ValidIsMember,
+            loaded.first.verify(Commitment(nullptr, trie.get_commitment())));
+    }
 }
 
 TEST(QueryResultTests, RejectsMalformedPathsWithoutThrowing)
@@ -148,9 +210,10 @@ TEST(QueryResultTests, RejectsShortenedLeafLabelAfterSerialization)
 
     CompressedTrie trie(make_shared<MemoryStorage>(), TrieType::Stored);
     append_proof_type path;
-    trie.insert(label, {}, path);
+    trie.insert(
+        label, utils::compute_payload_commitment({}, config.payload_commitment(), {}), path);
     auto root = trie.get_commitment();
-    QueryResult honest(config, key, {}, path, randomness_type{});
+    QueryResult honest(config, key, {}, path, randomness_type{}, trie.epoch());
     EXPECT_EQ(QueryVerificationResult::ValidIsMember, honest.verify_lookup_path(root));
     EXPECT_TRUE(InsertResult(root, path).verify());
 
@@ -162,7 +225,7 @@ TEST(QueryResultTests, RejectsShortenedLeafLabelAfterSerialization)
     path[0].first.load(saved_label);
     ASSERT_EQ(shortened_length, path[0].first.bit_count());
     ASSERT_EQ(0, memcmp(label.data(), path[0].first.data(), PartialLabel::ByteCount));
-    QueryResult forged(config, key, {}, path, randomness_type{});
+    QueryResult forged(config, key, {}, path, randomness_type{}, trie.epoch());
     vector<byte> serialized;
     forged.save(serialized);
     auto loaded = QueryResult::Load(config, serialized);
@@ -181,7 +244,7 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     key_type key;
     lookup_path_type lookup_proof;
     payload_type payload;
-    randomness_type randomness;
+    randomness_type randomness{};
     auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
     vector<byte> vrf_input = utils::make_bytes<vector<byte>>(0x01, 0x02, 0x03, 0x04, 0x05, 0x06);
     auto vrf_proof = sk->get_vrf_proof(vrf_input);
@@ -206,12 +269,12 @@ void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
     randomness[2] = static_cast<byte>(0xEE);
     randomness[3] = static_cast<byte>(0xFF);
 
-    qr = QueryResult(
-        config, key, payload, lookup_proof, *vrf_proof, randomness);
+    qr = QueryResult(config, key, payload, lookup_proof, *vrf_proof, randomness, 7);
 }
 
 void VerifyLoadedQueryResult(QueryResult &qr, const OZKSConfig &config)
 {
+    EXPECT_EQ(7, qr.epoch());
     EXPECT_EQ(static_cast<byte>(0xFE), qr.key()[0]);
     EXPECT_EQ(static_cast<byte>(0xEF), qr.key()[1]);
     EXPECT_EQ(static_cast<byte>(0xCD), qr.key()[2]);

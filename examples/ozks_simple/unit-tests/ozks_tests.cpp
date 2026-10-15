@@ -13,6 +13,7 @@
 #include "oZKS/storage/memory_storage_cache.h"
 #include "oZKS/utilities.h"
 #include "../ozks.h"
+#include "../providers/local_query_provider.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -47,7 +48,8 @@ TEST(OZKSTests, RejectsUnrelatedMembershipPathWithValidVRF)
             honest.payload(),
             other.lookup_proof(),
             *honest.vrf_proof(),
-            honest.randomness());
+            honest.randomness(),
+            honest.epoch());
         vector<byte> serialized;
         substituted.save(serialized);
         auto loaded = QueryResult::Load(config, serialized);
@@ -57,6 +59,129 @@ TEST(OZKSTests, RejectsUnrelatedMembershipPathWithValidVRF)
         rejected |= verified == QueryVerificationResult::NotValid;
     }
     EXPECT_TRUE(rejected);
+}
+
+TEST(OZKSTests, AuthenticatesPayloadAndInsertionEpoch)
+{
+    for (auto mode :
+         { PayloadCommitmentType::CommitedPayload, PayloadCommitmentType::UncommitedPayload }) {
+        for (auto labels : { LabelType::VRFLabels, LabelType::HashedLabels }) {
+            for (auto type : { TrieType::Stored, TrieType::Linked, TrieType::LinkedNoStorage }) {
+                OZKSConfig config(mode, labels, type, make_shared<MemoryStorage>());
+                OZKS ozks(config);
+                key_type key{ byte{ 1 } };
+                ozks.insert(key, payload_type{});
+                ozks.flush();
+                ozks.insert(
+                    { { key_type{ byte{ 2 } }, payload_type{ byte{ 3 } } },
+                      { key_type{ byte{ 4 } }, payload_type{ byte{ 5 } } } });
+                ozks.flush();
+                auto commitment = ozks.get_commitment();
+                EXPECT_EQ(2, ozks.get_epoch());
+                auto absent = ozks.query(key_type{ byte{ 99 } });
+                EXPECT_EQ(0, absent.epoch());
+                EXPECT_EQ(QueryVerificationResult::ValidNotMember, absent.verify(commitment));
+
+                auto make_query = [&](const QueryResult &source,
+                                      const payload_type &payload,
+                                      const lookup_path_type &path,
+                                      const randomness_type &randomness,
+                                      size_t epoch) -> QueryResult {
+                    if (source.vrf_proof()) {
+                        return { config,     source.key(), payload, path, *source.vrf_proof(),
+                                 randomness, epoch };
+                    }
+                    return { config, source.key(), payload, path, randomness, epoch };
+                };
+                auto verify = [&](const QueryResult &query) {
+                    vector<byte> serialized;
+                    query.save(serialized);
+                    auto loaded = QueryResult::Load(config, serialized);
+                    EXPECT_EQ(query.epoch(), loaded.first.epoch());
+                    return loaded.first.verify(commitment);
+                };
+                for (size_t i : { 1, 2, 4 }) {
+                    auto honest = ozks.query(key_type{ static_cast<byte>(i) });
+                    ASSERT_EQ(i == 1 ? 1 : 2, honest.epoch());
+                    ASSERT_EQ(QueryVerificationResult::ValidIsMember, verify(honest));
+                    auto payload = honest.payload();
+                    payload.push_back(byte{ 42 });
+                    EXPECT_EQ(
+                        QueryVerificationResult::NotValid,
+                        verify(make_query(
+                            honest,
+                            payload,
+                            honest.lookup_proof(),
+                            honest.randomness(),
+                            honest.epoch())));
+                    EXPECT_EQ(
+                        QueryVerificationResult::NotValid,
+                        verify(make_query(
+                            honest,
+                            honest.payload(),
+                            honest.lookup_proof(),
+                            honest.randomness(),
+                            honest.epoch() + 1)));
+                    auto randomness = honest.randomness();
+                    randomness[0] ^= byte{ 1 };
+                    EXPECT_EQ(
+                        mode == PayloadCommitmentType::CommitedPayload
+                            ? QueryVerificationResult::NotValid
+                            : QueryVerificationResult::ValidIsMember,
+                        verify(make_query(
+                            honest,
+                            honest.payload(),
+                            honest.lookup_proof(),
+                            randomness,
+                            honest.epoch())));
+
+                    auto opposite = mode == PayloadCommitmentType::CommitedPayload
+                                        ? PayloadCommitmentType::UncommitedPayload
+                                        : PayloadCommitmentType::CommitedPayload;
+                    OZKSConfig wrong_config(opposite, labels, type, config.storage());
+                    vector<byte> serialized;
+                    honest.save(serialized);
+                    EXPECT_EQ(
+                        QueryVerificationResult::NotValid,
+                        QueryResult::Load(wrong_config, serialized).first.verify(commitment));
+                }
+                hash_type absent_hash = compute_key_hash(absent.key());
+                if (absent.vrf_proof()) {
+                    copy_bytes_to_hash(absent.vrf_proof()->get_vrf_value(), absent_hash);
+                }
+                lookup_path_type root_as_leaf{ { PartialLabel(absent_hash),
+                                                 commitment.root_commitment() } };
+                EXPECT_EQ(
+                    QueryVerificationResult::NotValid,
+                    verify(make_query(absent, { byte{ 7 } }, root_as_leaf, {}, 1)));
+            }
+        }
+    }
+}
+
+TEST(OZKSTests, BatchQueriesReturnLeafEpochs)
+{
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        make_shared<MemoryStorage>());
+    OZKS ozks(config);
+    ozks.insert(key_type{ byte{ 1 } }, payload_type{});
+    ozks.flush();
+    ozks.insert(key_type{ byte{ 2 } }, payload_type{});
+    ozks.flush();
+    ozks_simple::providers::LocalQueryProvider provider(config);
+    vector<hash_type> labels{ compute_key_hash(key_type{ byte{ 1 } }),
+                              compute_key_hash(key_type{ byte{ 2 } }),
+                              compute_key_hash(key_type{ byte{ 3 } }) };
+    vector<bool> found;
+    vector<lookup_path_type> paths;
+    vector<size_t> epochs;
+    provider.query(ozks.id(), labels, found, paths, epochs);
+    EXPECT_EQ((vector<bool>{ true, true, false }), found);
+    EXPECT_EQ((vector<size_t>{ 1, 2, 0 }), epochs);
+    EXPECT_EQ(labels.size(), paths.size());
 }
 
 namespace {

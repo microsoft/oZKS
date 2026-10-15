@@ -231,6 +231,14 @@ bool CompressedTrie::lookup(const PartialLabel &label, lookup_path_type &path) c
 }
 
 bool CompressedTrie::lookup(
+    const PartialLabel &label, lookup_path_type &path, size_t &leaf_epoch) const
+{
+    path.clear();
+    root_->init(this);
+    return CTNode::lookup(label, root_, path, /* include_searched */ true, &leaf_epoch);
+}
+
+bool CompressedTrie::lookup(
     const PartialLabel &label, lookup_path_type &path, bool include_searched) const
 {
     path.clear();

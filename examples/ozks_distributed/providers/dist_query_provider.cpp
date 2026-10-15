@@ -60,20 +60,24 @@ QueryProvider::QueryProvider(const OZKSConfigDist &config)
 }
 
 bool QueryProvider::query(
-    ozks::trie_id_type trie_id, const ozks::hash_type &label, ozks::lookup_path_type &lookup_path)
+    ozks::trie_id_type trie_id,
+    const ozks::hash_type &label,
+    ozks::lookup_path_type &lookup_path,
+    size_t &leaf_epoch)
 {
     const auto &querier = get_querier(trie_id, this);
-    return querier.query(label, lookup_path);
+    return querier.query(label, lookup_path, leaf_epoch);
 }
 
 void QueryProvider::query(
     ozks::trie_id_type trie_id,
     const vector<ozks::hash_type> &labels,
     vector<bool> &found,
-    vector<ozks::lookup_path_type> &lookup_paths)
+    vector<ozks::lookup_path_type> &lookup_paths,
+    vector<size_t> &leaf_epochs)
 {
     const auto &querier = get_querier(trie_id, this);
-    return querier.query(labels, found, lookup_paths);
+    return querier.query(labels, found, lookup_paths, leaf_epochs);
 }
 
 size_t QueryProvider::get_epoch(trie_id_type trie_id)

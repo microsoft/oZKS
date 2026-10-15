@@ -2,12 +2,14 @@
 // Licensed under the MIT license.
 
 // STD
+#include <limits>
 #include <stdexcept>
 
 // oZKS
 #include "oZKS/query_result.h"
 #include "oZKS/query_result_generated.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 using namespace std;
 using namespace ozks;
@@ -33,9 +35,13 @@ QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &c
     }
 
     const PartialLabel query_label = queried_label();
-    auto classify_subtree = [&query_label](const PartialLabel &label) {
+    auto classify_subtree = [this, &query_label](const PartialLabel &label, const hash_type &hash) {
         if (label == query_label) {
-            return QueryVerificationResult::ValidIsMember;
+            auto payload_hash =
+                utils::compute_payload_commitment(payload_, payload_commitment_, randomness_);
+            return utils::compute_leaf_hash(label, payload_hash, epoch_) == hash
+                       ? QueryVerificationResult::ValidIsMember
+                       : QueryVerificationResult::NotValid;
         }
         // An unopened subtree can exclude the query only when its prefix diverges.
         return PartialLabel::CommonPrefixCount(label, query_label) < label.bit_count()
@@ -45,7 +51,7 @@ QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &c
 
     PartialLabel partial_label = lookup_proof()[0].first;
     hash_type hash = lookup_proof()[0].second;
-    auto result = classify_subtree(partial_label);
+    auto result = classify_subtree(partial_label, hash);
 
     for (size_t idx = 1; idx < lookup_proof().size(); idx++) {
         auto &sibling = lookup_proof()[idx];
@@ -59,7 +65,7 @@ QueryVerificationResult QueryResult::verify_lookup_path(const commitment_type &c
         if (PartialLabel::CommonPrefixCount(common, query_label) < common.bit_count()) {
             result = QueryVerificationResult::ValidNotMember;
         } else if (query_label[common.bit_count()] != current_is_right) {
-            result = classify_subtree(sibling.first);
+            result = classify_subtree(sibling.first, sibling.second);
         }
 
         // These are sibling nodes
@@ -164,6 +170,8 @@ size_t QueryResult::save(SerializationWriter &writer) const
     qr_builder.add_randomness(randomness_data);
     qr_builder.add_use_vrf(use_vrf_);
     qr_builder.add_lookup_proof_count(static_cast<uint32_t>(lookup_proof().size()));
+    qr_builder.add_version(ozks_serialization_version);
+    qr_builder.add_epoch(epoch_);
 
     auto fbs_query_result = qr_builder.Finish();
     fbs_builder.FinishSizePrefixed(fbs_query_result);
@@ -193,8 +201,15 @@ pair<QueryResult, size_t> QueryResult::Load(const OZKSConfig &config, Serializat
     }
 
     auto fbs_query_result = fbs::GetSizePrefixedQueryResult(in_data.data());
+    if (!same_serialization_version(fbs_query_result->version())) {
+        throw runtime_error("Failed to load QueryResult: unsupported version");
+    }
+    if (fbs_query_result->epoch() > numeric_limits<size_t>::max()) {
+        throw runtime_error("Failed to load QueryResult: insertion epoch is out of range");
+    }
 
     QueryResult query_result(config);
+    query_result.epoch_ = static_cast<size_t>(fbs_query_result->epoch());
     query_result.use_vrf_ = fbs_query_result->use_vrf();
 
     query_result.key_.resize(fbs_query_result->key()->size());

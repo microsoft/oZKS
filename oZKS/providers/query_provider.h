@@ -17,10 +17,13 @@ namespace ozks {
             {}
 
             /**
-            Query a compressed trie
+            Query a compressed trie, returning the leaf insertion epoch (zero if absent).
             */
             virtual bool query(
-                trie_id_type trie_id, const hash_type &label, lookup_path_type &lookup_path) = 0;
+                trie_id_type trie_id,
+                const hash_type &label,
+                lookup_path_type &lookup_path,
+                std::size_t &leaf_epoch) = 0;
 
             /**
             Perform several queries on a compressed trie
@@ -29,7 +32,8 @@ namespace ozks {
                 trie_id_type trie_id,
                 const std::vector<hash_type> &labels,
                 std::vector<bool> &found,
-                std::vector<lookup_path_type> &lookup_paths) = 0;
+                std::vector<lookup_path_type> &lookup_paths,
+                std::vector<std::size_t> &leaf_epochs) = 0;
 
             /**
             Get epoch number of the querier

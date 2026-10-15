@@ -82,7 +82,8 @@ namespace ozks {
             const PartialLabel &lookup_label,
             const std::shared_ptr<const CTNode> &root,
             lookup_path_type &path,
-            bool include_searched);
+            bool include_searched,
+            std::size_t *leaf_epoch = nullptr);
 
         /**
         Update hashes on the path of the given label

@@ -24,12 +24,16 @@ namespace ozks_distributed {
                     ozks::trie_id_type trie_id, std::shared_ptr<ozks::storage::Storage> storage);
                 Querier() = delete;
 
-                bool query(const ozks::hash_type &label, ozks::lookup_path_type &lookup_path) const;
+                bool query(
+                    const ozks::hash_type &label,
+                    ozks::lookup_path_type &lookup_path,
+                    std::size_t &leaf_epoch) const;
 
                 void query(
                     const std::vector<ozks::hash_type> &labels,
                     std::vector<bool> &found,
-                    std::vector<ozks::lookup_path_type> &lookup_paths) const;
+                    std::vector<ozks::lookup_path_type> &lookup_paths,
+                    std::vector<std::size_t> &leaf_epochs) const;
 
                 std::size_t epoch() const
                 {

@@ -73,6 +73,12 @@ namespace ozks {
         bool lookup(const PartialLabel &label, lookup_path_type &path) const;
 
         /**
+        Look up a label and return its original insertion epoch, or zero if absent.
+        */
+        bool lookup(
+            const PartialLabel &label, lookup_path_type &path, std::size_t &leaf_epoch) const;
+
+        /**
         Get the commitment (root hash) for the tree
         */
         commitment_type get_commitment() const;
