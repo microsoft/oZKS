@@ -8,8 +8,10 @@
 #include "oZKS/compressed_trie.h"
 #include "oZKS/ct_node_stored.h"
 #include "oZKS/insert_result.h"
+#include "oZKS/insert_result_generated.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 #include "gtest/gtest.h"
 
 using namespace std;
@@ -103,6 +105,51 @@ TEST(InsertResultTests, VerifySingleInsertTest)
 
         EXPECT_TRUE(res.initialized());
         EXPECT_TRUE(res.verify());
+    }
+}
+
+TEST(InsertResultTests, CarriesSerializationVersion)
+{
+    commitment_type commitment = make_bytes<commitment_type>(0x80, 0x23);
+    append_proof_type append_proof(1);
+    append_proof[0].first = make_bytes<PartialLabel>(0xAA, 0xBB);
+    append_proof[0].second = utils::compute_hash(make_bytes<vector<byte>>(0x01), "hash");
+    InsertResult ir(commitment, append_proof);
+
+    // An honest round trip carries the current version, through both Load overloads.
+    vector<uint8_t> buffer;
+    ir.save(buffer);
+    auto fbs_result = fbs::GetSizePrefixedInsertResult(buffer.data());
+    EXPECT_EQ(ozks_serialization_version, fbs_result->version());
+    EXPECT_EQ(commitment, InsertResult::Load(buffer).first.commitment());
+    stringstream stream;
+    ir.save(stream);
+    EXPECT_EQ(append_proof, InsertResult::Load(stream).first.append_proof());
+
+    // A legacy result without the field reads back as version 0; any other version is
+    // foreign. The hand-built buffers carry an empty proof so that they are otherwise
+    // loadable, and the current version is included as a control that must load: a throw
+    // can then only come from the version check.
+    for (uint32_t version :
+         { 0U, 1U, ozks_serialization_version, ozks_serialization_version + 1 }) {
+        SCOPED_TRACE(version);
+        flatbuffers::FlatBufferBuilder builder;
+        fbs::RootCommitment root(flatbuffers::span<const uint8_t, 32>{
+            reinterpret_cast<const uint8_t *>(commitment.data()), commitment.size() });
+        fbs::InsertResultBuilder result_builder(builder);
+        result_builder.add_commitment(&root);
+        result_builder.add_append_proof_count(0);
+        if (version != 0) {
+            result_builder.add_version(version);
+        }
+        builder.FinishSizePrefixed(result_builder.Finish());
+        vector<uint8_t> hand_built(
+            builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+        if (version == ozks_serialization_version) {
+            EXPECT_EQ(commitment, InsertResult::Load(hand_built).first.commitment());
+        } else {
+            EXPECT_THROW(InsertResult::Load(hand_built), runtime_error);
+        }
     }
 }
 

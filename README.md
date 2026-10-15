@@ -111,6 +111,7 @@ Rebuild persisted tries from the authoritative insertion history, preserving ins
 Regenerate query and insertion proofs against the rebuilt tries; retain historical version 1 data separately if needed.
 Query results now carry a serialization version and the queried leaf's original insertion epoch.
 Unversioned query results are rejected.
+Insert results also carry a serialization version; unversioned insert results are rejected.
 Query providers must return insertion epochs for both single and batched lookups; use zero for absent keys.
 Pass that epoch to the `QueryResult` constructor, not the current root epoch.
 Membership verification authenticates the returned payload and its opening randomness using the caller's configured payload commitment mode.

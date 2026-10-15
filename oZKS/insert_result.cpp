@@ -9,6 +9,7 @@
 #include "oZKS/insert_result_generated.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 using namespace std;
 
@@ -103,6 +104,7 @@ namespace ozks {
         fbs::InsertResultBuilder ir_builder(fbs_builder);
         ir_builder.add_commitment(&root_commitment_data);
         ir_builder.add_append_proof_count(static_cast<uint32_t>(append_proof().size()));
+        ir_builder.add_version(ozks_serialization_version);
 
         auto fbs_insert_result = ir_builder.Finish();
         fbs_builder.FinishSizePrefixed(fbs_insert_result);
@@ -132,6 +134,11 @@ namespace ozks {
         }
 
         auto fbs_insert_result = fbs::GetSizePrefixedInsertResult(in_data.data());
+        // Append proofs are only meaningful under the serialization version that produced
+        // them. Legacy results have no version field and read back as version 0.
+        if (!same_serialization_version(fbs_insert_result->version())) {
+            throw runtime_error("Failed to load InsertResult: unsupported version");
+        }
 
         commitment_type root_commitment;
         if (fbs_insert_result->commitment()->data()->size() != root_commitment.size()) {

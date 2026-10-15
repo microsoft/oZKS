@@ -7,6 +7,7 @@ namespace ozks.fbs;
 table InsertResult {
     commitment:RootCommitment;
     append_proof_count:uint32;
+    version:uint32;
 }
 
 root_type InsertResult;
