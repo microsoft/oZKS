@@ -35,7 +35,8 @@ See the README section "Serialization versioning and compatibility" for the poli
 - Query results carry the serialization version and the queried leaf's insertion epoch.
 - Stored nodes persisted through `CTNodeStored::save`/`Load`, insert results and the configuration blob carry the serialization version.
   A storage backend with its own node record format must version its records itself.
-- Commitments state the VRF suite of their public key; `Commitment::Load` rejects a commitment whose stated suite is missing or does not match the key.
+- Commitments with a VRF public key state its suite; `Commitment::Load` rejects a commitment whose stated suite is missing or does not match the key.
+  Hashed-label commitments carry neither a key nor a suite, and can now be serialized; a stated suite without a key is rejected.
 
 ### API changes
 
@@ -49,7 +50,8 @@ See the README section "Serialization versioning and compatibility" for the poli
   `QueryResult::save` throws for a VRF-mode result without an initialized proof.
 - `QueryResult::Load` and `InsertResult::Load` reject a proof element count above `max_proof_length` (257) before allocating, so a hostile buffer cannot force a large allocation.
 - `QueryResult::verify_vrf_proof` returns false when the proof's VRF suite differs from the key's.
-- `Commitment::Load` throws when the stated VRF suite is missing or does not match the public key.
+- `Commitment::Load` throws when the stated VRF suite is missing or does not match the public key, when a suite is stated without a key ("VRF type present without public key"), or when the root commitment is missing ("root commitment is missing").
+  `Commitment::save` no longer dereferences a null public key; a keyless commitment serializes without a key or suite.
 
 ### Build and packaging
 

@@ -28,7 +28,8 @@ namespace ozks {
         Commitment() = default;
 
         /**
-        Construct an instance of Commitment
+        Construct an instance of Commitment. The public key is null for hashed-label
+        instances, which have no VRF; such a commitment serializes without a key or suite.
         */
         Commitment(const vrf::PublicKey *public_key, const commitment_type &root_commitment)
             : root_commitment_(root_commitment)
@@ -39,7 +40,7 @@ namespace ozks {
         }
 
         /**
-        VRF public key
+        VRF public key; null for a hashed-label commitment.
         */
         const std::unique_ptr<vrf::PublicKey> &public_key() const
         {

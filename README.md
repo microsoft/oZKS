@@ -130,7 +130,7 @@ Relative to version 1:
 - Nonempty-tree commitments change. The empty-tree commitment (all zeros) is unchanged.
 - Query results carry the version and the queried leaf's original insertion epoch. Membership verification recomputes the leaf hash from the returned payload, its opening randomness (committed-payload mode only) and that epoch, under the caller's configured payload commitment mode.
 - Query results must match the caller's configured label mode; serialized data cannot enable or disable VRF verification. VRF-mode results require a proof and a trusted commitment that carries the VRF public key.
-- Commitments state the VRF suite of their public key, and the stated suite must match the key on load.
+- Commitments with a VRF public key state its suite, and the stated suite must match the key on load; hashed-label commitments carry neither a key nor a suite.
 - Stored nodes, insert results and the configuration blob carry the version.
 
 Stored nodes persisted through `CTNodeStored::save`/`Load` are checked; a storage backend that keeps node fields in its own record format must version its records itself.

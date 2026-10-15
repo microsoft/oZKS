@@ -10,8 +10,8 @@ table PublicKey {
 
 table Commitment {
     version:uint32;
-    public_key:PublicKey (required);
-    root_commitment:RootCommitment;
+    public_key:PublicKey;
+    root_commitment:RootCommitment (required);
     vrf_type:uint8 = null;
 }
 
