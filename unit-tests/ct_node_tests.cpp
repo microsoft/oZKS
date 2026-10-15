@@ -148,7 +148,7 @@ void DoUpdateHashTest(CompressedTrieForTests& trie)
     EXPECT_EQ(label, left_node->label());
     EXPECT_FALSE(nullptr == left_node);
     EXPECT_EQ(
-        "02f59c3b7eabe50c198271492acd99ffa1ab5cd77187b08ce58bfe6042a824fc",
+        "f276fe07c3fa60d31d9895b94860a34da4f82cd25f31c9bf262b1065d04b0313",
         to_string(left_node->hash()));
 
     label = make_bytes<PartialLabel>(0x02);
@@ -169,10 +169,10 @@ void DoUpdateHashTest(CompressedTrieForTests& trie)
     EXPECT_FALSE(nullptr == left_right_node);
 
     EXPECT_EQ(
-        "02f59c3b7eabe50c198271492acd99ffa1ab5cd77187b08ce58bfe6042a824fc",
+        "f276fe07c3fa60d31d9895b94860a34da4f82cd25f31c9bf262b1065d04b0313",
         to_string(left_left_node->hash()));
     EXPECT_EQ(
-        "a4b9d4701038d31cdef70c2ee0556033cb26165402cd69352300d3d33e386374",
+        "46e3e2d10c09a7622d78c71b9e82a70f3c1f432eafabfd936683a33c5f5d3fa5",
         to_string(left_right_node->hash()));
 
     EXPECT_NE(hash_root, root->hash());

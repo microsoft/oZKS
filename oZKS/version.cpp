@@ -9,7 +9,7 @@ namespace ozks {
     const uint32_t ozks_version =
         (OZKS_VERSION_PATCH << 20) + (OZKS_VERSION_MINOR << 10) + OZKS_VERSION_MAJOR;
 
-    const uint32_t ozks_serialization_version = 1;
+    const uint32_t ozks_serialization_version = 2;
 
     bool same_serialization_version(uint32_t sv)
     {

@@ -3,6 +3,7 @@
 
 // OZKS
 #include "oZKS/compressed_trie.h"
+#include "oZKS/compressed_trie_generated.h"
 #include "oZKS/query_result.h"
 #include "oZKS/storage/batch_storage.h"
 #include "oZKS/storage/memory_storage.h"
@@ -17,6 +18,26 @@ using namespace std;
 using namespace ozks;
 using namespace ozks::storage;
 using namespace utils;
+
+TEST(CompressedTrieTests, RejectsLegacyHashFormat)
+{
+    auto storage = make_shared<MemoryStorage>();
+    CompressedTrie trie(storage, TrieType::Stored);
+    append_proof_type path;
+    trie.insert(PartialLabel{ false, true }, {}, path);
+    vector<byte> current;
+    trie.save(current);
+    EXPECT_EQ(
+        trie.get_commitment(), CompressedTrie::Load(current, storage).first->get_commitment());
+
+    flatbuffers::FlatBufferBuilder builder;
+    auto legacy =
+        fbs::CreateCompressedTrie(builder, 1, trie.id(), 0, static_cast<uint8_t>(TrieType::Stored));
+    builder.FinishSizePrefixed(legacy);
+    vector<uint8_t> serialized(
+        builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+    EXPECT_THROW(CompressedTrie::Load(serialized, storage), runtime_error);
+}
 
 namespace {
     /**

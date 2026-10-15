@@ -5,6 +5,8 @@
 #include <iostream>
 
 // OZKS
+#include "oZKS/compressed_trie.h"
+#include "oZKS/insert_result.h"
 #include "oZKS/query_result.h"
 #include "oZKS/serialization_helpers.h"
 #include "oZKS/storage/memory_storage.h"
@@ -16,6 +18,54 @@
 using namespace ozks;
 using namespace ozks::storage;
 using namespace std;
+
+TEST(QueryResultTests, RejectsShortenedLeafLabelAfterSerialization)
+{
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        make_shared<MemoryStorage>());
+    key_type key{ byte{ 0 } };
+    PartialLabel label;
+    bool found = false;
+    for (size_t candidate = 0; candidate < 256; candidate++) {
+        key[0] = static_cast<byte>(candidate);
+        label = PartialLabel(utils::compute_key_hash(key));
+        if (!label[PartialLabel::MaxBitCount - 1]) {
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+
+    CompressedTrie trie(make_shared<MemoryStorage>(), TrieType::Stored);
+    append_proof_type path;
+    trie.insert(label, {}, path);
+    auto root = trie.get_commitment();
+    QueryResult honest(config, key, {}, path, randomness_type{});
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, honest.verify_lookup_path(root));
+    EXPECT_TRUE(InsertResult(root, path).verify());
+
+    array<byte, PartialLabel::SaveSize> saved_label{};
+    label.save(saved_label);
+    uint32_t shortened_length = PartialLabel::MaxBitCount - 1;
+    memcpy(
+        saved_label.data() + PartialLabel::ByteCount, &shortened_length, sizeof(shortened_length));
+    path[0].first.load(saved_label);
+    ASSERT_EQ(shortened_length, path[0].first.bit_count());
+    ASSERT_EQ(0, memcmp(label.data(), path[0].first.data(), PartialLabel::ByteCount));
+    QueryResult forged(config, key, {}, path, randomness_type{});
+    vector<byte> serialized;
+    forged.save(serialized);
+    auto loaded = QueryResult::Load(config, serialized);
+    EXPECT_EQ(QueryVerificationResult::NotValid, loaded.first.verify_lookup_path(root));
+
+    InsertResult forged_insert(root, path);
+    serialized.clear();
+    forged_insert.save(serialized);
+    EXPECT_FALSE(InsertResult::Load(serialized).first.verify());
+}
 
 void InitQueryResult(QueryResult &qr, const OZKSConfig &config)
 {

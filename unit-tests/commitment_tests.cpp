@@ -9,12 +9,34 @@
 
 // OZKS
 #include "oZKS/commitment.h"
+#include "oZKS/commitment_generated.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 #include "gtest/gtest.h"
 
 using namespace std;
 using namespace ozks;
 using namespace ozks::utils;
+
+TEST(CommitmentTests, RejectsLegacyHashFormat)
+{
+    EXPECT_EQ(2U, ozks_serialization_version);
+    EXPECT_FALSE(same_serialization_version(1));
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    auto pk = sk->get_public_key()->to_bytes();
+    flatbuffers::FlatBufferBuilder builder;
+    auto data = builder.CreateVector(reinterpret_cast<const uint8_t *>(pk.data()), pk.size());
+    auto public_key = fbs::CreatePublicKey(builder, data);
+    hash_type hash{};
+    fbs::RootCommitment root(
+        flatbuffers::span<const uint8_t, 32>{ reinterpret_cast<const uint8_t *>(hash.data()),
+                                              hash.size() });
+    auto commitment = fbs::CreateCommitment(builder, 1, public_key, &root);
+    builder.FinishSizePrefixed(commitment);
+    vector<uint8_t> serialized(
+        builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize());
+    EXPECT_THROW(Commitment::Load(serialized), runtime_error);
+}
 
 TEST(CommitmentTests, SerializeTest)
 {

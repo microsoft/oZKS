@@ -293,6 +293,10 @@ pair<shared_ptr<CompressedTrie>, size_t> CompressedTrie::Load(
     }
 
     auto fbs_ct = fbs::GetSizePrefixedCompressedTrie(in_data.data());
+    if (!same_serialization_version(fbs_ct->version())) {
+        throw runtime_error("Failed to load Compressed Trie: unsupported version");
+    }
+
     auto ct = make_shared<CompressedTrie>();
     ct->thread_count_ = fbs_ct->thread_count();
     ct->id_ = fbs_ct->id();

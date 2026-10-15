@@ -4,6 +4,7 @@
 // STD
 #include <algorithm>
 #include <cstddef>
+#include <set>
 #include <vector>
 
 // oZKS
@@ -295,6 +296,36 @@ TEST(Utilities, ComputeHash)
     EXPECT_NE(hash1, hash2);
     EXPECT_NE(hash2, hash3);
     EXPECT_NE(hash1, hash3);
+}
+
+TEST(Utilities, NodeHashesBindEveryLabelLength)
+{
+    hash_type zero_bytes{};
+    hash_type payload = compute_hash(make_bytes<vector<byte>>(1, 2, 3));
+    PartialLabel full_label(zero_bytes);
+    PartialLabel label;
+    PartialLabel sibling{ true };
+    set<hash_type> leaf_hashes;
+    set<hash_type> left_hashes;
+    set<hash_type> right_hashes;
+
+    for (size_t length = 0; length <= PartialLabel::MaxBitCount; length++) {
+        ASSERT_EQ(length, label.bit_count());
+        ASSERT_EQ(0, memcmp(label.data(), full_label.data(), PartialLabel::ByteCount));
+        EXPECT_TRUE(leaf_hashes.insert(compute_leaf_hash(label, payload, 7)).second);
+        EXPECT_TRUE(left_hashes.insert(compute_node_hash(label, payload, sibling, payload)).second);
+        EXPECT_TRUE(
+            right_hashes.insert(compute_node_hash(sibling, payload, label, payload)).second);
+
+        array<byte, PartialLabel::SaveSize> serialized{};
+        label.save(serialized);
+        PartialLabel loaded;
+        loaded.load(serialized);
+        EXPECT_EQ(compute_leaf_hash(label, payload, 7), compute_leaf_hash(loaded, payload, 7));
+        if (length < PartialLabel::MaxBitCount) {
+            label.add_bit(false);
+        }
+    }
 }
 
 TEST(Utilities, ByteVectorHashTest)

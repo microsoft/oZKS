@@ -92,10 +92,10 @@ hash_type utils::compute_key_hash(const key_type &key)
 
 hash_type utils::compute_leaf_hash(const PartialLabel &label, const hash_type &hash, size_t epoch)
 {
-    array<byte, PartialLabel::ByteCount + hash_size + sizeof(epoch)> buffer{};
-    utils::copy_bytes(label.data(), PartialLabel::ByteCount, buffer.data());
-    utils::copy_bytes(hash.data(), hash_size, buffer.data() + PartialLabel::ByteCount);
-    utils::copy_bytes(&epoch, sizeof(epoch), buffer.data() + PartialLabel::ByteCount + hash_size);
+    array<byte, PartialLabel::SaveSize + hash_size + sizeof(epoch)> buffer{};
+    label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer.data(), PartialLabel::SaveSize));
+    utils::copy_bytes(hash.data(), hash_size, buffer.data() + PartialLabel::SaveSize);
+    utils::copy_bytes(&epoch, sizeof(epoch), buffer.data() + PartialLabel::SaveSize + hash_size);
 
     return clear_lsb(compute_hash(buffer, "leaf_hash"));
 }
@@ -106,17 +106,14 @@ hash_type utils::compute_node_hash(
     const PartialLabel &right_label,
     const hash_type &right_hash)
 {
-    array<byte, PartialLabel::ByteCount + hash_size + PartialLabel::ByteCount + hash_size> buffer{};
-    utils::copy_bytes(left_label.data(), PartialLabel::ByteCount, buffer.data());
-    utils::copy_bytes(left_hash.data(), hash_size, buffer.data() + PartialLabel::ByteCount);
+    array<byte, 2 * (PartialLabel::SaveSize + hash_size)> buffer{};
+    left_label.save(gsl::span<byte, PartialLabel::SaveSize>(buffer.data(), PartialLabel::SaveSize));
+    utils::copy_bytes(left_hash.data(), hash_size, buffer.data() + PartialLabel::SaveSize);
+    right_label.save(
+        gsl::span<byte, PartialLabel::SaveSize>(
+            buffer.data() + PartialLabel::SaveSize + hash_size, PartialLabel::SaveSize));
     utils::copy_bytes(
-        right_label.data(),
-        PartialLabel::ByteCount,
-        buffer.data() + PartialLabel::ByteCount + hash_size);
-    utils::copy_bytes(
-        right_hash.data(),
-        hash_size,
-        buffer.data() + PartialLabel::ByteCount + hash_size + PartialLabel::ByteCount);
+        right_hash.data(), hash_size, buffer.data() + 2 * PartialLabel::SaveSize + hash_size);
 
     return clear_lsb(compute_hash(buffer, "node_hash"));
 }
