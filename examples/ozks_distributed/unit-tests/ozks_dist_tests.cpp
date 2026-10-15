@@ -585,6 +585,46 @@ TEST(OZKSDistTests, BatchInsertTest)
     }
 }
 
+TEST(OZKSDistTests, HashedLabelCommitmentHasNoKey)
+{
+    shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();
+    shared_ptr<storage::MemoryStorageBatchInserter> batch_inserter =
+        make_shared<storage::MemoryStorageBatchInserter>(backing_storage);
+
+    OZKSConfigDist config(
+        PayloadCommitmentType::CommitedPayload,
+        LabelType::HashedLabels,
+        TrieType::Stored,
+        batch_inserter,
+        {});
+    OZKS ozks(config);
+
+    // A hashed-label instance has no VRF key, and its commitment carries none.
+    EXPECT_THROW(ozks.get_vrf_public_key(), logic_error);
+    EXPECT_EQ(nullptr, ozks.get_commitment().public_key());
+
+    key_type key{ byte{ 7 } };
+    payload_type payload{ byte{ 8 } };
+    ozks.insert(key, payload);
+    ASSERT_TRUE(wait_for_epoch(ozks, 1, chrono::seconds(60)));
+
+    // The keyless commitment verifies hashed-label results, and survives serialization.
+    auto commitment = ozks.get_commitment();
+    ASSERT_EQ(nullptr, commitment.public_key());
+    auto result = ozks.query(key);
+    EXPECT_EQ(nullptr, result.vrf_proof());
+    EXPECT_EQ(payload, result.payload());
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, result.verify(commitment, key));
+    vector<byte> serialized;
+    commitment.save(serialized);
+    auto loaded = Commitment::Load(serialized);
+    EXPECT_EQ(nullptr, loaded.first.public_key());
+    EXPECT_EQ(QueryVerificationResult::ValidIsMember, result.verify(loaded.first, key));
+    EXPECT_EQ(
+        QueryVerificationResult::ValidNotMember,
+        ozks.query(key_type{ byte{ 9 } }).verify(loaded.first, key_type{ byte{ 9 } }));
+}
+
 TEST(OZKSDistTests, UpdaterTest)
 {
     shared_ptr<TestBackingStorage> backing_storage = make_shared<TestBackingStorage>();

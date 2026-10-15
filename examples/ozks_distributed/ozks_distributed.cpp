@@ -201,6 +201,10 @@ QueryResult OZKS::query(const key_type &key) const
 
 unique_ptr<vrf::PublicKey> OZKS::get_vrf_public_key() const
 {
+    // The VRF key only exists for VRF labels; hashed-label instances have none.
+    if (config_.label_type() != LabelType::VRFLabels) {
+        throw logic_error("VRF public key is not set");
+    }
     return vrf_sk_->get_public_key();
 }
 
@@ -211,9 +215,12 @@ size_t OZKS::get_epoch() const
 
 Commitment OZKS::get_commitment() const
 {
-    hash_type root_hash = trie_info_provider_->get_root_hash(id());
-
-    return { get_vrf_public_key().get(), root_hash };
+    // A hashed-label commitment carries no VRF public key.
+    unique_ptr<vrf::PublicKey> vrf_public_key;
+    if (config_.label_type() == LabelType::VRFLabels) {
+        vrf_public_key = get_vrf_public_key();
+    }
+    return { vrf_public_key.get(), trie_info_provider_->get_root_hash(id()) };
 }
 
 const OZKSConfig &OZKS::get_config() const
