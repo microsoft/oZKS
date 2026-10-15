@@ -649,6 +649,24 @@ TEST(OZKSDistTests, BatchInserterCallbackTest)
     EXPECT_EQ(cached_storage->added_tries_count(), 0);
 }
 
+namespace {
+    // Wait until the instance's trie reaches the expected epoch, then refresh its queriers.
+    // The distributed updaters tick every five seconds and share a global try-lock, so a tick
+    // can be skipped when two instances collide; a fixed sleep races against the next tick.
+    bool wait_for_epoch(OZKS &ozks, size_t expected_epoch, chrono::seconds timeout)
+    {
+        auto deadline = chrono::steady_clock::now() + timeout;
+        while (ozks.get_epoch() < expected_epoch) {
+            if (chrono::steady_clock::now() >= deadline) {
+                return false;
+            }
+            this_thread::sleep_for(chrono::milliseconds(100));
+        }
+        ozks.check_for_update();
+        return true;
+    }
+} // namespace
+
 TEST(OZKSDistTests, SharedSecretKeyTest)
 {
     // Two instances created with the same serialized secret key must produce:
@@ -717,10 +735,9 @@ TEST(OZKSDistTests, SharedSecretKeyTest)
         ozks2.insert(keys[i], payloads[i]);
     }
 
-    // Wait for async updaters to complete
-    this_thread::sleep_for(chrono::seconds(10));
-    ozks1.check_for_update();
-    ozks2.check_for_update();
+    // Wait for both async updaters to publish the inserted batch (epoch 1).
+    ASSERT_TRUE(wait_for_epoch(ozks1, 1, chrono::seconds(60)));
+    ASSERT_TRUE(wait_for_epoch(ozks2, 1, chrono::seconds(60)));
 
     // Both instances must agree on membership and payload for every key
     for (size_t i = 0; i < insert_count; i++) {
