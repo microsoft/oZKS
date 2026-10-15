@@ -23,7 +23,7 @@ For more details we refer the readers to [Section 5 of the SEEMless paper](https
 
 ## oZKS Implementation
 
-The core data structure of oZKS is a Patricia Trie, where leafs contain the keys added to the dictionary. Non-leaf nodes contain prefixes that are common to the added leaves. Each node also contains a hash. Leaf nodes contains hashes of the Key, a commitment of the Value and the epoch where the pair was added. Non-leaf nodes contain hashes of the concatenation of the hashes of their children. The core trie structure supports add / query operations.
+The core data structure of oZKS is a Patricia Trie, where leafs contain the keys added to the dictionary. Non-leaf nodes contain prefixes that are common to the added leaves. Each node also contains a hash. Leaf hashes cover the leaf label, the payload commitment and the insertion epoch; internal-node hashes cover the labels and hashes of both children (see Serialization versioning and compatibility). The core trie structure supports add / query operations.
 
 ### Examples
 
@@ -98,25 +98,56 @@ Verify that the `InsertResult` from an `insert` operation provides a correct app
 bool InsertResult::verify() const;
 ```
 
+`QueryResult::verify` authenticates the proof against the trusted `Commitment` passed to it.
+`InsertResult::verify` checks the append proof against the commitment carried in the result (`InsertResult::commitment()`); applications must compare that commitment with the published one.
+`is_member()` and successful deserialization are not authentication.
+Applications must also check that the key in a returned `QueryResult` is the key they asked for.
+
+## Serialization versioning and compatibility
+
+### Policy
+
+oZKS has a single serialization version, `ozks_serialization_version` in `oZKS/version.h`.
+It is written into, and checked on load for, every format the library defines: commitments, compressed tries, stored nodes (`CTNodeStored::save`/`Load`), query results, insert results, the configuration blob, and the example `OZKS` instances.
+Every loader rejects any other version.
+A FlatBuffers buffer that predates the field reads back as version 0; a legacy configuration blob reads its leading type bytes as a version value that can never equal a supported version. Both are rejected like any other mismatch.
+
+The version also fixes the commitment-structure hashes: it is embedded in the leaf and node hash domains (`leaf_hash_v2`, `node_hash_v2`) and the hash input encoding is defined per version.
+Bumping the version therefore invalidates all persisted data and every published commitment.
+Treat each bump as a full migration (see below). Wire-only or storage-only changes must still bump the version; batch such changes together, and never add an unversioned field or format.
+
+### Version 2
+
+Version 2 is the first version whose hashes and formats are fully specified.
+Version 2 has not shipped; until it does, its formats may still change without a further bump. Once shipped, any change requires version 3.
+Relative to version 1:
+
+- Leaf and node hashes cover the label's bit count as well as its bytes. Labels are hashed as their 32 bytes in bit order (bits past the bit count are zero) followed by the bit count as a 4-byte big-endian integer. A leaf hashes the encoded label, the payload commitment hash and the insertion epoch as an 8-byte big-endian integer; a node hashes the encoded label and hash of each child. The encoding does not depend on the width of `std::size_t`; the library requires a little-endian host, enforced at compile time.
+- The hash domains embed the version (`leaf_hash_v2`, `node_hash_v2`; version 1 used the unversioned `leaf_hash` and `node_hash`), so hashes from different versions are domain-separated.
+- Nonempty-tree commitments change. The empty-tree commitment (all zeros) is unchanged.
+- Query results carry the version and the queried leaf's original insertion epoch. Membership verification recomputes the leaf hash from the returned payload, its opening randomness (committed-payload mode only) and that epoch, under the caller's configured payload commitment mode.
+- Query results must match the caller's configured label mode; serialized data cannot enable or disable VRF verification. VRF-mode results require a proof and a trusted commitment that carries the VRF public key.
+- Commitments state the VRF suite of their public key, and the stated suite must match the key on load.
+- Stored nodes, insert results and the configuration blob carry the version.
+
+Stored nodes persisted through `CTNodeStored::save`/`Load` are checked; a storage backend that keeps node fields in its own record format must version its records itself.
+The in-memory backends hold node objects and never serialize them.
+
+### Integrator changes in version 2
+
+- Query providers must return the leaf insertion epoch for single and batched lookups; use zero for absent keys.
+- Pass that epoch to the `QueryResult` constructors, not the current root epoch.
+- Unversioned query results, insert results, stored nodes and configuration blobs are rejected.
+
+### Migration checklist for any version bump
+
+1. Do not relabel old serialized objects with the new version.
+2. Rebuild persisted tries from the authoritative insertion history, preserving each leaf's insertion epoch.
+3. Publish and independently distribute the new trusted commitments before serving proofs under the new version.
+4. Regenerate query and insertion proofs against the rebuilt tries.
+5. Retain historical data under the old version separately if it is still needed.
+
 ## Building and Installing oZKS
-
-### Commitment format compatibility
-
-Serialization version 2 authenticates each label's bit count as well as its backing bytes in leaf and internal-node hashes.
-This changes nonempty-tree commitments and is incompatible with version 1.
-Version 1 serialized commitments, tries, stored nodes, and example instances are rejected by the corresponding loaders.
-Stored nodes serialized with `CTNodeStored::save` carry the serialization version and `CTNodeStored::Load` rejects any other version; a backend that persists node fields in its own record format must version its records itself. The in-memory backends hold node objects and never serialize them.
-Do not relabel old serialized objects as version 2.
-Rebuild persisted tries from the authoritative insertion history, preserving insertion epochs, and publish and independently distribute new trusted commitments before serving version 2 proofs.
-Regenerate query and insertion proofs against the rebuilt tries; retain historical version 1 data separately if needed.
-Query results now carry a serialization version and the queried leaf's original insertion epoch.
-Unversioned query results are rejected.
-Insert results also carry a serialization version; unversioned insert results are rejected.
-Query providers must return insertion epochs for both single and batched lookups; use zero for absent keys.
-Pass that epoch to the `QueryResult` constructor, not the current root epoch.
-Membership verification authenticates the returned payload and its opening randomness using the caller's configured payload commitment mode.
-Query results must also match the caller's configured label mode; serialized data cannot enable or disable VRF verification.
-VRF-mode results require a proof and a trusted commitment containing the VRF public key.
 
 oZKS has multiple external dependencies that must be pre-installed.
 By far the easiest and recommended way to do this is using [vcpkg](https://github.com/microsoft/vcpkg).
