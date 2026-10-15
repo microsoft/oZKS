@@ -476,6 +476,46 @@ TEST(Utilities, NodeHashesBindEveryLabelLength)
     }
 }
 
+TEST(Utilities, NodeLabelTakesOptionalSecretKey)
+{
+    key_type key = make_bytes<key_type>(0x01, 0x02, 0x03);
+    hash_type key_hash = compute_key_hash(key);
+    VRFCache cache(16);
+
+    // Hashed labels never touch the key or the cache, so a null key is valid and the label is
+    // the key hash.
+    EXPECT_EQ(key_hash, get_node_label(key, nullptr, LabelType::HashedLabels));
+    auto hashed = get_node_label(key, nullptr, cache, LabelType::HashedLabels);
+    EXPECT_EQ(key_hash, hashed.first);
+    EXPECT_EQ(nullptr, hashed.second);
+    EXPECT_EQ(0U, cache.size());
+    EXPECT_EQ(0U, cache.cache_misses());
+
+    // VRF labels require the key: a null key is rejected rather than dereferenced.
+    EXPECT_THROW(get_node_label(key, nullptr, LabelType::VRFLabels), invalid_argument);
+    EXPECT_THROW(get_node_label(key, nullptr, cache, LabelType::VRFLabels), invalid_argument);
+
+    // With a key, both overloads agree and the label is the VRF value, not the key hash. The
+    // first cached call misses and populates the cache; the second hits it.
+    auto sk = vrf::VRF::Create(vrf::Type::ec_vrf_p256_sha256_tai);
+    hash_type label = get_node_label(key, sk.get(), LabelType::VRFLabels);
+    auto with_proof = get_node_label(key, sk.get(), cache, LabelType::VRFLabels);
+    EXPECT_NE(key_hash, label);
+    EXPECT_EQ(label, with_proof.first);
+    ASSERT_NE(nullptr, with_proof.second);
+    hash_type from_proof;
+    copy_bytes_to_hash(with_proof.second->get_vrf_value(), from_proof);
+    EXPECT_EQ(label, from_proof);
+    EXPECT_EQ(1U, cache.size());
+    EXPECT_EQ(1U, cache.cache_misses());
+    auto second = get_node_label(key, sk.get(), cache, LabelType::VRFLabels);
+    EXPECT_EQ(label, second.first);
+    EXPECT_EQ(1U, cache.cache_hits());
+
+    // A warm cache does not rescue a null key: the check precedes the cache lookup.
+    EXPECT_THROW(get_node_label(key, nullptr, cache, LabelType::VRFLabels), invalid_argument);
+}
+
 TEST(Utilities, PayloadCommitmentRecomputation)
 {
     for (auto mode :

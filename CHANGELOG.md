@@ -50,6 +50,9 @@ See the README section "Serialization versioning and compatibility" for the poli
   `QueryResult::save` throws for a VRF-mode result without an initialized proof.
 - `QueryResult::Load` and `InsertResult::Load` reject a proof element count above `max_proof_length` (257) before allocating, so a hostile buffer cannot force a large allocation.
 - `QueryResult::verify_vrf_proof` returns false when the proof's VRF suite differs from the key's.
+- Both `utils::get_node_label` overloads take `vrf::SecretKey *` instead of `vrf::SecretKey &`.
+  The pointer may be null for hashed labels, where it is not used; for VRF labels a null pointer throws `std::invalid_argument`.
+  Previously the example `OZKS` classes formed a reference from a null key in hashed-label mode.
 - `Commitment::Load` throws when the stated VRF suite is missing or does not match the public key, when a suite is stated without a key ("VRF type present without public key"), or when the root commitment is missing ("root commitment is missing").
   `Commitment::save` no longer dereferences a null public key; a keyless commitment serializes without a key or suite.
 

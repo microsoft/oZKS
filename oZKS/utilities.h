@@ -137,22 +137,19 @@ namespace ozks {
         void compute_hash(gsl::span<const std::byte> in, gsl::span<std::byte, sz> out);
 
         /**
-        Compute the label for a given key.
+        Compute the label for a given key, and the VRF proof when VRF labels are used; the
+        returned proof is null for hashed labels. The secret key may be null for hashed
+        labels, where it is not used; for VRF labels a null key throws std::invalid_argument.
         */
         std::pair<hash_type, std::unique_ptr<vrf::Proof>> get_node_label(
-            const key_type &key,
-            vrf::SecretKey &vrf_sk,
-            VRFCache &cache,
-            LabelType label_type);
+            const key_type &key, vrf::SecretKey *vrf_sk, VRFCache &cache, LabelType label_type);
 
         /**
         This function computes the label for a given key. In case the VRF proof is not needed,
-        this is faster than calling the overload that includes the VRF proof.
+        this is faster than calling the overload that includes the VRF proof. The secret key
+        may be null for hashed labels; for VRF labels a null key throws std::invalid_argument.
         */
-        hash_type get_node_label(
-            const key_type &key,
-            vrf::SecretKey &vrf_sk,
-            LabelType label_type);
+        hash_type get_node_label(const key_type &key, vrf::SecretKey *vrf_sk, LabelType label_type);
 
         /**
         Hasher for a byte vector.

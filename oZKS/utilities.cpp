@@ -227,23 +227,25 @@ void utils::compute_hash(gsl::span<const byte> in, gsl::span<byte, sz> out)
 }
 
 std::pair<hash_type, std::unique_ptr<vrf::Proof>> utils::get_node_label(
-    const key_type &key,
-    vrf::SecretKey &vrf_sk,
-    VRFCache &cache,
-    LabelType label_type)
+    const key_type &key, vrf::SecretKey *vrf_sk, VRFCache &cache, LabelType label_type)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
     std::unique_ptr<vrf::Proof> proof;
 
     if (label_type == LabelType::VRFLabels) {
+        // The secret key is used, and therefore required, only for VRF labels.
+        if (nullptr == vrf_sk) {
+            throw invalid_argument("VRF labels require a VRF secret key");
+        }
+
         // Look up the VRF proof from the cache
         auto cache_value = cache.get(key_hash);
         if (nullptr != cache_value) {
             proof = std::move(cache_value);
         } else {
             // Not found? Need to compute the proof and add it to the cache
-            auto vrf_proof = vrf_sk.get_vrf_proof(key_hash);
+            auto vrf_proof = vrf_sk->get_vrf_proof(key_hash);
             proof = std::move(vrf_proof);
             cache.add(key_hash, *proof);
         }
@@ -259,15 +261,19 @@ std::pair<hash_type, std::unique_ptr<vrf::Proof>> utils::get_node_label(
     return { key_hash, std::move(proof) };
 }
 
-hash_type utils::get_node_label(
-    const key_type &key, vrf::SecretKey &vrf_sk, LabelType label_type)
+hash_type utils::get_node_label(const key_type &key, vrf::SecretKey *vrf_sk, LabelType label_type)
 {
     // In any case, first hash the key with utils::compute_key_hash
     hash_type key_hash = utils::compute_key_hash(key);
 
     if (label_type == LabelType::VRFLabels) {
+        // The secret key is used, and therefore required, only for VRF labels.
+        if (nullptr == vrf_sk) {
+            throw invalid_argument("VRF labels require a VRF secret key");
+        }
+
         // If this OZKS uses VRFs, set key_hash instead to the VRF value (hash)
-        auto proof = vrf_sk.get_vrf_proof(key_hash);
+        auto proof = vrf_sk->get_vrf_proof(key_hash);
         auto vrf_value = proof->get_vrf_value();
         utils::copy_bytes_to_hash(vrf_value, key_hash);
     }
