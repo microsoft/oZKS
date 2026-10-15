@@ -8,6 +8,7 @@
 #include "oZKS/ozks_config.h"
 #include "oZKS/storage/memory_storage.h"
 #include "oZKS/utilities.h"
+#include "oZKS/version.h"
 
 // GTest
 #include "gtest/gtest.h"
@@ -86,6 +87,51 @@ TEST(ConfigTests, VRFSecretKeyTest)
                 vrf_secret_key),
             invalid_argument);
     }
+}
+
+TEST(ConfigTests, CarriesSerializationVersion)
+{
+    auto storage = make_shared<MemoryStorage>();
+    OZKSConfig config(
+        PayloadCommitmentType::UncommitedPayload, LabelType::HashedLabels, TrieType::Linked, storage);
+    vector<byte> buffer;
+    size_t save_size = config.save(buffer);
+
+    // The version leads the layout, in the writer's native byte order like every other field.
+    ASSERT_GE(buffer.size(), sizeof(uint32_t));
+    uint32_t version = 0;
+    memcpy(&version, buffer.data(), sizeof(version));
+    EXPECT_EQ(ozks_serialization_version, version);
+    OZKSConfig loaded;
+    EXPECT_EQ(save_size, OZKSConfig::Load(loaded, buffer, storage));
+    EXPECT_EQ(TrieType::Linked, loaded.trie_type());
+
+    // Rejections must come from the version check itself, not from a later read failure.
+    auto expect_unsupported_version = [&](const vector<byte> &blob) {
+        try {
+            OZKSConfig::Load(loaded, blob, storage);
+            FAIL() << "Load should have rejected the version";
+        } catch (const runtime_error &ex) {
+            EXPECT_STREQ("Failed to load OZKSConfig: unsupported version", ex.what());
+        }
+    };
+
+    // A foreign version is rejected before any other field is interpreted.
+    for (uint32_t foreign_version : { 0U, 1U, ozks_serialization_version + 1 }) {
+        SCOPED_TRACE(foreign_version);
+        vector<byte> foreign = buffer;
+        memcpy(foreign.data(), &foreign_version, sizeof(foreign_version));
+        expect_unsupported_version(foreign);
+    }
+
+    // A legacy blob (no version prefix) begins with the commitment type, label type, trie
+    // type and the use_storage flag, which is always 1, so it can never read as a supported
+    // version.
+    vector<byte> legacy(buffer.begin() + sizeof(uint32_t), buffer.end());
+    expect_unsupported_version(legacy);
+
+    // Fewer than four bytes fail in the reader before any version is interpreted.
+    EXPECT_THROW(OZKSConfig::Load(loaded, vector<byte>(3), storage), runtime_error);
 }
 
 TEST(ConfigTests, SerializationSizeTest)

@@ -4,6 +4,7 @@
 // OZKS
 #include "oZKS/ozks_config.h"
 #include "oZKS/storage/memory_storage.h"
+#include "oZKS/version.h"
 
 using namespace std;
 using namespace ozks;
@@ -47,8 +48,15 @@ OZKSConfig::OZKSConfig()
           /* thread_count */ 0)
 {}
 
+namespace {
+    // Version, four one-byte fields, secret key length, VRF cache size and thread count.
+    constexpr size_t config_fixed_size =
+        sizeof(uint32_t) + 4 * sizeof(uint8_t) + sizeof(uint32_t) + 2 * sizeof(uint64_t);
+} // namespace
+
 size_t OZKSConfig::save(SerializationWriter &writer) const
 {
+    uint32_t version = ozks_serialization_version;
     uint8_t payload_commitment8 = static_cast<uint8_t>(commitment_type_);
     uint8_t label_type8 = static_cast<uint8_t>(label_type_);
     uint8_t trie_type8 = static_cast<uint8_t>(trie_type_);
@@ -57,6 +65,7 @@ size_t OZKSConfig::save(SerializationWriter &writer) const
     uint64_t vrf_cache_size64 = vrf_cache_size_;
     uint64_t thread_count64 = thread_count_;
 
+    writer.write(reinterpret_cast<const uint8_t *>(&version), sizeof(uint32_t));
     writer.write(reinterpret_cast<const uint8_t *>(&payload_commitment8), sizeof(uint8_t));
     writer.write(reinterpret_cast<const uint8_t *>(&label_type8), sizeof(uint8_t));
     writer.write(reinterpret_cast<const uint8_t *>(&trie_type8), sizeof(uint8_t));
@@ -66,8 +75,7 @@ size_t OZKSConfig::save(SerializationWriter &writer) const
     writer.write(reinterpret_cast<const uint8_t *>(&vrf_cache_size64), sizeof(uint64_t));
     writer.write(reinterpret_cast<const uint8_t *>(&thread_count64), sizeof(uint64_t));
 
-    return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) +
-           sizeof(uint32_t) + vrf_secret_key_size + sizeof(uint64_t) + sizeof(uint64_t);
+    return config_fixed_size + vrf_secret_key_size;
 }
 
 template <typename T>
@@ -80,6 +88,7 @@ size_t OZKSConfig::save(vector<T> &vec) const
 size_t OZKSConfig::Load(
     OZKSConfig &config, SerializationReader &reader, shared_ptr<storage::Storage> storage)
 {
+    uint32_t version = 0;
     uint8_t payload_commitment8 = 0;
     uint8_t label_type8 = 0;
     uint8_t trie_type8 = 0;
@@ -87,6 +96,15 @@ size_t OZKSConfig::Load(
     uint32_t vrf_secret_key_size = 0;
     uint64_t vrf_cache_size64 = 0;
     uint64_t thread_count64 = 0;
+
+    // The version leads the layout. A legacy blob begins with the commitment type, label
+    // type, trie type and the use_storage flag (always 1); read as a uint32 that is at least
+    // 2^24 on little-endian hosts and has low byte 1 on big-endian hosts, so it can never
+    // equal a supported version (currently 2, only ever increasing).
+    reader.read(reinterpret_cast<uint8_t *>(&version), sizeof(uint32_t));
+    if (!same_serialization_version(version)) {
+        throw runtime_error("Failed to load OZKSConfig: unsupported version");
+    }
 
     reader.read(reinterpret_cast<uint8_t *>(&payload_commitment8), sizeof(uint8_t));
     reader.read(reinterpret_cast<uint8_t *>(&label_type8), sizeof(uint8_t));
@@ -112,8 +130,7 @@ size_t OZKSConfig::Load(
         static_cast<size_t>(thread_count64));
     swap(config, loaded_ozks_config);
 
-    return sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) +
-           sizeof(uint32_t) + vrf_secret_key_size + sizeof(uint64_t) + sizeof(uint64_t);
+    return config_fixed_size + vrf_secret_key_size;
 }
 
 template <typename T>
